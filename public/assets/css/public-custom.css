@@ -26,13 +26,17 @@ body{
 .small-uppercase a{font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(15,15,15,0.65)}
 
 /* Hero */
-.hero{padding:120px 0 60px}
-.hero{padding:0}
-.hero-inner{padding:124px 0 76px;position:relative}
+.hero{padding:0;background:linear-gradient(135deg,#11100e 0%,#1a1713 55%,#0d0c0b 100%);color:#fff;overflow:hidden}
+.hero-inner{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(320px,0.95fr);gap:clamp(28px,4vw,64px);align-items:center;min-height:calc(100vh - 110px);padding:124px 0 76px;position:relative}
 .hero-inner:after{content:"";position:absolute;left:0;bottom:30px;width:120px;height:1px;background:rgba(255,255,255,0.45)}
 .hero .title{font-family:'Playfair Display', var(--serif);font-size:68px;margin:0 0 16px;color:#fff;letter-spacing: -0.03em;line-height:0.98;text-align:left;max-width:760px;text-shadow:0 12px 36px rgba(0,0,0,0.16)}
 .hero .subtitle{color:rgba(255,255,255,0.9);max-width:650px;font-size:17px}
-.hero-copy{max-width:760px}
+.hero-copy{max-width:760px;position:relative;z-index:1}
+.hero-visual{position:relative;min-height:520px;display:grid;place-items:center}
+.hero-frame{position:relative;overflow:hidden;border-radius:28px;border:1px solid rgba(255,255,255,0.12);box-shadow:0 28px 80px rgba(0,0,0,0.28);background:#201c17}
+.hero-frame img{display:block;width:100%;height:100%;object-fit:cover}
+.hero-frame-primary{width:min(100%,540px);aspect-ratio:4/5}
+.hero-frame-secondary{position:absolute;right:-12px;bottom:-18px;width:min(58%,260px);aspect-ratio:4/5;border-radius:22px;box-shadow:0 24px 60px rgba(0,0,0,0.35)}
 .hero .cta{padding:11px 20px;border-radius:8px}
 
 .decor-sep{width:86px;height:1px;background:rgba(255,255,255,0.5);margin:12px 0 18px}
@@ -96,8 +100,11 @@ body{
 /* Small screens */
 @media(max-width:600px){
   .section-heading h2{font-size:28px}
-  .hero-inner{padding:100px 0 54px}
+  .hero-inner{grid-template-columns:1fr;min-height:auto;padding:100px 0 54px}
   .hero .title{font-size:36px}
+  .hero-visual{min-height:320px}
+  .hero-frame-primary{width:min(100%,340px)}
+  .hero-frame-secondary{width:min(52%,180px);right:0;bottom:-8px}
   .brand-logo{height:36px}
   .portfolio img{height:140px}
   .portfolio{grid-template-columns:1fr;gap:14px}

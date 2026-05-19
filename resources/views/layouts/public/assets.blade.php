@@ -8,9 +8,7 @@
 
         <!-- Reused vendor fonts/icons if needed -->
         @php
-                $fontPath = public_path('assets/fonts/InstrumentSans-Regular.woff2');
-                $heroPath = public_path('assets/images/hero.jpg');
-                $heroAlt = file_exists($heroPath) ? asset('assets/images/hero.jpg') : asset('assets/images/icon.jpg');
+            $fontPath = public_path('assets/fonts/InstrumentSans-Regular.woff2');
         @endphp
         @if(file_exists($fontPath))
                 <link rel="preload" href="{{ asset('assets/fonts/InstrumentSans-Regular.woff2') }}" as="font" type="font/woff2" crossorigin>
@@ -27,16 +25,6 @@
 
         <!-- Serif display font (Google Fonts) -->
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
-
-        <style>
-            /* Hero background injected from server to allow asset() helper and fallback */
-            .hero{
-                background: linear-gradient(rgba(10,10,10,0.45), rgba(10,10,10,0.18)), url('{{ $heroAlt }}') center/cover no-repeat;
-                color: #fff;
-            }
-            .hero .title{color:#fff}
-            .hero .subtitle{color:rgba(255,255,255,0.85)}
-        </style>
 
 </head>
 <body>
