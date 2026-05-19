@@ -3,13 +3,17 @@
         <div class="footer-brand">
             <div class="footer-brandline">
                 @php
-                    $icon = public_path('assets/images/icon.jpg');
+                    $icon = public_path('assets/etherno/public/icon_trans_2.png');
                     $fallback = public_path('assets/images/photos/aboutmain.jpg');
                 @endphp
                 @if(file_exists($icon))
-                    <img src="{{ asset('assets/images/icon.jpg') }}" alt="Etherno" class="footer-logo">
+                    <div class="footer-logo-wrap">
+                        <img src="{{ asset('assets/etherno/public/icon_trans_2.png') }}" alt="Etherno" class="footer-logo">
+                    </div>
                 @elseif(file_exists($fallback))
-                    <img src="{{ asset('assets/images/photos/aboutmain.jpg') }}" alt="Etherno" class="footer-logo">
+                    <div class="footer-logo-wrap">
+                        <img src="{{ asset('assets/images/photos/aboutmain.jpg') }}" alt="Etherno" class="footer-logo">
+                    </div>
                 @endif
                 <div>
                     <p class="eyebrow footer-eyebrow">Etherno Pernikahan</p>
