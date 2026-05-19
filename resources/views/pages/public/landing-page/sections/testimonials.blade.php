@@ -1,35 +1,35 @@
 <section class="section-block container" id="testimonials">
   <div class="section-heading">
-    <p class="eyebrow">Client Notes</p>
-    <h2>Warm words from couples who booked with confidence</h2>
-    <p class="section-lead">The social proof is kept calm, premium, and readable so it supports the page instead of shouting for attention.</p>
+    <p class="eyebrow">Ulasan Klien</p>
+    <h2>Kata-kata hangat dari pasangan yang memesan dengan percaya diri</h2>
+    <p class="section-lead">Bukti sosial ditampilkan dengan tenang, premium, dan mudah dibaca agar mendukung halaman, bukan merebut perhatian.</p>
   </div>
 
   <div class="testimonial-grid">
     <article class="testimonial-card testimonial-card-large">
       <div class="quote-mark">“</div>
-      <p>They moved quietly, captured the important moments, and delivered a gallery that felt editorial rather than generic.</p>
+      <p>Mereka bekerja dengan tenang, menangkap momen penting, dan menghasilkan galeri yang terasa editorial, bukan generik.</p>
       <div class="testimonial-meta">
         <strong>A. & B.</strong>
-        <span>Intimate package</span>
+        <span>Paket Intim</span>
       </div>
     </article>
 
     <article class="testimonial-card">
       <div class="quote-mark">“</div>
-      <p>The direction was calm and the final photos had the soft cinematic tone we were looking for.</p>
+      <p>Arahan mereka tenang dan hasil foto akhirnya memiliki nuansa sinematik lembut yang kami cari.</p>
       <div class="testimonial-meta">
         <strong>C. & D.</strong>
-        <span>Signature package</span>
+        <span>Paket Andalan</span>
       </div>
     </article>
 
     <article class="testimonial-card">
       <div class="quote-mark">“</div>
-      <p>Professional from consultation to delivery, and the album feels like something we will keep forever.</p>
+      <p>Profesional dari konsultasi sampai pengiriman, dan albumnya terasa seperti sesuatu yang akan kami simpan selamanya.</p>
       <div class="testimonial-meta">
         <strong>E. & F.</strong>
-        <span>Luxury package</span>
+        <span>Paket Mewah</span>
       </div>
     </article>
   </div>
