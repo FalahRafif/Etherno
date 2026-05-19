@@ -1,11 +1,12 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\BlankController;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-use App\Http\Controllers\Admin\BlankController;
-
-Route::get('/admin/blank', [BlankController::class, 'index'])->name('admin.blank');
+Route::prefix('admin')->name('admin.')->group(function () {
+    Route::get('/blank', [BlankController::class, 'index'])->name('blank');
+});
