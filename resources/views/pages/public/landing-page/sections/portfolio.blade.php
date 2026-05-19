@@ -1,4 +1,4 @@
-<section class="portfolio container" id="portfolio">
+{{-- <section class="portfolio container" id="portfolio">
   @php $imgs = ['photos/9.jpg','photos/8.jpg','photos/7.jpg','photos/6.jpg','photos/5.jpg']; @endphp
   <div class="feature">
     @php $p = public_path('assets/images/' . $imgs[0]); @endphp
@@ -18,4 +18,4 @@
     @endif
   @endforeach
   </div>
-</section>
+</section> --}}
