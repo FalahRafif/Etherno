@@ -1,9 +1,9 @@
 <section class="container" id="flow">
-  <h2 style="font-family:var(--serif);">Alur Booking Singkat</h2>
+  <h2 style="font-family:var(--serif);">Alur Pemesanan Singkat</h2>
   <ol>
     <li>Pilih paket yang sesuai.</li>
-    <li>Konsultasi tanggal & detail acara.</li>
-    <li>DP untuk mengunci tanggal.</li>
-    <li>Konfirmasi & sesi pra-wedding (opsional).</li>
+    <li>Konsultasi tanggal dan detail acara.</li>
+    <li>Bayar DP untuk mengunci tanggal.</li>
+    <li>Konfirmasi dan sesi pra-pernikahan (opsional).</li>
   </ol>
 </section>

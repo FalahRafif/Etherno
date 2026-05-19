@@ -3,18 +3,18 @@
   <div class="feature">
     @php $p = public_path('assets/images/' . $imgs[0]); @endphp
     @if(file_exists($p))
-      <img src="{{ asset('assets/images/' . $imgs[0]) }}" alt="Portfolio feature">
+      <img src="{{ asset('assets/images/' . $imgs[0]) }}" alt="Foto unggulan portofolio">
     @else
-      <img src="{{ asset('assets/images/icon.jpg') }}" alt="Portfolio placeholder">
+      <img src="{{ asset('assets/images/icon.jpg') }}" alt="Pengganti portofolio">
     @endif
   </div>
   <div class="grid">
   @foreach(array_slice($imgs,1) as $img)
     @php $p = public_path('assets/images/' . $img); @endphp
     @if(file_exists($p))
-      <div><img src="{{ asset('assets/images/' . $img) }}" alt="Portfolio"></div>
+      <div><img src="{{ asset('assets/images/' . $img) }}" alt="Portofolio"></div>
     @else
-      <div><img src="{{ asset('assets/images/icon.jpg') }}" alt="Portfolio placeholder"></div>
+      <div><img src="{{ asset('assets/images/icon.jpg') }}" alt="Pengganti portofolio"></div>
     @endif
   @endforeach
   </div>
