@@ -1,18 +1,18 @@
 # Public Layout Checklist
 
-1. Create layout directory and partials: `resources/views/layouts/public/` - DONE
-2. Add custom CSS: `public/assets/css/public-custom.css` - DONE
-3. Create landing page and sections under `resources/views/pages/public/landing-page/` - DONE
-4. Create `LandingPageController` - DONE
-5. Add route for `/` to landing page - DONE
-6. Verify views render and assets load - PARTIAL (server-side render OK; browser snapshot OK but some images/fonts 404)
-	- Notes: font `InstrumentSans-Regular.woff2` and portfolio images not found in `public/assets/images/portfolio/` (placeholders shown).
-7. Visual verification (desktop + mobile) - PARTIAL (structure and layout render; manual review recommended for spacing, imagery, and mobile polish)
-8. Use `icon.jpg` as logo placeholder and fallback for missing images - DONE
-9. Apply cinematic, elegant visual refinements to CSS and hero overlay - DONE
-10. Include admin vendor libraries (Bootstrap, icons) to access layout utilities - DONE (conditional include)
-11. Update portfolio to feature a large hero image + grid, and add rounded/masked styles - DONE
-12. Further polish spacing, typography, and nav microcopy - DONE (packages, testimonials, FAQ, footer redesigned)
-13. Replace portfolio placeholders with distinct images from `public/assets/images/photos/` - DONE (used existing photos)
+1. Buat direktori layout dan partial: `resources/views/layouts/public/` - SELESAI
+2. Tambahkan CSS kustom: `public/assets/css/public-custom.css` - SELESAI
+3. Buat landing page dan section di bawah `resources/views/pages/public/landing-page/` - SELESAI
+4. Buat `LandingPageController` - SELESAI
+5. Tambahkan route `/` ke landing page - SELESAI
+6. Verifikasi view ter-render dan aset termuat - SEBAGIAN (render sisi server OK; snapshot browser OK tetapi ada beberapa gambar/font 404)
+	- Catatan: font `InstrumentSans-Regular.woff2` dan gambar portofolio tidak ditemukan di `public/assets/images/portfolio/` (placeholder ditampilkan).
+7. Verifikasi visual (desktop + mobile) - SEBAGIAN (struktur dan layout ter-render; tinjauan manual disarankan untuk jarak, gambar, dan polesan mobile)
+8. Gunakan `icon.jpg` sebagai placeholder logo dan cadangan untuk gambar yang hilang - SELESAI
+9. Terapkan penyempurnaan visual sinematik dan elegan pada CSS serta overlay hero - SELESAI
+10. Sertakan library vendor admin (Bootstrap, ikon) untuk akses utilitas layout - SELESAI (include bersyarat)
+11. Perbarui portofolio agar menampilkan gambar hero besar + grid, serta gaya rounded/masked - SELESAI
+12. Sempurnakan spacing, tipografi, dan microcopy navigasi - SELESAI (paket, testimoni, FAQ, footer sudah didesain ulang)
+13. Ganti placeholder portofolio dengan gambar berbeda dari `public/assets/images/photos/` - SELESAI (memakai foto yang sudah ada)
 
-Update statuses after verification steps complete.
+Perbarui status setelah langkah verifikasi selesai.
