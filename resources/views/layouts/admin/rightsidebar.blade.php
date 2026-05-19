@@ -156,7 +156,7 @@
                             <div class="list-group list-group-flush ">
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-3">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/12.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/12.jpg') }}" alt="img">
                                     </div>
                                     <div>
                                         <strong>Madeleine</strong> Hey! there I' am available....
@@ -167,7 +167,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-3">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/1.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/1.jpg') }}" alt="img">
                                     </div>
                                     <div>
                                         <strong>Anthony</strong> New product Launching...
@@ -178,7 +178,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-3">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/2.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/2.jpg') }}" alt="img">
                                     </div>
                                     <div>
                                         <strong>Olivia</strong> New Schedule Realease......
@@ -189,7 +189,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-3">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/8.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/8.jpg') }}" alt="img">
                                     </div>
                                     <div>
                                         <strong>Madeleine</strong> Hey! there I' am available....
@@ -200,7 +200,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-3">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/11.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/11.jpg') }}" alt="img">
                                     </div>
                                     <div>
                                         <strong>Anthony</strong> New product Launching...
@@ -211,7 +211,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-3">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/6.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/6.jpg') }}" alt="img">
                                     </div>
                                     <div>
                                         <strong>Olivia</strong> New Schedule Realease......
@@ -222,7 +222,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-3">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/9.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/9.jpg') }}" alt="img">
                                     </div>
                                     <div>
                                         <strong>Olivia</strong> Hey! there I' am available....
@@ -237,7 +237,7 @@
                             <div class="list-group list-group-flush ">
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-2">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/9.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/9.jpg') }}" alt="img">
                                     </div>
                                     <div class="">
                                         <div class="font-weight-semibold">Mozelle Belt</div>
@@ -248,7 +248,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-2">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/11.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/11.jpg') }}" alt="img">
                                     </div>
                                     <div class="">
                                         <div class="font-weight-semibold">Florinda Carasco</div>
@@ -259,7 +259,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-2">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/10.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/10.jpg') }}" alt="img">
                                     </div>
                                     <div class="">
                                         <div class="font-weight-semibold">Alina Bernier</div>
@@ -270,7 +270,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-2">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/2.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/2.jpg') }}" alt="img">
                                     </div>
                                     <div class="">
                                         <div class="font-weight-semibold">Zula Mclaughin</div>
@@ -281,7 +281,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-2">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/13.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/13.jpg') }}" alt="img">
                                     </div>
                                     <div class="">
                                         <div class="font-weight-semibold">Isidro Heide</div>
@@ -292,7 +292,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-2">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/12.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/12.jpg') }}" alt="img">
                                     </div>
                                     <div class="">
                                         <div class="font-weight-semibold">Mozelle Belt</div>
@@ -303,7 +303,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-2">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/4.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/4.jpg') }}" alt="img">
                                     </div>
                                     <div class="">
                                         <div class="font-weight-semibold">Florinda Carasco</div>
@@ -314,7 +314,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-2">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/7.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/7.jpg') }}" alt="img">
                                     </div>
                                     <div class="">
                                         <div class="font-weight-semibold">Alina Bernier</div>
@@ -325,7 +325,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-2">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/2.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/2.jpg') }}" alt="img">
                                     </div>
                                     <div class="">
                                         <div class="font-weight-semibold">Zula Mclaughin</div>
@@ -336,7 +336,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-2">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/14.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/14.jpg') }}" alt="img">
                                     </div>
                                     <div class="">
                                         <div class="font-weight-semibold">Isidro Heide</div>
@@ -347,7 +347,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-2">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/11.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/11.jpg') }}" alt="img">
                                     </div>
                                     <div class="">
                                         <div class="font-weight-semibold">Florinda Carasco</div>
@@ -358,7 +358,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-2">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/9.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/9.jpg') }}" alt="img">
                                     </div>
                                     <div class="">
                                         <div class="font-weight-semibold">Alina Bernier</div>
@@ -369,7 +369,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-2">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/15.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/15.jpg') }}" alt="img">
                                     </div>
                                     <div class="">
                                         <div class="font-weight-semibold">Zula Mclaughin</div>
@@ -380,7 +380,7 @@
                                 </div>
                                 <div class="list-group-item d-flex  align-items-center border-0">
                                     <div class="me-2">
-                                        <img class="avatar avatar-md rounded-circle cover-image" src="../assets/images/faces/4.jpg" alt="img">
+                                        <img class="avatar avatar-md rounded-circle cover-image" src="{{ asset('assets/images/faces/4.jpg') }}" alt="img">
                                     </div>
                                     <div class="">
                                         <div class="font-weight-semibold">Isidro Heide</div>
