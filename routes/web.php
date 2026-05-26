@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\BlankController;
 use App\Http\Controllers\Public\LandingPageController;
 
 Route::get('/', [LandingPageController::class, 'index'])->name('home');
+Route::get('/booking', [LandingPageController::class, 'booking'])->name('booking.page');
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/blank', [BlankController::class, 'index'])->name('blank');

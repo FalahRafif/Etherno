@@ -24,14 +24,14 @@
 
         <div class="footer-links">
             <p class="footer-title">Navigasi</p>
-            <a href="#portfolio">Portofolio</a>
-            <a href="#packages">Paket</a>
-            <a href="#faq">FAQ</a>
+            <a href="{{ route('home') }}#portfolio">Portofolio</a>
+            <a href="{{ route('home') }}#packages">Paket</a>
+            <a href="{{ route('home') }}#faq">FAQ</a>
         </div>
 
         <div class="footer-links">
             <p class="footer-title">Kontak</p>
-            <a href="#booking">Pesan Sekarang</a>
+            <a href="{{ route('booking.page') }}">Pesan Sekarang</a>
             <a href="mailto:hello@etherno.id">hello@etherno.id</a>
             <a href="#">Instagram</a>
         </div>

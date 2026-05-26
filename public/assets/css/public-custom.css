@@ -253,7 +253,10 @@ body{
 .faq-card p{padding:0 20px 20px;margin:0;color:rgba(15,15,15,.72);line-height:1.7}
 .faq-card[open]{border-color:rgba(181,143,66,.2)}
 
-.final-cta{padding:46px 0 4px;text-align:center}
+.final-cta{
+  padding:48px 0 18px;
+  text-align:center;
+}
 .final-cta-title{
   margin:0;
   font-family:'Playfair Display',var(--serif);
@@ -261,7 +264,161 @@ body{
   line-height:1.12;
   color:#121212;
 }
-.final-cta p{margin:14px 0 0}
+.final-cta-copy{
+  margin:12px auto 0;
+  max-width:620px;
+  color:rgba(15,15,15,.66);
+  font-size:15px;
+}
+.final-cta .cta{margin-top:14px}
+
+.booking-section{padding-top:72px;scroll-margin-top:96px}
+.booking-heading{margin-bottom:24px}
+.booking-grid{
+  display:grid;
+  grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr);
+  gap:22px;
+  align-items:start;
+}
+.booking-panel{
+  border:1px solid rgba(15,15,15,.08);
+  border-radius:18px;
+  background:linear-gradient(180deg,#ffffff,#fcfaf7);
+  box-shadow:0 14px 38px rgba(11,10,9,.05);
+  padding:24px;
+}
+.booking-panel h3{
+  margin:0;
+  font-family:'Playfair Display',var(--serif);
+  font-size:26px;
+  line-height:1.2;
+  color:#131313;
+}
+.booking-caption{
+  margin:10px 0 16px;
+  color:rgba(15,15,15,.68);
+  font-size:14px;
+  line-height:1.65;
+}
+.form-label{
+  display:block;
+  margin-bottom:8px;
+  color:rgba(15,15,15,.78);
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.form-input{
+  width:100%;
+  border:1px solid rgba(15,15,15,.16);
+  border-radius:10px;
+  padding:11px 12px;
+  color:#111;
+  font-size:14px;
+  background:#fff;
+  font-family:var(--sans);
+  line-height:1.4;
+}
+.form-input:focus{
+  outline:none;
+  border-color:rgba(181,143,66,.72);
+  box-shadow:0 0 0 3px rgba(181,143,66,.14);
+}
+.form-select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,#4a4a4a 50%),linear-gradient(135deg,#4a4a4a 50%,transparent 50%);background-position:calc(100% - 18px) calc(50% + 2px),calc(100% - 12px) calc(50% + 2px);background-size:6px 6px,6px 6px;background-repeat:no-repeat;padding-right:34px}
+.form-textarea{resize:vertical;min-height:130px}
+.form-field{min-width:0}
+
+.availability-summary{
+  margin:14px 0 14px;
+  border:1px dashed rgba(181,143,66,.4);
+  border-radius:10px;
+  background:rgba(181,143,66,.07);
+  padding:10px 12px;
+  color:#5f4a1f;
+  font-size:14px;
+}
+.slot-list{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.slot-card{
+  border:1px solid rgba(15,15,15,.08);
+  border-radius:12px;
+  background:#fff;
+  padding:12px;
+}
+.slot-name{
+  margin:0 0 4px;
+  color:#171717;
+  font-size:13px;
+  font-weight:700;
+}
+.slot-status{
+  margin:0;
+  color:rgba(15,15,15,.64);
+  font-size:13px;
+}
+.slot-card.status-available{border-color:rgba(38,138,90,.4);background:rgba(224,246,235,.65)}
+.slot-card.status-available .slot-status{color:#125e3a}
+.slot-card.status-limited{border-color:rgba(181,143,66,.45);background:rgba(255,247,221,.84)}
+.slot-card.status-limited .slot-status{color:#815d14}
+.slot-card.status-full{border-color:rgba(184,80,80,.44);background:rgba(254,236,236,.86)}
+.slot-card.status-full .slot-status{color:#9a3131}
+.slot-card.status-unknown{border-color:rgba(15,15,15,.1);background:#fff}
+
+.booking-note{
+  margin:12px 0 0;
+  color:rgba(15,15,15,.7);
+  font-size:13px;
+}
+
+.booking-form-grid{
+  margin-top:16px;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+.form-field-full{grid-column:1/-1}
+
+.estimate-box{
+  margin-top:18px;
+  border:1px solid rgba(181,143,66,.28);
+  border-radius:12px;
+  background:linear-gradient(180deg,rgba(255,250,239,.9),rgba(255,255,255,.95));
+  padding:14px;
+}
+.estimate-title{
+  margin:0 0 8px;
+  color:#33260f;
+  font-size:14px;
+  font-weight:700;
+}
+.estimate-list{
+  margin:0;
+  padding-left:18px;
+  color:rgba(15,15,15,.74);
+  font-size:14px;
+}
+.estimate-list li{margin:5px 0}
+.estimate-note{
+  margin:10px 0 0;
+  color:#6a5222;
+  font-size:13px;
+  line-height:1.55;
+}
+
+.booking-actions{margin-top:18px}
+.booking-submit{
+  border:none;
+  cursor:pointer;
+}
+.booking-disclaimer{
+  margin:10px 0 0;
+  color:rgba(15,15,15,.56);
+  font-size:12px;
+}
 
 .public-footer{margin-top:56px;padding:44px 0 24px;background:#11110f;color:#f6f1e8}
 .footer-grid{
@@ -369,6 +526,9 @@ body{
   .portfolio{grid-template-columns:1fr;gap:14px}
   .portfolio .feature{grid-column:auto}
   .portfolio .feature img{height:300px}
+  .booking-grid{grid-template-columns:1fr}
+  .booking-panel{padding:20px}
+  .booking-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 
   .footer-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
   .footer-brand{grid-column:1/-1}
@@ -393,9 +553,14 @@ body{
   .package-featured{transform:none}
   .testimonial-card{padding:24px}
   .faq-card summary{font-size:18px}
-
-  .final-cta{padding-top:36px}
+  .final-cta{padding:36px 0 12px}
   .final-cta-title{font-size:clamp(34px,11.5vw,42px)}
+  .final-cta-copy{font-size:14px}
+
+  .booking-section{padding-top:56px}
+  .booking-form-grid{grid-template-columns:1fr}
+  .slot-list{grid-template-columns:1fr}
+  .booking-panel h3{font-size:24px}
 
   .footer-brandline{grid-template-columns:1fr;justify-items:start}
   .footer-logo-wrap{padding:10px 14px}
