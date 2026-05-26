@@ -8,87 +8,85 @@ class AdminPreviewController extends Controller
 {
     public function dashboard()
     {
-        return $this->render('Dashboard', 'Ringkasan operasional harian, booking baru, dan alert pembayaran.');
+        return $this->page('pages.admin.dashboard', 'Dashboard');
     }
 
     public function bookingRequests()
     {
-        return $this->render('Booking Requests', 'Review request baru sebelum customer melakukan pembayaran DP.');
+        return $this->page('pages.admin.bookings.requests', 'Booking Requests');
     }
 
     public function bookingsActive()
     {
-        return $this->render('Bookings Active', 'Daftar booking yang sudah DP verified dan mengunci slot.');
+        return $this->page('pages.admin.bookings.active', 'Bookings Active');
     }
 
     public function bookingDetail(string $booking)
     {
-        return $this->render('Booking Detail', 'Halaman detail booking untuk approval, verifikasi, dan tindak lanjut.', [
+        return $this->page('pages.admin.bookings.detail', 'Booking Detail', [
             'bookingCode' => strtoupper($booking),
         ]);
     }
 
     public function calendar()
     {
-        return $this->render('Calendar & Slots', 'Monitoring kapasitas harian, sesi pagi-siang, dan sesi sore-malam.');
+        return $this->page('pages.admin.calendar', 'Calendar & Slots');
     }
 
     public function dpVerification()
     {
-        return $this->render('DP Verification', 'Verifikasi manual konfirmasi DP sebelum booking menjadi aktif.');
+        return $this->page('pages.admin.payments.dp', 'DP Verification');
     }
 
     public function finalPayment()
     {
-        return $this->render('Final Payment', 'Verifikasi pelunasan maksimal H-1 acara dan update status booking.');
+        return $this->page('pages.admin.payments.final', 'Final Payment');
     }
 
     public function pricingReviews()
     {
-        return $this->render('Pricing Review', 'Hitung harga final dan breakdown biaya tambahan berdasarkan lokasi.');
+        return $this->page('pages.admin.pricing.reviews', 'Pricing Review');
     }
 
     public function packages()
     {
-        return $this->render('Packages', 'Kelola paket, base price, dan perbedaan ketentuan wedding/non-wedding.');
+        return $this->page('pages.admin.master.packages', 'Packages');
     }
 
     public function locationRules()
     {
-        return $this->render('Location Rules', 'Kelola kategori lokasi dan pola estimasi biaya tambahan.');
+        return $this->page('pages.admin.master.location-rules', 'Location Rules');
     }
 
     public function reschedules()
     {
-        return $this->render('Reschedule Requests', 'Review request reschedule manual berdasarkan ketersediaan jadwal.');
+        return $this->page('pages.admin.reschedules', 'Reschedule Requests');
     }
 
     public function cancellations()
     {
-        return $this->render('Cancellations', 'Catat pembatalan dan status DP non-refundable.');
+        return $this->page('pages.admin.cancellations', 'Cancellations');
     }
 
     public function forceMajeure()
     {
-        return $this->render('Force Majeure', 'Penanganan fotografer pengganti, cuaca buruk, dan refund kondisi ekstrem.');
+        return $this->page('pages.admin.force-majeure', 'Force Majeure');
     }
 
     public function customers()
     {
-        return $this->render('Customers', 'Riwayat customer dan histori booking berdasarkan nomor WhatsApp.');
+        return $this->page('pages.admin.customers', 'Customers');
     }
 
     public function settings()
     {
-        return $this->render('Settings', 'Konfigurasi rekening transfer, WhatsApp utama, dan policy operasional.');
+        return $this->page('pages.admin.settings', 'Settings');
     }
 
-    protected function render(string $pageTitle, string $pageSummary, array $extra = [])
+    protected function page(string $view, string $title, array $payload = [])
     {
-        return view('pages.admin.preview', array_merge([
-            'pageTitle' => $pageTitle,
-            'pageSummary' => $pageSummary,
-            'title' => $pageTitle . ' - Etherno Admin',
-        ], $extra));
+        return view($view, array_merge([
+            'title' => $title . ' - Etherno Admin',
+        ], $payload));
     }
 }
