@@ -1,9 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -12,13 +10,7 @@ return new class extends Migration
 	 */
 	public function up(): void
 	{
-		Schema::create('wilayah', function (Blueprint $table): void {
-			$table->string('kode', 13)->primary();
-			$table->string('nama');
-			$table->index('nama', 'wilayah_name_idx');
-		});
-
-		$records = $this->loadWilayahRecords(database_path('migrations/1.1.0/dataset/wilayah.sql'));
+		$records = $this->loadWilayahRecords(database_path('migrations/1.1.3/dataset/wilayah.sql'));
 
 		foreach (array_chunk($records, 1000) as $chunk) {
 			DB::table('wilayah')->insert($chunk);
@@ -30,7 +22,12 @@ return new class extends Migration
 	 */
 	public function down(): void
 	{
-		Schema::dropIfExists('wilayah');
+		$records = $this->loadWilayahRecords(database_path('migrations/1.1.3/dataset/wilayah.sql'));
+		$codes = array_column($records, 'kode');
+
+		foreach (array_chunk($codes, 1000) as $chunk) {
+			DB::table('wilayah')->whereIn('kode', $chunk)->delete();
+		}
 	}
 
 	/**
