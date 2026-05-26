@@ -8,7 +8,7 @@
   <div class="package-grid">
     <article class="package package-soft">
       <p class="package-tag">Paling dipilih</p>
-      <h3>Intim</h3>
+      <h3>Intimate</h3>
       <div class="price">IDR 6.000.000</div>
       <p class="package-copy">Cocok untuk perayaan singkat dan elegan dengan cerita yang fokus.</p>
       <ul class="package-list">

@@ -3,12 +3,12 @@
         <div class="footer-brand">
             <div class="footer-brandline">
                 @php
-                    $icon = public_path('assets/etherno/public/icon_trans_2.png');
+                    $icon = public_path('assets/etherno/public/icon_trans_white_1.png');
                     $fallback = public_path('assets/images/photos/aboutmain.jpg');
                 @endphp
                 @if(file_exists($icon))
                     <div class="footer-logo-wrap">
-                        <img src="{{ asset('assets/etherno/public/icon_trans_2.png') }}" alt="Etherno" class="footer-logo">
+                        <img src="{{ asset('assets/etherno/public/icon_trans_white_1.png') }}" alt="Etherno" class="footer-logo">
                     </div>
                 @elseif(file_exists($fallback))
                     <div class="footer-logo-wrap">
