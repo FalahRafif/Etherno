@@ -7,7 +7,7 @@
 
   <div class="testimonial-grid">
     <article class="testimonial-card testimonial-card-large">
-      <div class="quote-mark">“</div>
+      <div class="quote-mark">&ldquo;</div>
       <p>Mereka bekerja dengan tenang, menangkap momen penting, dan menghasilkan galeri yang terasa editorial, bukan generik.</p>
       <div class="testimonial-meta">
         <strong>A. & B.</strong>
@@ -16,7 +16,7 @@
     </article>
 
     <article class="testimonial-card">
-      <div class="quote-mark">“</div>
+      <div class="quote-mark">&ldquo;</div>
       <p>Arahan mereka tenang dan hasil foto akhirnya memiliki nuansa sinematik lembut yang kami cari.</p>
       <div class="testimonial-meta">
         <strong>C. & D.</strong>
@@ -25,7 +25,7 @@
     </article>
 
     <article class="testimonial-card">
-      <div class="quote-mark">“</div>
+      <div class="quote-mark">&ldquo;</div>
       <p>Profesional dari konsultasi sampai pengiriman, dan albumnya terasa seperti sesuatu yang akan kami simpan selamanya.</p>
       <div class="testimonial-meta">
         <strong>E. & F.</strong>

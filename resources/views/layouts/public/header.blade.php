@@ -13,11 +13,20 @@
                 <span class="brand-text">Etherno</span>
             @endif
         </a>
-        <nav class="nav small-uppercase">
-            <a href="#portfolio">Portofolio</a>
-            <a href="#packages">Paket</a>
-            <a href="#faq">FAQ</a>
-        </nav>
-        <a class="cta" href="#booking" aria-label="Pesan Sekarang">Pesan Sekarang</a>
+
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="public-menu" aria-label="Buka menu navigasi">
+            <span class="menu-toggle-bar" aria-hidden="true"></span>
+            <span class="menu-toggle-bar" aria-hidden="true"></span>
+            <span class="menu-toggle-bar" aria-hidden="true"></span>
+        </button>
+
+        <div class="header-menu" id="public-menu">
+            <nav class="nav small-uppercase" aria-label="Navigasi utama">
+                <a href="#portfolio">Portofolio</a>
+                <a href="#packages">Paket</a>
+                <a href="#faq">FAQ</a>
+            </nav>
+            <a class="cta header-cta" href="#booking" aria-label="Pesan Sekarang">Pesan Sekarang</a>
+        </div>
     </div>
 </header>
