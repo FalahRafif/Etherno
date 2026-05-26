@@ -3,8 +3,19 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\BlankController;
 use App\Http\Controllers\Admin\AdminPreviewController;
+use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Public\BookingSupportController;
 use App\Http\Controllers\Public\LandingPageController;
+
+// Auth routes (guests only)
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+});
+
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+
+// Public routes
 
 Route::get('/', [LandingPageController::class, 'index'])->name('home');
 Route::get('/booking', [LandingPageController::class, 'booking'])->name('booking.page');
@@ -15,7 +26,7 @@ Route::get('/booking/payment/final', [BookingSupportController::class, 'finalPay
 Route::get('/booking/reschedule', [BookingSupportController::class, 'reschedule'])->name('booking.reschedule');
 Route::get('/booking/cancellation-policy', [BookingSupportController::class, 'cancellationPolicy'])->name('booking.cancellation.policy');
 
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::redirect('/', '/admin/dashboard')->name('home');
     Route::get('/dashboard', [AdminPreviewController::class, 'dashboard'])->name('dashboard');
     Route::get('/bookings/requests', [AdminPreviewController::class, 'bookingRequests'])->name('bookings.requests');
