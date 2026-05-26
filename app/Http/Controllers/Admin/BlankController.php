@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 
 class BlankController extends Controller
 {
     /**
-     * Display the blank admin page.
+     * Redirect legacy blank route to admin dashboard preview.
      */
-    public function index()
+    public function index(): RedirectResponse
     {
-        return view('pages.admin.blank');
+        return redirect()->route('admin.dashboard');
     }
 }

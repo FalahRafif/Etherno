@@ -8,7 +8,7 @@
   <div class="faq-grid">
     <details class="faq-card" open>
       <summary>Berapa lama foto akan kami terima?</summary>
-      <p>Hasil akhir biasanya memerlukan 4–6 minggu, tergantung paket dan jumlah edit yang dipilih.</p>
+      <p>Hasil akhir biasanya memerlukan 4-6 minggu, tergantung paket dan jumlah edit yang dipilih.</p>
     </details>
 
     <details class="faq-card">
