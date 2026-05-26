@@ -49,8 +49,6 @@
     const eveningCard = document.querySelector('[data-slot-card="evening"]');
     const morningStatus = document.querySelector('[data-slot-status="morning"]');
     const eveningStatus = document.querySelector('[data-slot-status="evening"]');
-    const previewForm = document.getElementById('booking_form_preview');
-
     if (!dateCheckInput || !dateFormInput || !summary || !morningCard || !eveningCard || !morningStatus || !eveningStatus) {
       return;
     }
@@ -126,12 +124,6 @@
       dateCheckInput.value = dateFormInput.value;
       renderAvailability(dateFormInput.value);
     });
-
-    if (previewForm) {
-      previewForm.addEventListener('submit', function (event) {
-        event.preventDefault();
-      });
-    }
 
     renderAvailability(dateCheckInput.value || dateFormInput.value);
   });

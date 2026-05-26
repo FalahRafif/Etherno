@@ -280,6 +280,7 @@ body{
   gap:22px;
   align-items:start;
 }
+.booking-grid-single{grid-template-columns:1fr}
 .booking-panel{
   border:1px solid rgba(15,15,15,.08);
   border-radius:18px;
@@ -419,6 +420,62 @@ body{
   color:rgba(15,15,15,.56);
   font-size:12px;
 }
+.booking-disclaimer a{color:#7a6025}
+.booking-disclaimer a:hover{color:#5d4414}
+
+.booking-support-card{max-width:760px;margin:0 auto}
+.booking-support-title{margin-top:6px}
+.booking-support-state{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:14px 0 4px;
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid rgba(20,120,70,.28);
+  background:rgba(229,247,237,.7);
+  color:#1f6a44;
+}
+.booking-support-state i{font-size:18px}
+.booking-support-actions{
+  margin-top:16px;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.cta-outline{
+  background:#fff;
+  color:#634b18;
+  border:1px solid rgba(181,143,66,.46);
+  box-shadow:none;
+}
+.cta-outline:hover{
+  color:#503b11;
+  border-color:rgba(181,143,66,.72);
+  box-shadow:0 8px 20px rgba(11,10,9,.08);
+}
+
+.booking-support-links{margin-top:20px}
+.booking-support-link-list{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin-top:14px;
+}
+.booking-support-link-list a{
+  display:block;
+  text-decoration:none;
+  border:1px solid rgba(15,15,15,.08);
+  border-radius:10px;
+  padding:11px 12px;
+  color:#2a2a2a;
+  background:#fff;
+  font-size:14px;
+}
+.booking-support-link-list a:hover{
+  border-color:rgba(181,143,66,.45);
+  color:#5f4715;
+}
 
 .public-footer{margin-top:56px;padding:44px 0 24px;background:#11110f;color:#f6f1e8}
 .footer-grid{
@@ -529,6 +586,7 @@ body{
   .booking-grid{grid-template-columns:1fr}
   .booking-panel{padding:20px}
   .booking-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .booking-support-link-list{grid-template-columns:repeat(2,minmax(0,1fr))}
 
   .footer-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
   .footer-brand{grid-column:1/-1}
@@ -561,6 +619,8 @@ body{
   .booking-form-grid{grid-template-columns:1fr}
   .slot-list{grid-template-columns:1fr}
   .booking-panel h3{font-size:24px}
+  .booking-support-actions{grid-template-columns:1fr}
+  .booking-support-link-list{grid-template-columns:1fr}
 
   .footer-brandline{grid-template-columns:1fr;justify-items:start}
   .footer-logo-wrap{padding:10px 14px}
