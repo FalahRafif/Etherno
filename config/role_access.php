@@ -133,6 +133,12 @@ return [
             'section' => 'Management Data',
             'items' => [
                 [
+                    'label' => 'Management Paket',
+                    'route_name' => 'packages',
+                    'active' => ['packages', 'packages.create', 'packages.edit'],
+                    'roles' => ['Admin'],
+                ],
+                [
                     'label' => 'Aturan Harga Lokasi',
                     'route_name' => 'location.rules',
                     'active' => ['location.rules', 'location.rules.create', 'location.rules.edit'],

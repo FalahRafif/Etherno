@@ -3,6 +3,7 @@
 use App\Http\Controllers\Web\Admin\AdminPreviewController;
 use App\Http\Controllers\Web\Admin\BlankController;
 use App\Http\Controllers\Web\Admin\LocationPricingRuleController;
+use App\Http\Controllers\Web\Admin\PackageController;
 use App\Http\Controllers\Web\Admin\ProfileController;
 use App\Http\Controllers\Web\Admin\UserManagementController;
 use Illuminate\Support\Facades\Route;
@@ -17,7 +18,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->grou
     Route::get('/payments/dp', [AdminPreviewController::class, 'dpVerification'])->name('payments.dp');
     Route::get('/payments/final', [AdminPreviewController::class, 'finalPayment'])->name('payments.final');
     Route::get('/pricing/reviews', [AdminPreviewController::class, 'pricingReviews'])->name('pricing.reviews');
-    Route::get('/packages', [AdminPreviewController::class, 'packages'])->name('packages');
+    Route::get('/packages', [PackageController::class, 'index'])->name('packages');
+    Route::get('/packages/create', [PackageController::class, 'create'])->name('packages.create');
+    Route::post('/packages', [PackageController::class, 'store'])->name('packages.store');
+    Route::get('/packages/{package}/edit', [PackageController::class, 'edit'])->name('packages.edit');
+    Route::put('/packages/{package}', [PackageController::class, 'update'])->name('packages.update');
+    Route::delete('/packages/{package}', [PackageController::class, 'destroy'])->name('packages.destroy');
     Route::get('/location-rules', [LocationPricingRuleController::class, 'index'])->name('location.rules');
     Route::get('/location-rules/options', [LocationPricingRuleController::class, 'locationOptions'])->name('location.rules.options');
     Route::get('/location-rules/create', [LocationPricingRuleController::class, 'create'])->name('location.rules.create');
