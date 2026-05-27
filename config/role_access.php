@@ -130,18 +130,29 @@ return [
             ],
         ],
         [
+            'section' => 'Aturan',
+            'items' => [
+                [
+                    'label' => 'Aturan Harga Lokasi',
+                    'route_name' => 'location.rules',
+                    'active' => ['location.rules', 'location.rules.create', 'location.rules.edit'],
+                    'roles' => ['Admin'],
+                ],
+                [
+                    'label' => 'Aturan Waktu Pembayaran',
+                    'route_name' => 'payment-date-rules',
+                    'active' => ['payment-date-rules', 'payment-date-rules.create', 'payment-date-rules.edit'],
+                    'roles' => ['Admin'],
+                ],
+            ],
+        ],
+        [
             'section' => 'Management Data',
             'items' => [
                 [
                     'label' => 'Management Paket',
                     'route_name' => 'packages',
                     'active' => ['packages', 'packages.create', 'packages.edit'],
-                    'roles' => ['Admin'],
-                ],
-                [
-                    'label' => 'Aturan Harga Lokasi',
-                    'route_name' => 'location.rules',
-                    'active' => ['location.rules', 'location.rules.create', 'location.rules.edit'],
                     'roles' => ['Admin'],
                 ],
                 [

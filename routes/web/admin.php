@@ -4,6 +4,7 @@ use App\Http\Controllers\Web\Admin\AdminPreviewController;
 use App\Http\Controllers\Web\Admin\BlankController;
 use App\Http\Controllers\Web\Admin\LocationPricingRuleController;
 use App\Http\Controllers\Web\Admin\PackageController;
+use App\Http\Controllers\Web\Admin\PaymentDateRuleController;
 use App\Http\Controllers\Web\Admin\ProfileController;
 use App\Http\Controllers\Web\Admin\UserManagementController;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->grou
     Route::get('/location-rules', [LocationPricingRuleController::class, 'index'])->name('location.rules');
     Route::get('/location-rules/create', [LocationPricingRuleController::class, 'create'])->name('location.rules.create');
     Route::get('/location-rules/{locationPricingRule}/edit', [LocationPricingRuleController::class, 'edit'])->name('location.rules.edit');
+    Route::get('/payment-date-rules', [PaymentDateRuleController::class, 'index'])->name('payment-date-rules');
+    Route::get('/payment-date-rules/create', [PaymentDateRuleController::class, 'create'])->name('payment-date-rules.create');
+    Route::get('/payment-date-rules/{setting}/edit', [PaymentDateRuleController::class, 'edit'])->name('payment-date-rules.edit');
     Route::get('/reschedules', [AdminPreviewController::class, 'reschedules'])->name('reschedules');
     Route::get('/cancellations', [AdminPreviewController::class, 'cancellations'])->name('cancellations');
     Route::get('/force-majeure', [AdminPreviewController::class, 'forceMajeure'])->name('force.majeure');

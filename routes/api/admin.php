@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Admin\LocationPricingRuleController;
 use App\Http\Controllers\Api\Admin\PackageController;
+use App\Http\Controllers\Api\Admin\PaymentDateRuleController;
 use App\Http\Controllers\Api\Admin\ProfileController;
 use App\Http\Controllers\Api\Admin\UserManagementController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,10 @@ Route::prefix('admin')
         Route::put('/location-rules/{locationPricingRule}', [LocationPricingRuleController::class, 'update'])->name('location-rules.update');
         Route::delete('/location-rules/{locationPricingRule}', [LocationPricingRuleController::class, 'destroy'])->name('location-rules.destroy');
         Route::get('/location-rules/options', [LocationPricingRuleController::class, 'locationOptions'])->name('location-rules.options');
+
+        Route::post('/payment-date-rules', [PaymentDateRuleController::class, 'store'])->name('payment-date-rules.store');
+        Route::put('/payment-date-rules/{setting}', [PaymentDateRuleController::class, 'update'])->name('payment-date-rules.update');
+        Route::delete('/payment-date-rules/{setting}', [PaymentDateRuleController::class, 'destroy'])->name('payment-date-rules.destroy');
     });
 
 Route::prefix('admin')
