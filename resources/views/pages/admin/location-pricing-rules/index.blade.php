@@ -164,7 +164,7 @@
                             <td class="text-end">
                                 <div class="btn-list justify-content-end">
                                     <a href="{{ route('admin.location.rules.edit', $rule) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                                    <form method="POST" action="{{ route('admin.location.rules.destroy', $rule) }}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus aturan ini?');">
+                                    <form method="POST" action="{{ route('api.admin.location-rules.destroy', $rule) }}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus aturan ini?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-outline-danger">Hapus</button>

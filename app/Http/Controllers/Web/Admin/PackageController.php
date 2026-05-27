@@ -3,11 +3,8 @@
 namespace App\Http\Controllers\Web\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\Package\StorePackageRequest;
-use App\Http\Requests\Admin\Package\UpdatePackageRequest;
 use App\Models\Package;
 use App\Services\Admin\PackageService;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use RuntimeException;
@@ -37,34 +34,9 @@ class PackageController extends Controller
         ));
     }
 
-    public function store(StorePackageRequest $request): RedirectResponse
+    public function edit(Package $package): View
     {
-        try {
-            $payload = $request->payload();
-            if ($request->hasFile('thumbnail')) {
-                $payload['thumbnail'] = $request->file('thumbnail');
-            }
-            $this->packageService->createPackage($payload);
-        } catch (RuntimeException $exception) {
-            return back()
-                ->withInput()
-                ->withErrors(['general' => $exception->getMessage()]);
-        }
-
-        return redirect()
-            ->route('admin.packages')
-            ->with('status', 'Paket berhasil ditambahkan.');
-    }
-
-    public function edit(Package $package): View|RedirectResponse
-    {
-        try {
-            $managedPackage = $this->packageService->resolveEditablePackage($package);
-        } catch (RuntimeException $exception) {
-            return redirect()
-                ->route('admin.packages')
-                ->withErrors(['general' => $exception->getMessage()]);
-        }
+        $managedPackage = $this->packageService->resolveEditablePackage($package);
 
         return view('pages.admin.management-package.edit', array_merge(
             $this->packageService->getFormPayload(),
@@ -73,37 +45,5 @@ class PackageController extends Controller
                 'managedPackage' => $managedPackage,
             ]
         ));
-    }
-
-    public function update(UpdatePackageRequest $request, Package $package): RedirectResponse
-    {
-        try {
-            $payload = $request->payload();
-            if ($request->hasFile('thumbnail')) {
-                $payload['thumbnail'] = $request->file('thumbnail');
-            }
-            $this->packageService->updatePackage($package, $payload);
-        } catch (RuntimeException $exception) {
-            return back()
-                ->withInput()
-                ->withErrors(['general' => $exception->getMessage()]);
-        }
-
-        return redirect()
-            ->route('admin.packages')
-            ->with('status', 'Paket berhasil diperbarui.');
-    }
-
-    public function destroy(Package $package): RedirectResponse
-    {
-        try {
-            $this->packageService->deletePackage($package);
-        } catch (RuntimeException $exception) {
-            return back()->withErrors(['general' => $exception->getMessage()]);
-        }
-
-        return redirect()
-            ->route('admin.packages')
-            ->with('status', 'Paket berhasil dihapus.');
     }
 }

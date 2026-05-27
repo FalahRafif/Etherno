@@ -126,7 +126,7 @@
                             <td class="text-end">
                                 <div class="btn-list justify-content-end">
                                     <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                                    <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus akun ini?');">
+                                    <form method="POST" action="{{ route('api.admin.users.destroy', $user) }}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus akun ini?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-outline-danger">Hapus</button>

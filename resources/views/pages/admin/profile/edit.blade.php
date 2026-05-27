@@ -23,7 +23,7 @@
     <div class="alert alert-danger mb-3" role="alert">{{ $errors->first('general') }}</div>
 @endif
 
-<form method="POST" action="{{ panel_route('admin.profile.update') }}" enctype="multipart/form-data" class="profile-form-wrap">
+<form method="POST" action="{{ route('api.admin.profile.update') }}" enctype="multipart/form-data" class="profile-form-wrap">
     @csrf
     @method('PUT')
 

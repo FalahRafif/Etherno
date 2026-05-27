@@ -18,7 +18,7 @@
 
 @include('pages.admin.location-pricing-rules._form', [
     'formTitle' => 'Form Tambah Aturan',
-    'formAction' => route('admin.location.rules.store'),
+    'formAction' => route('api.admin.location-rules.store'),
     'submitLabel' => 'Simpan Aturan',
     'locationLevels' => $locationLevels,
     'locationPath' => $locationPath ?? null,

@@ -143,7 +143,7 @@
                             <td class="text-end">
                                 <div class="btn-list justify-content-end">
                                     <a href="{{ route('admin.packages.edit', $package) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                                    <form method="POST" action="{{ route('admin.packages.destroy', $package) }}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus paket ini?');">
+                                    <form method="POST" action="{{ route('api.admin.packages.destroy', $package) }}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus paket ini?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-outline-danger">Hapus</button>

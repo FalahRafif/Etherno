@@ -17,7 +17,7 @@
 
 @include('pages.admin.management-package._form', [
     'formTitle' => 'Form Tambah Paket',
-    'formAction' => route('admin.packages.store'),
+    'formAction' => route('api.admin.packages.store'),
     'submitLabel' => 'Simpan Paket',
     'statusOptions' => $statusOptions,
     'packageTypeOptions' => $packageTypeOptions,

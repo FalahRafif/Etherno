@@ -18,7 +18,7 @@
 
 @include('pages.admin.location-pricing-rules._form', [
     'formTitle' => 'Form Edit Aturan',
-    'formAction' => route('admin.location.rules.update', $managedRule),
+    'formAction' => route('api.admin.location-rules.update', $managedRule),
     'submitLabel' => 'Simpan Perubahan',
     'managedRule' => $managedRule,
     'locationLevels' => $locationLevels,

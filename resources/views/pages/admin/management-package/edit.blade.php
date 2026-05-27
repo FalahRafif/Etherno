@@ -17,7 +17,7 @@
 
 @include('pages.admin.management-package._form', [
     'formTitle' => 'Form Edit Paket',
-    'formAction' => route('admin.packages.update', $managedPackage),
+    'formAction' => route('api.admin.packages.update', $managedPackage),
     'submitLabel' => 'Simpan Perubahan',
     'managedPackage' => $managedPackage,
     'statusOptions' => $statusOptions,

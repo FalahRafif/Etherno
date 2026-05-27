@@ -3,21 +3,15 @@
 namespace App\Http\Controllers\Web\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\UserManagement\StoreUserRequest;
-use App\Http\Requests\Admin\UserManagement\UpdateUserRequest;
 use App\Models\User;
-use App\Services\AuthService;
 use App\Services\Admin\UserManagementService;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
-use RuntimeException;
 
 class UserManagementController extends Controller
 {
     public function __construct(
-        private UserManagementService $userManagementService,
-        private AuthService $authService
+        private UserManagementService $userManagementService
     ) {
     }
 
@@ -40,21 +34,6 @@ class UserManagementController extends Controller
         ]);
     }
 
-    public function store(StoreUserRequest $request): RedirectResponse
-    {
-        try {
-            $this->userManagementService->createUser($request->payload());
-        } catch (RuntimeException $exception) {
-            return back()
-                ->withInput()
-                ->withErrors(['general' => $exception->getMessage()]);
-        }
-
-        return redirect()
-            ->route('admin.users')
-            ->with('status', 'Akun internal berhasil ditambahkan.');
-    }
-
     public function edit(User $user): View
     {
         $managedUser = $this->userManagementService->resolveManageableUser($user);
@@ -65,37 +44,5 @@ class UserManagementController extends Controller
             'managedUser' => $managedUser,
             'profileImageUrl' => $this->userManagementService->resolveProfileImageUrl($managedUser),
         ]);
-    }
-
-    public function update(UpdateUserRequest $request, User $user): RedirectResponse
-    {
-        try {
-            $updatedUser = $this->userManagementService->updateUser($user, $request->payload());
-
-            if (auth()->id() === (int) $updatedUser->getKey()) {
-                $this->authService->syncInternalSession($request, $updatedUser);
-            }
-        } catch (RuntimeException $exception) {
-            return back()
-                ->withInput()
-                ->withErrors(['general' => $exception->getMessage()]);
-        }
-
-        return redirect()
-            ->route('admin.users')
-            ->with('status', 'Data akun berhasil diperbarui.');
-    }
-
-    public function destroy(User $user): RedirectResponse
-    {
-        try {
-            $this->userManagementService->deleteUser($user);
-        } catch (RuntimeException $exception) {
-            return back()->withErrors(['general' => $exception->getMessage()]);
-        }
-
-        return redirect()
-            ->route('admin.users')
-            ->with('status', 'Akun berhasil dihapus.');
     }
 }

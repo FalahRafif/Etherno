@@ -17,7 +17,7 @@
 
 @include('pages.admin.management-user._form', [
     'formTitle' => 'Form Tambah Akun',
-    'formAction' => route('admin.users.store'),
+    'formAction' => route('api.admin.users.store'),
     'submitLabel' => 'Simpan Akun',
     'profileImageUrl' => null,
 ])

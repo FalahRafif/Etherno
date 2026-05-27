@@ -15,7 +15,7 @@
     <div class="alert alert-danger mb-3" role="alert">{{ $errors->first('general') }}</div>
 @endif
 
-<form method="POST" action="{{ $formAction }}" class="lpr-form-card" data-location-options-url="{{ route('admin.location.rules.options') }}">
+<form method="POST" action="{{ $formAction }}" class="lpr-form-card" data-location-options-url="{{ route('api.admin.location-rules.options') }}">
     @csrf
     @if ($isEdit)
         @method('PUT')

@@ -17,7 +17,7 @@
 
 @include('pages.admin.management-user._form', [
     'formTitle' => 'Form Edit Akun',
-    'formAction' => route('admin.users.update', $managedUser),
+    'formAction' => route('api.admin.users.update', $managedUser),
     'submitLabel' => 'Simpan Perubahan',
     'managedUser' => $managedUser,
     'profileImageUrl' => $profileImageUrl,
