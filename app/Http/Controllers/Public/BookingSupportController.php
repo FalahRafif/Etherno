@@ -3,48 +3,42 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
+use App\Services\Portal\GuestPageService;
+use Illuminate\View\View;
 
 class BookingSupportController extends Controller
 {
-    public function success()
+    public function __construct(private GuestPageService $guestPageService)
     {
-        return view('pages.public.booking-page.support.success', [
-            'title' => 'Request Booking Terkirim - Etherno',
-        ]);
     }
 
-    public function status()
+    public function success(): View
     {
-        return view('pages.public.booking-page.support.status', [
-            'title' => 'Cek Status Booking - Etherno',
-        ]);
+        return $this->guestPageService->render('booking.success');
     }
 
-    public function dpPayment()
+    public function status(): View
     {
-        return view('pages.public.booking-page.support.payment-dp', [
-            'title' => 'Konfirmasi DP - Etherno',
-        ]);
+        return $this->guestPageService->render('booking.status');
     }
 
-    public function finalPayment()
+    public function dpPayment(): View
     {
-        return view('pages.public.booking-page.support.payment-final', [
-            'title' => 'Konfirmasi Pelunasan - Etherno',
-        ]);
+        return $this->guestPageService->render('booking.payment.dp');
     }
 
-    public function reschedule()
+    public function finalPayment(): View
     {
-        return view('pages.public.booking-page.support.reschedule', [
-            'title' => 'Request Reschedule - Etherno',
-        ]);
+        return $this->guestPageService->render('booking.payment.final');
     }
 
-    public function cancellationPolicy()
+    public function reschedule(): View
     {
-        return view('pages.public.booking-page.support.cancellation-policy', [
-            'title' => 'Kebijakan Pembatalan - Etherno',
-        ]);
+        return $this->guestPageService->render('booking.reschedule');
+    }
+
+    public function cancellationPolicy(): View
+    {
+        return $this->guestPageService->render('booking.cancellation.policy');
     }
 }

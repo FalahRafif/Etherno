@@ -5,9 +5,9 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Booking Requests', 'url' => route('admin.bookings.requests'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Verifikasi DP', 'url' => route('admin.payments.dp'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Calendar & Slots', 'url' => route('admin.calendar'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Booking Requests', 'url' => panel_route('admin.bookings.requests'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Verifikasi DP', 'url' => panel_route('admin.payments.dp'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Calendar & Slots', 'url' => panel_route('admin.calendar'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
     $alerts = [
@@ -32,7 +32,7 @@
             '2026-07-12',
             ['type' => 'badge', 'tone' => 'warning', 'label' => 'under_review'],
             ['type' => 'badge', 'tone' => 'light', 'label' => 'dp_waiting_payment'],
-            ['type' => 'link', 'label' => 'Review', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-021'])],
+            ['type' => 'link', 'label' => 'Review', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-021'])],
         ],
         [
             'ETH-2026-014',
@@ -40,7 +40,7 @@
             '2026-06-25',
             ['type' => 'badge', 'tone' => 'success', 'label' => 'active'],
             ['type' => 'badge', 'tone' => 'info', 'label' => 'dp_verified'],
-            ['type' => 'link', 'label' => 'Set Final Price', 'url' => route('admin.pricing.reviews')],
+            ['type' => 'link', 'label' => 'Set Final Price', 'url' => panel_route('admin.pricing.reviews')],
         ],
         [
             'ETH-2026-018',
@@ -48,7 +48,7 @@
             '2026-06-19',
             ['type' => 'badge', 'tone' => 'secondary', 'label' => 'final_payment_pending'],
             ['type' => 'badge', 'tone' => 'danger', 'label' => 'final_pending_verification'],
-            ['type' => 'link', 'label' => 'Verifikasi Pelunasan', 'url' => route('admin.payments.final')],
+            ['type' => 'link', 'label' => 'Verifikasi Pelunasan', 'url' => panel_route('admin.payments.final')],
         ],
     ];
 
@@ -69,7 +69,7 @@
                 'Semua koordinasi lanjutan tetap dipusatkan melalui WhatsApp.',
             ],
             'actions' => [
-                ['label' => 'Buka DP Queue', 'url' => route('admin.payments.dp'), 'class' => 'btn btn-primary btn-sm'],
+                ['label' => 'Buka DP Queue', 'url' => panel_route('admin.payments.dp'), 'class' => 'btn btn-primary btn-sm'],
             ],
         ],
     ];
@@ -98,3 +98,4 @@
     </div>
 </div>
 @endsection
+

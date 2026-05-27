@@ -3,90 +3,101 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\Portal\InternalPageService;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class AdminPreviewController extends Controller
 {
-    public function dashboard()
+    public function __construct(private InternalPageService $internalPageService)
     {
-        return $this->page('pages.admin.dashboard', 'Dashboard');
     }
 
-    public function bookingRequests()
+    public function dashboard(Request $request): View
     {
-        return $this->page('pages.admin.bookings.requests', 'Booking Requests');
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'dashboard');
     }
 
-    public function bookingsActive()
+    public function bookingRequests(Request $request): View
     {
-        return $this->page('pages.admin.bookings.active', 'Bookings Active');
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'bookings.requests');
     }
 
-    public function bookingDetail(string $booking)
+    public function bookingsActive(Request $request): View
     {
-        return $this->page('pages.admin.bookings.detail', 'Booking Detail', [
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'bookings.active');
+    }
+
+    public function bookingDetail(Request $request, string $booking): View
+    {
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'bookings.detail', [
             'bookingCode' => strtoupper($booking),
         ]);
     }
 
-    public function calendar()
+    public function calendar(Request $request): View
     {
-        return $this->page('pages.admin.calendar', 'Calendar & Slots');
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'calendar');
     }
 
-    public function dpVerification()
+    public function dpVerification(Request $request): View
     {
-        return $this->page('pages.admin.payments.dp', 'DP Verification');
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'payments.dp');
     }
 
-    public function finalPayment()
+    public function finalPayment(Request $request): View
     {
-        return $this->page('pages.admin.payments.final', 'Final Payment');
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'payments.final');
     }
 
-    public function pricingReviews()
+    public function pricingReviews(Request $request): View
     {
-        return $this->page('pages.admin.pricing.reviews', 'Pricing Review');
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'pricing.reviews');
     }
 
-    public function packages()
+    public function packages(Request $request): View
     {
-        return $this->page('pages.admin.master.packages', 'Packages');
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'packages');
     }
 
-    public function locationRules()
+    public function locationRules(Request $request): View
     {
-        return $this->page('pages.admin.master.location-rules', 'Location Rules');
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'location.rules');
     }
 
-    public function reschedules()
+    public function reschedules(Request $request): View
     {
-        return $this->page('pages.admin.reschedules', 'Reschedule Requests');
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'reschedules');
     }
 
-    public function cancellations()
+    public function cancellations(Request $request): View
     {
-        return $this->page('pages.admin.cancellations', 'Cancellations');
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'cancellations');
     }
 
-    public function forceMajeure()
+    public function forceMajeure(Request $request): View
     {
-        return $this->page('pages.admin.force-majeure', 'Force Majeure');
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'force.majeure');
     }
 
-    public function customers()
+    public function customers(Request $request): View
     {
-        return $this->page('pages.admin.customers', 'Customers');
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'customers');
     }
 
-    public function settings()
+    public function settings(Request $request): View
     {
-        return $this->page('pages.admin.settings', 'Settings');
+        return $this->internalPageService->render($this->resolvePanelPrefix($request), 'settings');
     }
 
-    protected function page(string $view, string $title, array $payload = [])
+    private function resolvePanelPrefix(Request $request): string
     {
-        return view($view, array_merge([
-            'title' => $title . ' - Etherno Admin',
-        ], $payload));
+        $routeName = $request->route()?->getName();
+
+        if (is_string($routeName) && str_contains($routeName, '.')) {
+            return explode('.', $routeName)[0];
+        }
+
+        return 'admin';
     }
 }

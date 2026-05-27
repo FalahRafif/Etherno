@@ -66,4 +66,26 @@ class User extends Authenticatable
     {
         return $this->hasMany(BookingHistory::class, 'operator_id');
     }
+
+    public function roleName(): ?string
+    {
+        if ($this->relationLoaded('role')) {
+            return $this->role?->name;
+        }
+
+        return $this->role()->value('name');
+    }
+
+    public function hasRole(string|array $roles): bool
+    {
+        $roleName = $this->roleName();
+
+        if ($roleName === null) {
+            return false;
+        }
+
+        $acceptedRoles = is_array($roles) ? $roles : [$roles];
+
+        return in_array($roleName, $acceptedRoles, true);
+    }
 }

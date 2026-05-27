@@ -5,15 +5,15 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Booking Requests', 'url' => route('admin.bookings.requests'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Cancellations', 'url' => route('admin.cancellations'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Booking Requests', 'url' => panel_route('admin.bookings.requests'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Cancellations', 'url' => panel_route('admin.cancellations'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
     $columns = ['Nama', 'WhatsApp', 'Total Booking', 'Booking Terakhir', 'Status Terakhir', 'Aksi'];
     $rows = [
-        ['Rani Putri', '08xxxxxxxx11', '2', '2026-06-25', ['type' => 'badge', 'tone' => 'success', 'label' => 'active'], ['type' => 'link', 'label' => 'Lihat Booking', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-014'])]],
-        ['Ari Susanto', '08xxxxxxxx22', '1', '2026-07-16', ['type' => 'badge', 'tone' => 'warning', 'label' => 'under_review'], ['type' => 'link', 'label' => 'Lihat Booking', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-023'])]],
-        ['Nina Ayu', '08xxxxxxxx33', '1', '2026-06-28', ['type' => 'badge', 'tone' => 'danger', 'label' => 'cancelled'], ['type' => 'link', 'label' => 'Riwayat', 'url' => route('admin.cancellations')]],
+        ['Rani Putri', '08xxxxxxxx11', '2', '2026-06-25', ['type' => 'badge', 'tone' => 'success', 'label' => 'active'], ['type' => 'link', 'label' => 'Lihat Booking', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-014'])]],
+        ['Ari Susanto', '08xxxxxxxx22', '1', '2026-07-16', ['type' => 'badge', 'tone' => 'warning', 'label' => 'under_review'], ['type' => 'link', 'label' => 'Lihat Booking', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-023'])]],
+        ['Nina Ayu', '08xxxxxxxx33', '1', '2026-06-28', ['type' => 'badge', 'tone' => 'danger', 'label' => 'cancelled'], ['type' => 'link', 'label' => 'Riwayat', 'url' => panel_route('admin.cancellations')]],
     ];
 
     $sideCards = [
@@ -48,3 +48,4 @@
     </div>
 </div>
 @endsection
+
