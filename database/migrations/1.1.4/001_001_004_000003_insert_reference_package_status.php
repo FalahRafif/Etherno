@@ -63,7 +63,7 @@ return new class extends Migration
 	{
 		DB::table('references')
 			->where('group_id', 'package_status')
-			->whereIn('code', ['ACTIVE', 'INACTIVE', 'DRAFT'])
+			->whereIn('code', ['PS_ACTIVE', 'PS_INACTIVE', 'PS_DRAFT'])
 			->delete();
 	}
 };

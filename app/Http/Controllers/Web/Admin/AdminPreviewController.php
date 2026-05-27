@@ -59,11 +59,6 @@ class AdminPreviewController extends Controller
         return $this->internalPageService->render($this->resolvePanelPrefix(), 'packages');
     }
 
-    public function locationRules(): View
-    {
-        return $this->internalPageService->render($this->resolvePanelPrefix(), 'location.rules');
-    }
-
     public function reschedules(): View
     {
         return $this->internalPageService->render($this->resolvePanelPrefix(), 'reschedules');

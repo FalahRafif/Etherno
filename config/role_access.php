@@ -130,36 +130,47 @@ return [
             ],
         ],
         [
-            'section' => 'Master Data',
+            'section' => 'Aturan',
             'items' => [
                 [
-                    'label' => 'Packages',
-                    'route_name' => 'packages',
-                    'active' => ['packages'],
-                    'roles' => ['Admin'],
-                ],
-                [
-                    'label' => 'Location Rules',
+                    'label' => 'Aturan Harga Lokasi',
                     'route_name' => 'location.rules',
-                    'active' => ['location.rules'],
+                    'active' => ['location.rules', 'location.rules.create', 'location.rules.edit'],
                     'roles' => ['Admin'],
                 ],
                 [
-                    'label' => 'Customers',
-                    'route_name' => 'customers',
-                    'active' => ['customers'],
-                    'roles' => ['Admin', 'Petugas'],
-                ],
-                [
-                    'label' => 'Settings',
-                    'route_name' => 'settings',
-                    'active' => ['settings'],
+                    'label' => 'Aturan Waktu Pembayaran',
+                    'route_name' => 'payment-date-rules',
+                    'active' => ['payment-date-rules', 'payment-date-rules.create', 'payment-date-rules.edit'],
                     'roles' => ['Admin'],
                 ],
                 [
-                    'label' => 'Blank (Dev)',
-                    'route_name' => 'blank',
-                    'active' => ['blank'],
+                    'label' => 'Aturan Persen DP',
+                    'route_name' => 'dp-percentage-rules',
+                    'active' => ['dp-percentage-rules', 'dp-percentage-rules.create', 'dp-percentage-rules.edit'],
+                    'roles' => ['Admin'],
+                ],
+                [
+                    'label' => 'Aturan Waktu Paket',
+                    'route_name' => 'package-date-rules',
+                    'active' => ['package-date-rules', 'package-date-rules.create', 'package-date-rules.edit'],
+                    'roles' => ['Admin'],
+                ],
+            ],
+        ],
+        [
+            'section' => 'Management Data',
+            'items' => [
+                [
+                    'label' => 'Management Paket',
+                    'route_name' => 'packages',
+                    'active' => ['packages', 'packages.create', 'packages.edit'],
+                    'roles' => ['Admin'],
+                ],
+                [
+                    'label' => 'Management User/Akun',
+                    'route_name' => 'users',
+                    'active' => ['users', 'users.create', 'users.edit'],
                     'roles' => ['Admin'],
                 ],
             ],

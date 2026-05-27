@@ -37,7 +37,7 @@
         </div>
     </div>
     <div class="container footer-bottom">
-        <span>&copy; {{ date('Y') }} Etherno. Seluruh hak dilindungi.</span>
+        <span>&copy; {{ date('Y') }} Etherno. Crafted with ❤️ by mahasiswa Bina Sarana Informatika. Seluruh hak dilindungi.</span>
         <span>Dokumentasi pernikahan yang elegan.</span>
     </div>
 </footer>
