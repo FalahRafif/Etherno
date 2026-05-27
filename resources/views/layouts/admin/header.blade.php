@@ -23,6 +23,10 @@
     $displayName = trim((string) ($sessionUser['name'] ?? $authUser?->name ?? 'Internal User'));
     $displayRole = trim((string) ($sessionUser['role'] ?? (($authUser instanceof \App\Models\User) ? $authUser->roleName() : 'Internal')));
     $displayEmail = trim((string) ($sessionUser['email'] ?? $authUser?->email ?? ''));
+    $displayProfileImageUrl = trim((string) ($sessionUser['profile_image_url'] ?? ''));
+    if ($displayProfileImageUrl === '') {
+        $displayProfileImageUrl = asset('assets/images/faces/2.jpg');
+    }
 @endphp
 
 <!-- app-header -->
@@ -574,7 +578,13 @@
                         <a href="#" class="header-link dropdown-toggle" id="mainHeaderProfile" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                             <div class="d-flex align-items-center">
                                 <div class="me-sm-2 me-0">
-                                    <img src="{{ asset('assets/images/faces/2.jpg') }}" alt="img" width="32" height="32" class="rounded-circle">
+                                    <img
+                                        src="{{ $displayProfileImageUrl }}"
+                                        alt="img"
+                                        width="32"
+                                        height="32"
+                                        class="rounded-circle"
+                                        onerror="this.onerror=null;this.src='{{ asset('assets/images/faces/2.jpg') }}';">
                                 </div>
                                 <div class="d-xl-block d-none">
                                     <p class="fw-semibold mb-0 lh-1">{{ $displayName !== '' ? $displayName : 'Internal User' }}</p>

@@ -35,7 +35,12 @@
             <div class="row g-3">
                 <div class="col-12 col-lg-4">
                     <div class="profile-image-wrap">
-                        <img src="{{ $profileImageUrl ?: asset('assets/images/faces/2.jpg') }}" alt="Profile Image" id="profile-image-preview" class="profile-image-preview">
+                        <img
+                            src="{{ $profileImageUrl ?: asset('assets/images/faces/2.jpg') }}"
+                            alt="Profile Image"
+                            id="profile-image-preview"
+                            class="profile-image-preview"
+                            onerror="this.onerror=null;this.src='{{ asset('assets/images/faces/2.jpg') }}';">
                         <label for="profile_image" class="form-label mt-3">Foto Profile (opsional)</label>
                         <input type="file" class="form-control @error('profile_image') is-invalid @enderror" id="profile_image" name="profile_image" accept=".jpg,.jpeg,.png,.webp">
                         @error('profile_image')

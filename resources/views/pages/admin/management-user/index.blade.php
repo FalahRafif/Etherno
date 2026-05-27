@@ -100,15 +100,7 @@
                             $badgeClass = $roleName === 'Admin'
                                 ? 'bg-success-transparent text-success'
                                 : 'bg-info-transparent text-info';
-                            $profileUrl = '';
-                            $profilePath = trim((string) ($user->profileImageAttachment?->path ?? ''));
-                            if ($profilePath !== '') {
-                                $profileUrl = str_starts_with($profilePath, 'http://') || str_starts_with($profilePath, 'https://')
-                                    ? $profilePath
-                                    : (str_starts_with($profilePath, 'storage/')
-                                        ? asset($profilePath)
-                                        : asset('storage/' . ltrim($profilePath, '/')));
-                            }
+                            $profileUrl = trim((string) ($user->profile_image_url ?? ''));
                             if ($profileUrl === '') {
                                 $profileUrl = asset('assets/images/faces/2.jpg');
                             }
@@ -116,7 +108,11 @@
                         <tr>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
-                                    <img src="{{ $profileUrl }}" alt="{{ $user->name }}" class="um-avatar">
+                                    <img
+                                        src="{{ $profileUrl }}"
+                                        alt="{{ $user->name }}"
+                                        class="um-avatar"
+                                        onerror="this.onerror=null;this.src='{{ asset('assets/images/faces/2.jpg') }}';">
                                     <div class="d-flex flex-column">
                                         <span class="fw-semibold">{{ $user->name }}</span>
                                         <small class="text-muted">{{ $user->uuid }}</small>

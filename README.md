@@ -17,6 +17,7 @@ Sebelum membuat fitur baru, mengubah flow booking, menambah migration, atau memi
 - Banyak tabel memakai soft delete manual lewat kolom `delete_status`, `deleted_at`, dan `deleted_by`, bukan trait `SoftDeletes`.
 - Error page production sudah custom dan auto-switch layout: context public pakai layout public, context internal (`admin`/`petugas`) pakai shell admin.
 - Session internal auth menyimpan `auth.role` dan snapshot user di `auth.user` untuk kebutuhan panel/layout.
+- TTL signed URL untuk preview attachment internal diatur lewat `ATTACHMENT_TEMP_URL_TTL_MINUTES` (default `30`).
 
 ## Product Principles
 
@@ -116,6 +117,7 @@ Entry point route API ada di `routes/api.php` dan saat ini me-require:
 
 - `routes/api/auth.php`: endpoint auth yang menerima request.
 - `routes/api/admin.php`: endpoint internal admin (CRUD akun internal, dll).
+- `routes/api/attachment.php`: endpoint secure preview attachment (signed URL).
 
 Endpoint auth saat ini:
 
@@ -128,6 +130,11 @@ Endpoint admin user management:
 - `POST /api/admin/users` (name `api.admin.users.store`), middleware `web` + `auth` + `role:Admin`.
 - `PUT /api/admin/users/{user}` (name `api.admin.users.update`), middleware `web` + `auth` + `role:Admin`.
 - `DELETE /api/admin/users/{user}` (name `api.admin.users.destroy`), middleware `web` + `auth` + `role:Admin`.
+
+Endpoint secure preview attachment internal:
+
+- `GET /api/internal/attachments/{attachmentUuid}/preview` (name `api.internal.attachments.preview`), middleware `web` + `auth` + `signed` + validasi role internal (`Admin`/`Petugas`) di controller.
+- URL selalu temporary signed URL (default TTL 30 menit) dan wajib digenerate ulang setelah expired.
 
 Public route memakai nama seperti `home`, `booking.page`, `booking.success`, `booking.status`, `booking.payment.dp`, `booking.payment.final`, `booking.reschedule`, dan `booking.cancellation.policy`.
 
@@ -336,6 +343,8 @@ Catatan implementasi user management internal:
 - Halaman admin management akun membatasi role yang bisa dipilih hanya `Admin` dan `Petugas`.
 - CRUD akun internal tidak mengelola role `Customer`.
 - Penghapusan akun memakai soft delete manual (`delete_status = true`) melalui repository.
+- Upload foto profile internal disimpan sebagai file terenkripsi di disk private (`local`) dan nilai `attachments.path` disimpan dalam format path terenkripsi.
+- Rendering avatar (list user, profile page, header internal) memakai temporary signed URL, bukan URL storage publik langsung.
 
 Reference group yang sudah ada:
 

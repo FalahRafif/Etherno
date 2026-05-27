@@ -6,9 +6,9 @@ use App\Models\User;
 use App\Repositories\Contracts\AttachmentRepositoryInterface;
 use App\Repositories\Contracts\ReferenceRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Services\AttachmentSecurityService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -19,7 +19,8 @@ class ProfileService
     public function __construct(
         private UserRepositoryInterface $userRepository,
         private ReferenceRepositoryInterface $referenceRepository,
-        private AttachmentRepositoryInterface $attachmentRepository
+        private AttachmentRepositoryInterface $attachmentRepository,
+        private AttachmentSecurityService $attachmentSecurityService
     ) {
     }
 
@@ -30,25 +31,8 @@ class ProfileService
         }
 
         $user->loadMissing('profileImageAttachment');
-        $path = trim((string) ($user->profileImageAttachment?->path ?? ''));
 
-        if ($path === '') {
-            return null;
-        }
-
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return $path;
-        }
-
-        if (str_starts_with($path, '/')) {
-            return url($path);
-        }
-
-        if (str_starts_with($path, 'storage/')) {
-            return asset($path);
-        }
-
-        return Storage::disk('public')->url($path);
+        return $this->attachmentSecurityService->generateTemporaryPreviewUrl($user->profileImageAttachment);
     }
 
     public function updateProfile(User $user, array $payload): User
@@ -75,11 +59,20 @@ class ProfileService
             $entity = $this->userRepository->update($user, $updatePayload);
 
             if ($profileImage instanceof UploadedFile) {
+                $previousAttachmentId = (int) ($entity->profile_image_attachment_id ?? 0);
                 $attachmentId = $this->storeProfileImageAttachment($profileImage);
                 /** @var User $entity */
                 $entity = $this->userRepository->update($entity, [
                     'profile_image_attachment_id' => $attachmentId,
                 ]);
+
+                if ($previousAttachmentId > 0 && $previousAttachmentId !== $attachmentId) {
+                    try {
+                        $this->attachmentRepository->delete($previousAttachmentId, $this->resolveCurrentUserId());
+                    } catch (\Throwable $throwable) {
+                        // Abaikan jika attachment lama sudah tidak tersedia.
+                    }
+                }
             }
 
             return $entity;
@@ -90,15 +83,16 @@ class ProfileService
 
     private function storeProfileImageAttachment(UploadedFile $file): int
     {
-        $storedPath = $file->store('profile-images', 'public');
-        if (!is_string($storedPath) || $storedPath === '') {
+        $storagePayload = $this->attachmentSecurityService->storeEncryptedProfileImage($file);
+        $encryptedPath = trim((string) ($storagePayload['encrypted_path'] ?? ''));
+        if ($encryptedPath === '') {
             throw new RuntimeException('Upload foto profile gagal disimpan.');
         }
 
         $attachment = $this->attachmentRepository->create([
             'uuid' => (string) Str::uuid(),
-            'name' => $file->getClientOriginalName() ?: basename($storedPath),
-            'path' => $storedPath,
+            'name' => $file->getClientOriginalName() ?: 'profile-image',
+            'path' => $encryptedPath,
             'type_file' => $this->resolveImageTypeReferenceId(),
         ]);
 
@@ -131,5 +125,12 @@ class ProfileService
         $normalized = trim((string) $value);
 
         return $normalized === '' ? null : $normalized;
+    }
+
+    private function resolveCurrentUserId(): ?int
+    {
+        $authId = auth()->id();
+
+        return is_int($authId) ? $authId : null;
     }
 }

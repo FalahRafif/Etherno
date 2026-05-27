@@ -8,11 +8,11 @@ use App\Repositories\Contracts\AttachmentRepositoryInterface;
 use App\Repositories\Contracts\ReferenceRepositoryInterface;
 use App\Repositories\Contracts\RoleRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Services\AttachmentSecurityService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -24,7 +24,8 @@ class UserManagementService
         private UserRepositoryInterface $userRepository,
         private RoleRepositoryInterface $roleRepository,
         private ReferenceRepositoryInterface $referenceRepository,
-        private AttachmentRepositoryInterface $attachmentRepository
+        private AttachmentRepositoryInterface $attachmentRepository,
+        private AttachmentSecurityService $attachmentSecurityService
     ) {
     }
 
@@ -39,6 +40,7 @@ class UserManagementService
     {
         $roles = $this->availableRoles();
         $users = $this->buildManageableUsersQuery($roles, $search)->get();
+        $this->appendProfileImageUrls($users);
 
         return [
             'roles' => $roles,
@@ -130,11 +132,20 @@ class UserManagementService
             $entity = $this->userRepository->update($managedUser, $updatePayload);
 
             if ($profileImage instanceof UploadedFile) {
+                $previousAttachmentId = (int) ($entity->profile_image_attachment_id ?? 0);
                 $attachmentId = $this->storeProfileImageAttachment($profileImage);
                 /** @var User $entity */
                 $entity = $this->userRepository->update($entity, [
                     'profile_image_attachment_id' => $attachmentId,
                 ]);
+
+                if ($previousAttachmentId > 0 && $previousAttachmentId !== $attachmentId) {
+                    try {
+                        $this->attachmentRepository->delete($previousAttachmentId, $this->resolveCurrentUserId());
+                    } catch (\Throwable $throwable) {
+                        // Abaikan jika attachment lama sudah tidak tersedia.
+                    }
+                }
             }
 
             return $entity;
@@ -175,9 +186,8 @@ class UserManagementService
         }
 
         $user->loadMissing('profileImageAttachment');
-        $path = trim((string) ($user->profileImageAttachment?->path ?? ''));
 
-        return $this->resolveAttachmentPathToUrl($path);
+        return $this->attachmentSecurityService->generateTemporaryPreviewUrl($user->profileImageAttachment);
     }
 
     /**
@@ -303,8 +313,9 @@ class UserManagementService
 
     private function storeProfileImageAttachment(UploadedFile $file): int
     {
-        $storedPath = $file->store('profile-images', 'public');
-        if (!is_string($storedPath) || $storedPath === '') {
+        $storagePayload = $this->attachmentSecurityService->storeEncryptedProfileImage($file);
+        $encryptedPath = trim((string) ($storagePayload['encrypted_path'] ?? ''));
+        if ($encryptedPath === '') {
             throw new RuntimeException('Upload foto profile gagal disimpan.');
         }
 
@@ -312,8 +323,8 @@ class UserManagementService
 
         $attachment = $this->attachmentRepository->create([
             'uuid' => (string) Str::uuid(),
-            'name' => $file->getClientOriginalName() ?: basename($storedPath),
-            'path' => $storedPath,
+            'name' => $file->getClientOriginalName() ?: 'profile-image',
+            'path' => $encryptedPath,
             'type_file' => $imageTypeReferenceId,
         ]);
 
@@ -356,29 +367,20 @@ class UserManagementService
         return $normalized === '' ? null : $normalized;
     }
 
-    private function resolveAttachmentPathToUrl(?string $path): ?string
+    /**
+     * @param  Collection<int, User>  $users
+     */
+    private function appendProfileImageUrls(Collection $users): void
     {
-        $normalizedPath = trim((string) $path);
-
-        if ($normalizedPath === '') {
-            return null;
+        foreach ($users as $user) {
+            $user->setAttribute('profile_image_url', $this->resolveProfileImageUrl($user));
         }
+    }
 
-        if (
-            str_starts_with($normalizedPath, 'http://') ||
-            str_starts_with($normalizedPath, 'https://')
-        ) {
-            return $normalizedPath;
-        }
+    private function resolveCurrentUserId(): ?int
+    {
+        $authId = auth()->id();
 
-        if (str_starts_with($normalizedPath, '/')) {
-            return url($normalizedPath);
-        }
-
-        if (str_starts_with($normalizedPath, 'storage/')) {
-            return asset($normalizedPath);
-        }
-
-        return Storage::disk('public')->url($normalizedPath);
+        return is_int($authId) ? $authId : null;
     }
 }

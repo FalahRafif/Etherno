@@ -28,7 +28,8 @@
                             src="{{ $profileUrl }}"
                             alt="Profile Image Preview"
                             id="profile-image-preview"
-                            class="um-profile-preview">
+                            class="um-profile-preview"
+                            onerror="this.onerror=null;this.src='{{ asset('assets/images/faces/2.jpg') }}';">
                         <label for="profile_image" class="form-label mt-3">Foto Profile (opsional)</label>
                         <input type="file" class="form-control @error('profile_image') is-invalid @enderror" id="profile_image" name="profile_image" accept=".jpg,.jpeg,.png,.webp">
                         @error('profile_image')

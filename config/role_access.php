@@ -130,7 +130,7 @@ return [
             ],
         ],
         [
-            'section' => 'Master Data',
+            'section' => 'Management Data',
             'items' => [
                 [
                     'label' => 'Packages',
