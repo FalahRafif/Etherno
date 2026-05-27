@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Admin\AdminPreviewController;
+use App\Http\Controllers\Web\Admin\AdminPreviewController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('petugas')->name('petugas.')->middleware(['auth', 'role:Petugas'])->group(function () {

@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Auth;
+namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use App\Services\AuthService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 class AuthController extends Controller
 {
@@ -15,34 +15,9 @@ class AuthController extends Controller
     {
     }
 
-    public function showLogin(Request $request): View|RedirectResponse
+    public function login(LoginRequest $request): RedirectResponse
     {
-        if (auth()->check()) {
-            $user = $request->user()?->loadMissing('role');
-
-            if ($user instanceof User && $this->authService->isInternalUser($user)) {
-                $dashboardRoute = $this->authService->resolveDashboardRoute($user);
-
-                if (is_string($dashboardRoute)) {
-                    return redirect()->route($dashboardRoute);
-                }
-            }
-
-            $this->authService->clearRoleSession($request);
-            $this->authService->logout();
-        }
-
-        return view('pages.auth.login', ['title' => 'Login - Etherno Admin']);
-    }
-
-    public function login(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-        ]);
-
-        if ($this->authService->attempt($validated['email'], $validated['password'], $request->boolean('remember'))) {
+        if ($this->authService->attempt($request->email(), $request->password(), $request->remember())) {
             $request->session()->regenerate();
             $user = $request->user()?->loadMissing('role');
 

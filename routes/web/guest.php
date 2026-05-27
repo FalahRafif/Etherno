@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Public\BookingSupportController;
-use App\Http\Controllers\Public\LandingPageController;
+use App\Http\Controllers\Web\Public\BookingSupportController;
+use App\Http\Controllers\Web\Public\LandingPageController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingPageController::class, 'index'])->name('home');

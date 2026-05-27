@@ -97,12 +97,27 @@ Catatan kompatibilitas: `paymet_date_rule` memakai typo existing. Jangan rename 
 
 ### Route Structure
 
-Entry point route ada di `routes/web.php` dan hanya me-require file route lain:
+Registrasi route ada di `bootstrap/app.php` melalui `withRouting(...)`:
 
-- `routes/web/auth.php`: login/logout.
+- `web: routes/web.php`
+- `api: routes/api.php`
+- `commands: routes/console.php`
+
+Entry point route web ada di `routes/web.php` dan me-require file route lain:
+
+- `routes/web/auth.php`: halaman login (view-only, method GET).
 - `routes/web/guest.php`: halaman public/guest.
 - `routes/web/admin.php`: panel admin.
 - `routes/web/petugas.php`: panel petugas.
+
+Entry point route API ada di `routes/api.php` dan saat ini me-require:
+
+- `routes/api/auth.php`: endpoint auth yang menerima request.
+
+Endpoint auth saat ini:
+
+- `POST /api/login` (name `login.post`), middleware `web` + `guest`.
+- `POST /api/logout` (name `logout`), middleware `web` + `auth`.
 
 Public route memakai nama seperti `home`, `booking.page`, `booking.success`, `booking.status`, `booking.payment.dp`, `booking.payment.final`, `booking.reschedule`, dan `booking.cancellation.policy`.
 
@@ -169,14 +184,17 @@ Untuk internal menu, `route_name` adalah suffix panel. Sidebar akan membentuk ro
 
 ### Auth And Session Flow
 
-Controller: `app/Http/Controllers/Auth/AuthController.php`.
+Controller Web: `app/Http/Controllers/Web/Auth/AuthController.php`.
+
+Controller API: `app/Http/Controllers/Api/Auth/AuthController.php`.
 
 Service: `app/Services/AuthService.php`.
 
 Flow login:
 
 - Form login ada di route `login`.
-- `AuthController` memanggil `AuthService->attempt()`.
+- Submit form login menuju route `login.post` (`POST /api/login`).
+- `Api\Auth\AuthController@login` memakai `LoginRequest` lalu memanggil `AuthService->attempt()`.
 - Setelah berhasil login, user diload dengan relation `role`.
 - Jika role bukan `Admin` atau `Petugas`, user langsung logout dan mendapat error: akun belum memiliki akses panel internal.
 - Jika valid, session menyimpan `auth.role` dengan value prefix route, misalnya `admin` atau `petugas`.
@@ -184,8 +202,11 @@ Flow login:
 
 Flow logout:
 
+- Route logout ada di `POST /api/logout`.
 - `AuthService->clearRoleSession()` menghapus `auth.role`.
 - `AuthService->logout()` logout, invalidate session, dan regenerate token.
+
+Catatan: meskipun login/logout berada di file route API dan ber-prefix `/api`, endpoint ini tetap memakai middleware `web` supaya session auth dan CSRF flow browser tetap berjalan.
 
 Middleware role:
 
@@ -203,7 +224,8 @@ User helper:
 
 Standard project saat ini:
 
-- Controller tipis: validasi request, delegasi ke service, return response/view.
+- Controller Web tipis: fokus render page, return view/redirect, dan tidak menerima `Request`/`FormRequest` di method signature.
+- Controller API tipis: menerima `Request`/`FormRequest`, delegasi ke service, dan tidak mengembalikan view.
 - Service: orchestration business flow, pemilihan view/page, keputusan domain, transaksi jika dibutuhkan.
 - Repository contract: interface di `app/Repositories/Contracts`.
 - Repository implementation: Eloquent di `app/Repositories/Eloquent`.
@@ -326,6 +348,7 @@ Model domain yang sudah ada di `app/Models`:
 - Laravel infrastructure: `Cache`, `CacheLock`, `Job`, `JobBatch`, `FailedJob`, `PasswordResetToken`, `Session`.
 
 Model relation sudah dibuat mengikuti foreign key migration. Saat membuat query feature baru, prefer eager loading relation yang sudah tersedia daripada join manual, kecuali ada alasan performa yang jelas.
+Model yang memakai `delete_status` sekarang menggunakan trait `App\Models\Concerns\HasManualSoftDeletes` untuk global scope aktif, `withInactive()`, dan `onlyInactive()`.
 
 ## Migration Version Map
 
@@ -337,6 +360,8 @@ Migrations diload dari `app/Providers/AppServiceProvider.php`:
 - `1.1.6`: roles, default users, alter users role/profile, customers, bookings, booking history, booking/event session references.
 - `1.1.7`: billing, billing details, billing installments, payments, billing/payment references.
 - `1.1.8`: PostgreSQL performance indexes.
+- `1.1.9`: perbaikan typo kolom bookings (`gogle_maps_pin`, `rechedule_*` -> `google_maps_pin`, `reschedule_*`).
+- `1.1.10`: perbaikan kompatibilitas partial index `idx_bookings_reschedule_date_act` pasca rename kolom bookings.
 
 Migration per versi:
 
@@ -357,6 +382,7 @@ Catatan migration:
 - Nama file migration harus unik dan urut dengan prefix angka.
 - Jika menambah folder versi baru, tambahkan `loadMigrationsFrom(...)` di `AppServiceProvider`.
 - Index migration `1.1.8` hanya berjalan untuk driver `pgsql`.
+- Migration `1.1.10` memperbaiki index reschedule agar mengikuti nama kolom final (`reschedule_date`) tanpa mengubah migration lama.
 - Reference insert migration umumnya punya `down()` yang menghapus berdasarkan `group_id` dan `code`.
 
 ## Default Development Users
@@ -411,7 +437,7 @@ Dalam Blade internal, gunakan `panel_route('admin.route.name')` saat membuat lin
 
 Langkah umum:
 
-- Tambahkan method tipis di `AdminPreviewController`.
+- Tambahkan method tipis di `app/Http/Controllers/Web/Admin/AdminPreviewController.php`.
 - Tambahkan key page di `InternalPageService`.
 - Tambahkan view di `resources/views/pages/admin`.
 - Tambahkan route di `admin.php` dan/atau `petugas.php`.
@@ -421,11 +447,21 @@ Langkah umum:
 
 Langkah umum:
 
-- Tambahkan method tipis di controller public, atau pakai controller public yang relevan.
+- Tambahkan method tipis di `app/Http/Controllers/Web/Public/*Controller.php`.
 - Tambahkan key page di `GuestPageService`.
 - Tambahkan route di `routes/web/guest.php`.
 - Tambahkan view di `resources/views/pages/public`.
 - Tambahkan menu/CTA di `config/role_access.php` jika perlu.
+
+### Add API Endpoint
+
+Langkah umum:
+
+- Tambahkan method handler di `app/Http/Controllers/Api/*Controller.php`.
+- Gunakan `FormRequest` untuk validasi input request.
+- Tambahkan route endpoint di `routes/api/*.php` lalu require file-nya dari `routes/api.php`.
+- Jika endpoint dipakai browser dengan session Laravel, pastikan middleware `web` ikut dipasang.
+- Jika endpoint benar-benar stateless untuk consumer eksternal, gunakan middleware `api` sesuai kebutuhan.
 
 ### Add New Table And Model
 

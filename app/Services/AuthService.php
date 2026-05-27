@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\RoleName;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,7 +27,7 @@ class AuthService
             return false;
         }
 
-        $internalRoles = config('role_access.roles.internal', ['Admin', 'Petugas']);
+        $internalRoles = config('role_access.roles.internal', [RoleName::Admin->value, RoleName::Petugas->value]);
 
         return $user->hasRole($internalRoles);
     }
