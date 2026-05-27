@@ -1,297 +1,486 @@
 # Etherno
 
-Etherno adalah aplikasi pemesanan layanan dokumentasi foto/video untuk kebutuhan wedding dan non-wedding. README ini menjadi panduan produk utama saat membuat task berikutnya agar implementasi tetap mengikuti proses bisnis yang sudah disepakati.
+Etherno adalah aplikasi pemesanan layanan dokumentasi foto/video untuk kebutuhan wedding dan non-wedding. README ini adalah source of truth untuk sesi development berikutnya, terutama jika project dikerjakan bersama beberapa agent AI.
 
-## Product Source Of Truth
+Sebelum membuat fitur baru, mengubah flow booking, menambah migration, atau memindahkan struktur route/layout, baca dokumen ini dulu lalu cocokkan dengan file aktual di repo.
 
-Gunakan dokumen ini sebagai acuan sebelum membuat fitur baru, mengubah flow booking, membuat status pembayaran, menulis copywriting publik, atau merancang tampilan admin/customer.
+## Quick Context For Future Agents
 
-Prinsip utama:
+- Stack utama: Laravel 13, PHP 8.3, PostgreSQL untuk migration lanjutan tertentu.
+- Local PHP yang dipakai user: `C:\laragon\bin\php\php-8.3.29-Win32-vs16-x64\php.exe`.
+- Arsitektur aplikasi diarahkan ke flow tipis: Controller -> Service -> Repository -> Model.
+- Public/guest dan internal panel dipisah dari route sampai layout.
+- Internal panel punya dua role aktif: `Admin` dan `Petugas`.
+- Role `Customer` sudah ada di database, tetapi login/dashboard customer belum dipakai untuk saat ini.
+- Hak akses menu/route masih hardcoded di `config/role_access.php`, belum memakai tabel `role_menu` atau permission table.
+- Semua migration sudah dikelompokkan per folder versi di `database/migrations/*` dan diload lewat `AppServiceProvider`.
+- Banyak tabel memakai soft delete manual lewat kolom `delete_status`, `deleted_at`, dan `deleted_by`, bukan trait `SoftDeletes`.
+
+## Product Principles
 
 - Booking belum dianggap fix sebelum DP berhasil diverifikasi.
 - Slot hanya terblokir setelah DP dibayarkan dan diverifikasi.
 - Harga awal hanya menampilkan base price plus estimasi/range biaya tambahan, bukan angka final.
 - WhatsApp adalah kanal komunikasi utama untuk pembayaran, koordinasi, reschedule, cancellation, dan follow-up setelah booking.
 - Upload bukti pembayaran di sistem bersifat opsional sebagai support flow, bukan pengganti WhatsApp.
+- Admin/petugas tetap melakukan verifikasi manual untuk approval, DP, pelunasan, reschedule, cancellation, dan force majeure.
 
-## 1. Booking Flow
+## Business Flow
 
-Customer mengisi form booking dengan data:
+### 1. Booking Request
 
-- Nama
-- Nomor WhatsApp
-- Tanggal acara
-- Lokasi acara
-- Pin Google Maps lokasi acara (wajib)
-- Paket yang dipilih
-- Detail acara
+Customer mengisi form booking dengan data nama, nomor WhatsApp, tanggal acara, lokasi acara, pin Google Maps, paket yang dipilih, dan detail acara.
 
-Flow approval:
+Form booking menghasilkan request/penawaran, bukan booking final. Status awal harus mencerminkan bahwa booking masih menunggu review internal.
 
-- Sistem menggunakan approval sebelum pembayaran.
-- Admin melakukan review data booking terlebih dahulu.
-- Setelah disetujui admin, customer diminta melakukan pembayaran DP.
-- Booking dianggap fix setelah DP dibayarkan dan berhasil diverifikasi.
+### 2. Approval Before Payment
 
-Implikasi sistem:
+Sistem memakai approval sebelum pembayaran.
 
-- Form booking menghasilkan request/penawaran, bukan booking final.
-- Status awal harus mencerminkan bahwa booking masih menunggu review/admin approval.
-- Customer tidak boleh dianggap memiliki slot sebelum DP verified.
+- Customer submit request booking.
+- Petugas/Admin review data booking.
+- Jika disetujui, customer diminta membayar DP.
+- Booking dianggap fix hanya setelah DP dibayarkan dan diverifikasi.
 
-## 2. Slot And Schedule
+Customer tidak boleh dianggap memiliki slot sebelum DP verified.
+
+### 3. Slot And Schedule
 
 Aturan jadwal:
 
 - Maksimal 2 booking per hari.
-- Sesi tersedia: pagi-siang dan sore-malam.
+- Sesi tersedia: `PAGI - SIANG` dan `SORE - MALAM`.
 - Sistem menerapkan First Come First Serve berdasarkan DP.
 - Slot hanya terblokir setelah DP berhasil diverifikasi.
-- Jika customer belum membayar DP, slot tetap tersedia untuk customer lain.
+- Booking pending approval, approved but unpaid, expired, atau cancelled tidak memblokir slot.
 
-Implikasi sistem:
+Implikasi teknis: availability harus dihitung dari booking aktif yang DP-nya sudah verified atau status bisnis yang setara.
 
-- Slot availability harus dihitung dari booking yang DP-nya verified/active.
-- Booking yang masih pending approval, approved but unpaid, atau expired tidak memblokir slot.
-- Jika dua booking aktif sudah ada pada tanggal yang sama, tanggal tersebut dianggap penuh.
+### 4. Pricing And Location
 
-## 3. Pricing And Location
+Tampilan awal harus menampilkan base price paket dan estimasi/range biaya tambahan berdasarkan lokasi.
 
-Tampilan awal di sistem harus menampilkan:
+Kategori lokasi yang sudah disiapkan lewat reference `price_type`:
 
-- Harga dasar atau base price dari paket.
-- Estimasi biaya tambahan berdasarkan kategori/range lokasi.
-- Note transparansi biaya tambahan.
+- `PRT_TAMBAHAN_RINGAN`: Tambahan Ringan.
+- `PRT_TAMBAHAN_SEDANG`: Tambahan Sedang.
+- `PRT_TAMBAHAN_CUSTOM`: Tambahan Custom (Transport / Akomodasi).
 
-Contoh kategori lokasi:
+Perhitungan lokasi berbasis area/kota, bukan kilometer. Biaya tambahan dapat meliputi transport, akomodasi, dan overtime. Harga final dikonfirmasi setelah pengecekan.
 
-- Jabodetabek / Bandung: tambahan ringan atau range kecil.
-- Luar kota area Jawa: tambahan sedang.
-- Luar pulau: custom, termasuk transport dan akomodasi.
-
-Biaya tambahan dapat meliputi:
-
-- Transport
-- Akomodasi untuk luar kota atau luar pulau
-- Overtime jika durasi lebih dari 8 jam
-
-Aturan display:
-
-- Jangan menampilkan angka final pada tahap awal.
-- Tampilkan range atau estimasi agar customer punya gambaran.
-- Wajib menampilkan note: "Biaya tambahan (transport, akomodasi, dll) akan disesuaikan berdasarkan lokasi dan dikonfirmasi setelah pengecekan."
-
-Perhitungan lokasi:
-
-- Perhitungan berbasis kota, bukan kilometer.
-- Area Jabodetabek masih masuk range tertentu.
-- Luar kota dan luar pulau memiliki biaya tambahan.
-
-## 4. Payment System
-
-Metode pembayaran utama:
-
-- Manual transfer.
-
-Flow DP:
-
-- Customer melakukan transfer DP ke rekening Etherno.
-- Customer melakukan konfirmasi pembayaran melalui WhatsApp sebagai jalur utama.
-- Customer dapat upload bukti pembayaran di sistem sebagai opsi tambahan.
-- Admin melakukan verifikasi manual.
-- Status booking diupdate di sistem setelah verifikasi.
-
-Implikasi sistem:
-
-- Sistem perlu menyimpan status pembayaran dan status verifikasi manual.
-- Upload bukti pembayaran tidak otomatis membuat booking aktif.
-- Booking aktif hanya setelah admin melakukan verifikasi DP.
-
-## 5. Payment Scheme
+### 5. Payment Scheme
 
 DP menjadi metode utama untuk mengunci booking.
 
-Besaran DP:
+- Wedding: DP 15%.
+- Non-wedding: DP 10%.
+- DP maksimal dibayar H+3 setelah approval/penawaran.
+- Pelunasan maksimal H-1 acara.
+- Pelunasan dan DP diverifikasi manual.
 
-- Wedding: 15% dari nilai paket/penawaran.
-- Non-wedding: 10% dari nilai paket/penawaran.
+Rules ini disimpan di tabel `settings`:
 
-Pelunasan:
+- `paymet_date_rule` dengan code `PDR_DP` dan `PDR_MAX_FINAL`.
+- `payment_type_price_percentage` dengan code `PTPP_WED` dan `PTPP_NON_WED`.
+- `package_date_rule` dengan code `PKDR_MAX_RECHEDULE_DATE`.
 
-- Maksimal H-1 acara.
-- Pembayaran dilakukan melalui transfer manual.
-- Konfirmasi pelunasan dilakukan melalui WhatsApp sebagai jalur utama.
+Catatan kompatibilitas: `paymet_date_rule` memakai typo existing. Jangan rename tanpa migration perbaikan yang eksplisit.
 
-Booking aktif:
+### 6. Expiration, Reschedule, Cancellation, Force Majeure
 
-- Booking aktif setelah DP berhasil diverifikasi.
+- Jika DP belum dibayar maksimal 3 hari setelah approval, booking menjadi expired dan slot kembali tersedia.
+- Reschedule maksimal 14 hari sebelum acara dan bergantung ketersediaan jadwal.
+- Cancellation setelah DP berarti DP hangus/non-refundable.
+- Force majeure diproses manual. Jika fotografer berhalangan, Etherno menyediakan pengganti. Jika kondisi ekstrem, refund dapat dilakukan setelah dikurangi biaya operasional.
 
-## 6. DP Expiration
+## Current Technical Architecture
 
-Batas waktu pembayaran DP:
+### Route Structure
 
-- Maksimal 3 hari setelah penawaran diberikan.
+Entry point route ada di `routes/web.php` dan hanya me-require file route lain:
 
-Jika DP belum dibayar dalam batas waktu:
+- `routes/web/auth.php`: login/logout.
+- `routes/web/guest.php`: halaman public/guest.
+- `routes/web/admin.php`: panel admin.
+- `routes/web/petugas.php`: panel petugas.
 
-- Booking dianggap expired.
-- Slot kembali tersedia.
-- Customer perlu melakukan proses booking/penawaran ulang jika masih ingin melanjutkan.
+Public route memakai nama seperti `home`, `booking.page`, `booking.success`, `booking.status`, `booking.payment.dp`, `booking.payment.final`, `booking.reschedule`, dan `booking.cancellation.policy`.
 
-Implikasi sistem:
+Admin route memakai prefix URL `/admin`, name prefix `admin.`, middleware `auth` dan `role:Admin`.
 
-- Sistem perlu menyimpan waktu penawaran/approval.
-- Sistem perlu mengenali booking yang expired.
-- Booking expired tidak boleh memblokir slot.
+Petugas route memakai prefix URL `/petugas`, name prefix `petugas.`, middleware `auth` dan `role:Petugas` untuk route operasional. Di file `routes/web/petugas.php` juga ada route admin-only dengan prefix `/petugas` dan middleware `role:Admin` untuk beberapa page master. Jika behavior ini berubah, update route dan dokumentasi bersamaan.
 
-## 7. After DP And Final Price
+### Layout Structure
 
-Setelah DP dibayarkan dan diverifikasi:
+- Internal panel: `resources/views/layouts/admin/admin.blade.php`.
+- Admin sidebar: `resources/views/layouts/admin/sidebar.blade.php`.
+- Public base layout: `resources/views/layouts/public/public.blade.php`.
+- Guest alias layout: `resources/views/layouts/guest/guest.blade.php`.
+- Public header config-driven: `resources/views/layouts/public/header.blade.php`.
+- Auth layout: `resources/views/layouts/auth/auth.blade.php`.
 
-- Admin melakukan pengecekan lokasi.
-- Admin menghitung biaya tambahan jika ada.
-- Harga final disampaikan melalui WhatsApp sebagai jalur utama.
-- Harga final juga dapat ditampilkan di sistem sebagai fitur opsional.
+Guest/public tidak boleh mengambil menu internal. Admin dan Petugas berbagi layout admin yang sama, tetapi menu dan route difilter berdasarkan role.
 
-Informasi harga final yang disampaikan:
+### Access Configuration
 
-- Harga final.
-- Breakdown biaya tambahan jika ada.
+File utama: `config/role_access.php`.
 
-Implikasi sistem:
+Isi penting:
 
-- Harga final dapat berbeda dari estimasi awal.
-- Perubahan harga final harus memiliki ruang untuk catatan admin.
-- Breakdown biaya tambahan sebaiknya disimpan agar audit dan komunikasi jelas.
+- `roles.internal`: role yang boleh login ke internal panel (`Admin`, `Petugas`).
+- `roles.admin_only`: role admin-only (`Admin`).
+- `route_prefix_by_role`: mapping role ke route prefix (`Admin -> admin`, `Petugas -> petugas`).
+- `dashboard_route_by_role`: redirect dashboard setelah login.
+- `panel_title_by_prefix`: label panel untuk title.
+- `guest.menu`: menu public berbasis section/items dan siap dropdown.
+- `guest.cta`: tombol CTA public.
+- `menu`: menu internal berbasis section/items, roles, route name, dan active state.
 
-## 8. Final Payment
+Contoh menu guest dropdown:
 
-Flow utama pelunasan:
-
-- Customer melakukan pelunasan melalui transfer manual.
-- Customer mengonfirmasi pelunasan melalui WhatsApp.
-
-System support opsional:
-
-- Customer dapat upload bukti pembayaran pelunasan di sistem.
-- Upload ini hanya tambahan dan tetap mengikuti flow utama via WhatsApp.
-
-Implikasi sistem:
-
-- Final payment perlu status tersendiri, misalnya unpaid, pending verification, verified.
-- Admin tetap menjadi pihak yang memverifikasi pelunasan.
-- Pelunasan wajib selesai maksimal H-1 acara.
-
-## 9. After Payment And Coordination
-
-Setelah pembayaran dan booking aktif:
-
-- Semua komunikasi lanjutan dilakukan melalui WhatsApp.
-- Sistem boleh menyimpan ringkasan status, tetapi koordinasi operasional tetap manual via WhatsApp.
-
-Contoh komunikasi lanjutan:
-
-- Koordinasi detail acara.
-- Konfirmasi timeline.
-- Arahan teknis.
-- Follow-up kebutuhan lokasi.
-
-## 10. Reschedule And Cancellation
-
-Reschedule:
-
-- Request maksimal 2 minggu sebelum acara.
-- Reschedule bergantung pada ketersediaan jadwal.
-- Diproses manual melalui WhatsApp.
-
-Cancellation:
-
-- DP hangus.
-- DP bersifat non-refundable.
-
-Implikasi sistem:
-
-- Sistem perlu membedakan cancellation dan reschedule.
-- Reschedule tidak boleh otomatis diterima tanpa admin review.
-- Cancellation harus mempertahankan catatan pembayaran DP.
-
-## 11. Force Majeure Handling
-
-Jika fotografer berhalangan:
-
-- Etherno menyediakan fotografer pengganti.
-- Tidak ada biaya tambahan untuk customer.
-
-Jika cuaca buruk:
-
-- Sesi bisa dihentikan atau dipindahkan.
-- Cuaca buruk tidak menjadi tanggung jawab penuh fotografer.
-
-Jika kondisi ekstrem:
-
-- Refund dapat dilakukan.
-- Refund dikurangi biaya operasional.
-
-Implikasi sistem:
-
-- Admin perlu ruang catatan untuk force majeure.
-- Refund force majeure harus diproses manual dan tidak otomatis.
-- Status khusus dapat dibuat jika dibutuhkan pada tahap berikutnya.
-
-## Suggested Status Model
-
-Status booking yang disarankan untuk implementasi berikutnya:
-
-- `draft` atau `submitted`: customer sudah mengirim form booking.
-- `under_review`: admin sedang melakukan review.
-- `approved`: admin menyetujui penawaran, menunggu DP.
-- `rejected`: admin menolak request/penawaran.
-- `dp_pending`: customer sudah konfirmasi/upload bukti DP, menunggu verifikasi admin.
-- `active`: DP verified, booking fix, slot terblokir.
-- `expired`: DP tidak dibayar dalam 3 hari setelah penawaran.
-- `final_payment_pending`: customer sudah konfirmasi/upload bukti pelunasan.
-- `paid`: pelunasan verified.
-- `reschedule_requested`: customer meminta reschedule.
-- `rescheduled`: tanggal/sesi sudah dipindahkan.
-- `cancelled`: booking dibatalkan.
-- `force_majeure`: booking terkena kondisi force majeure.
-
-Catatan:
-
-- Nama status bisa disesuaikan dengan pola kode yang sudah ada.
-- Pastikan hanya status `active`, `paid`, dan status aktif lain yang memang sudah DP verified yang memblokir slot.
-
-## Suggested Payment Status Model
-
-Status pembayaran yang disarankan:
-
-- `unpaid`
-- `dp_waiting_payment`
-- `dp_pending_verification`
-- `dp_verified`
-- `final_waiting_payment`
-- `final_pending_verification`
-- `final_verified`
-- `expired`
-- `refunded`
-
-Catatan:
-
-- Payment status dan booking status boleh dipisah agar logika slot, verifikasi admin, dan pelunasan lebih mudah dirawat.
-- Jangan otomatis mengubah booking menjadi active hanya karena bukti pembayaran diupload.
-
-## Development Notes
-
-Local PHP path yang digunakan pada environment ini:
-
-```powershell
-C:\laragon\bin\php\php-8.3.29-Win32-vs16-x64\php.exe
+```php
+[
+    'section' => 'Company',
+    'items' => [
+        [
+            'type' => 'dropdown',
+            'label' => 'Tentang Kami',
+            'items' => [
+                ['label' => 'Profil', 'route' => 'home', 'fragment' => 'about'],
+                ['label' => 'Tim', 'route' => 'home', 'fragment' => 'team'],
+            ],
+        ],
+    ],
+]
 ```
 
-Contoh menjalankan artisan dengan PHP Laragon:
+Contoh menu internal:
 
-```powershell
-& "C:\laragon\bin\php\php-8.3.29-Win32-vs16-x64\php.exe" artisan view:cache
+```php
+[
+    'label' => 'Packages',
+    'route_name' => 'packages',
+    'active' => ['packages'],
+    'roles' => ['Admin'],
+]
 ```
 
-Saat membuat task berikutnya, baca README ini terlebih dahulu sebelum menentukan migrasi, model, enum/status, controller flow, tampilan public, atau halaman admin.
+Untuk internal menu, `route_name` adalah suffix panel. Sidebar akan membentuk route final lewat helper `panel_route('admin.' . $routeName)`, sehingga Admin menuju `admin.*` dan Petugas menuju `petugas.*`.
+
+### Auth And Session Flow
+
+Controller: `app/Http/Controllers/Auth/AuthController.php`.
+
+Service: `app/Services/AuthService.php`.
+
+Flow login:
+
+- Form login ada di route `login`.
+- `AuthController` memanggil `AuthService->attempt()`.
+- Setelah berhasil login, user diload dengan relation `role`.
+- Jika role bukan `Admin` atau `Petugas`, user langsung logout dan mendapat error: akun belum memiliki akses panel internal.
+- Jika valid, session menyimpan `auth.role` dengan value prefix route, misalnya `admin` atau `petugas`.
+- Redirect dashboard mengikuti `config('role_access.dashboard_route_by_role')`.
+
+Flow logout:
+
+- `AuthService->clearRoleSession()` menghapus `auth.role`.
+- `AuthService->logout()` logout, invalidate session, dan regenerate token.
+
+Middleware role:
+
+- File: `app/Http/Middleware/EnsureUserHasRole.php`.
+- Alias middleware `role` diregister di `bootstrap/app.php`.
+- Penggunaan: `role:Admin`, `role:Petugas`, atau `role:Admin,Petugas`.
+- Jika user tidak punya role sesuai, response `403`.
+
+User helper:
+
+- `User::roleName(): ?string`.
+- `User::hasRole(string|array $roles): bool`.
+
+### Controller, Service, Repository Standard
+
+Standard project saat ini:
+
+- Controller tipis: validasi request, delegasi ke service, return response/view.
+- Service: orchestration business flow, pemilihan view/page, keputusan domain, transaksi jika dibutuhkan.
+- Repository contract: interface di `app/Repositories/Contracts`.
+- Repository implementation: Eloquent di `app/Repositories/Eloquent`.
+- Model: relation, casts, fillable, helper model kecil.
+
+Base repository:
+
+- Contract: `app/Repositories/Contracts/BaseRepositoryInterface.php`.
+- Implementation: `app/Repositories/Eloquent/BaseRepository.php`.
+- Method umum: `query`, `all`, `paginate`, `find`, `findOrFail`, `findBy`, `getBy`, `create`, `update`, `delete`, `restore`.
+- `query(true)` otomatis filter `delete_status = false` jika model punya fillable `delete_status`.
+- `delete()` melakukan soft delete manual jika model mendukung `delete_status`.
+
+Repository binding:
+
+- File: `app/Providers/RepositoryServiceProvider.php`.
+- Semua repository contract dibind ke implementation Eloquent.
+- Saat membuat model baru, buat contract, implementation, lalu register binding di provider ini.
+
+Portal services:
+
+- `app/Services/Portal/GuestPageService.php`: mapping page public ke view dan title.
+- `app/Services/Portal/InternalPageService.php`: mapping page internal ke view dan title.
+
+Jika menambah page baru, update route, controller method tipis, service page map, view, dan menu config jika perlu.
+
+## Data Model Overview
+
+### Master And Reference
+
+- `references`: master reference generic untuk status/type/level.
+- `settings`: rule konfigurasi bisnis, memiliki optional `type_id` ke `references`.
+- `attachments`: file metadata, `type_file` join ke `references`.
+- `roles`: role aplikasi.
+- `users`: user internal/customer, `role_id` ke `roles`, `profile_image_attachment_id` ke `attachments`.
+
+Reference group yang sudah ada:
+
+- `location_level`: Kelurahan, Kecamatan, Kota, Provinsi.
+- `price_type`: Tambahan Ringan, Tambahan Sedang, Tambahan Custom.
+- `type_file`: Dokumen, Gambar.
+- `package_status`: ACTIVE, INACTIVE, DRAFT.
+- `package_type`: WEDDING, NON WEDDING.
+- `booking_status`: WAITING APPROVAL sampai REFUND.
+- `event_session`: PAGI - SIANG, SORE - MALAM.
+- `billing_status`: UNPAID, PARTIAL, PAID, CANCELLED, REFUND.
+- `billing_type`: BASE, ADDON.
+- `intallment_type`: DP, PARTIAL, FINAL, REFUND.
+- `payment_type`: DP, PARTIAL, FINAL, REFUND.
+- `payment_status`: PEDING, SUCCESS, FAILED.
+- `payment_method`: BANK TRANSFER, QRIS, CASH, E-WALLET.
+
+Catatan kompatibilitas: `intallment_type` dan `PEDING` memakai typo existing. Jangan rename tanpa migration perbaikan yang eksplisit.
+
+### Location
+
+- `wilayah`: dataset wilayah mentah dari `database/migrations/1.1.3/dataset/wilayah.sql`.
+- `locations`: hasil transform dari `wilayah`, dengan parent-child berdasarkan kode wilayah.
+- `locations.level_id` join ke `references` group `location_level`.
+- `locations.wilayah_id` join ke `wilayah.kode`.
+- `locations.parent_id` self-reference ke `locations.id`.
+- `location_pricing_rules`: mapping lokasi ke `price_type`.
+
+Format kode wilayah:
+
+- `11`: provinsi.
+- `11.01`: kota/kabupaten.
+- `11.01.01`: kecamatan.
+- `11.01.01.2001`: kelurahan.
+
+Migration transform wilayah ke locations dibuat khusus PostgreSQL.
+
+### Packages
+
+- `packages`: paket layanan, punya `status_id`, `thumbnail_attachment_id`, dan `package_type`.
+- `package_benefits`: benefit per package.
+- `packages.status_id` join ke reference `package_status`.
+- `packages.package_type` join ke reference `package_type`.
+- `packages.thumbnail_attachment_id` join ke `attachments`.
+
+### Customers And Bookings
+
+- `customers`: data customer booking.
+- `bookings`: booking utama.
+- `booking_history`: riwayat status booking.
+
+Relasi booking:
+
+- `customer_id` ke `customers`.
+- `package_id` ke `packages`.
+- `status_id` ke `references` group `booking_status`.
+- `location_id` ke `locations`.
+- `event_session` ke `references` group `event_session`.
+- `operator_id` ke `users`.
+
+`booking_history` menyimpan `booking_id`, `status_id`, dan `operator_id`.
+
+### Billing And Payments
+
+- `billings`: tagihan per booking.
+- `billing_details`: breakdown tagihan, `billing_type` ke reference `billing_type`.
+- `billing_installments`: cicilan/tagihan DP/final/refund, `installment_type` ke reference `intallment_type`, `status_id` ke reference `billing_status`.
+- `payments`: pembayaran aktual, join ke `billing_installments`, reference `payment_type`, `payment_status`, `payment_method`, dan optional attachment bukti transfer.
+
+Relasi penting:
+
+- `billings.booking_id` ke `bookings`.
+- `billings.status_id` ke reference `billing_status`.
+- `payments.transfer_receipt_attachment_id` ke `attachments`.
+
+## Model Map
+
+Model domain yang sudah ada di `app/Models`:
+
+- Master: `Reference`, `Setting`, `Attachment`, `Role`, `User`.
+- Location: `Wilayah`, `Location`, `LocationPricingRule`.
+- Package: `Package`, `PackageBenefit`.
+- Booking: `Customer`, `Booking`, `BookingHistory`.
+- Billing/payment: `Billing`, `BillingDetail`, `BillingInstallment`, `Payment`.
+- Laravel infrastructure: `Cache`, `CacheLock`, `Job`, `JobBatch`, `FailedJob`, `PasswordResetToken`, `Session`.
+
+Model relation sudah dibuat mengikuti foreign key migration. Saat membuat query feature baru, prefer eager loading relation yang sudah tersedia daripada join manual, kecuali ada alasan performa yang jelas.
+
+## Migration Version Map
+
+Migrations diload dari `app/Providers/AppServiceProvider.php`:
+
+- `1.0.0`: users base, cache, jobs, test user.
+- `1.1.3`: wilayah, references, locations, location reference, transform wilayah, price type, location pricing rules.
+- `1.1.4`: attachments, file type, packages, package status/type, settings, settings rules, package benefits.
+- `1.1.6`: roles, default users, alter users role/profile, customers, bookings, booking history, booking/event session references.
+- `1.1.7`: billing, billing details, billing installments, payments, billing/payment references.
+- `1.1.8`: PostgreSQL performance indexes.
+
+Migration per versi:
+
+```powershell
+& "C:\laragon\bin\php\php-8.3.29-Win32-vs16-x64\php.exe" artisan migrate --path=database/migrations/1.1.4
+```
+
+Rollback/reset per versi:
+
+```powershell
+& "C:\laragon\bin\php\php-8.3.29-Win32-vs16-x64\php.exe" artisan migrate:reset --path=database/migrations/1.1.4
+```
+
+Untuk production tambahkan `--force`.
+
+Catatan migration:
+
+- Nama file migration harus unik dan urut dengan prefix angka.
+- Jika menambah folder versi baru, tambahkan `loadMigrationsFrom(...)` di `AppServiceProvider`.
+- Index migration `1.1.8` hanya berjalan untuk driver `pgsql`.
+- Reference insert migration umumnya punya `down()` yang menghapus berdasarkan `group_id` dan `code`.
+
+## Default Development Users
+
+Migration `database/migrations/1.1.6/001_001_006_000003_insert_default_users.php` membuat user dev:
+
+- `admin@etherno.local` / `password` dengan role `Admin`.
+- `petugas@etherno.local` / `password` dengan role `Petugas`.
+- `customer@etherno.local` / `password` dengan role `Customer`.
+
+Customer saat ini akan ditolak login ke panel internal. Untuk production, ganti credential default dan strategi seeding.
+
+## Performance Indexes
+
+Migration `1.1.8` menambahkan partial indexes PostgreSQL untuk query aktif (`delete_status = false`), antara lain:
+
+- `references(group_id, code)`.
+- `settings(group_id, code)` dan `settings(group_id, type_id)`.
+- `locations(parent_id, level_id)` dan `locations(level_id, wilayah_id)`.
+- booking indexes untuk status, event date, customer, operator, location, package, reschedule, force majeure.
+- billing/payment indexes untuk status, due date, paid date, installment, dan method.
+- infrastructure indexes untuk password reset, sessions, dan jobs.
+
+Jika menambah tabel besar atau query list utama, tambahkan index di migration versi baru, bukan mengubah migration lama yang sudah pernah dijalankan.
+
+## How To Add Common Features
+
+### Add Public Menu
+
+Edit `config/role_access.php` pada `guest.menu`. Formatnya section/items dan support dropdown. Header public otomatis render dari config.
+
+Jika link menuju section landing page, gunakan:
+
+```php
+['label' => 'FAQ', 'route' => 'home', 'fragment' => 'faq']
+```
+
+Jika link menuju page baru, tambahkan route di `routes/web/guest.php` dan mapping page di `GuestPageService`.
+
+### Add Internal Menu
+
+Edit `config/role_access.php` pada `menu`.
+
+- Gunakan `route_name` suffix, misalnya `packages`, bukan `admin.packages`.
+- Isi `roles` sesuai akses.
+- Tambahkan active key agar sidebar state benar.
+- Pastikan route tersedia di `routes/web/admin.php` dan/atau `routes/web/petugas.php`.
+
+Dalam Blade internal, gunakan `panel_route('admin.route.name')` saat membuat link agar route otomatis mengikuti role session.
+
+### Add Internal Page
+
+Langkah umum:
+
+- Tambahkan method tipis di `AdminPreviewController`.
+- Tambahkan key page di `InternalPageService`.
+- Tambahkan view di `resources/views/pages/admin`.
+- Tambahkan route di `admin.php` dan/atau `petugas.php`.
+- Tambahkan menu di `config/role_access.php` jika perlu.
+
+### Add Public Page
+
+Langkah umum:
+
+- Tambahkan method tipis di controller public, atau pakai controller public yang relevan.
+- Tambahkan key page di `GuestPageService`.
+- Tambahkan route di `routes/web/guest.php`.
+- Tambahkan view di `resources/views/pages/public`.
+- Tambahkan menu/CTA di `config/role_access.php` jika perlu.
+
+### Add New Table And Model
+
+Langkah umum:
+
+- Buat migration di folder versi terbaru atau folder versi baru.
+- Buat model dengan fillable, casts, dan relation.
+- Buat repository interface di `app/Repositories/Contracts`.
+- Buat repository Eloquent di `app/Repositories/Eloquent`.
+- Register binding di `RepositoryServiceProvider`.
+- Tambahkan service untuk business flow, lalu controller tipis.
+- Tambahkan index migration jika tabel akan sering difilter/listing.
+
+## Development Commands
+
+PHP Laragon:
+
+```powershell
+& "C:\laragon\bin\php\php-8.3.29-Win32-vs16-x64\php.exe" --version
+```
+
+Clear cache setelah mengubah config, route, view, provider, atau helper:
+
+```powershell
+& "C:\laragon\bin\php\php-8.3.29-Win32-vs16-x64\php.exe" artisan optimize:clear
+```
+
+Syntax check file PHP:
+
+```powershell
+& "C:\laragon\bin\php\php-8.3.29-Win32-vs16-x64\php.exe" -l app/Http/Middleware/EnsureUserHasRole.php
+```
+
+Run tests:
+
+```powershell
+& "C:\laragon\bin\php\php-8.3.29-Win32-vs16-x64\php.exe" artisan test
+```
+
+Start local server:
+
+```powershell
+& "C:\laragon\bin\php\php-8.3.29-Win32-vs16-x64\php.exe" artisan serve
+```
+
+## Agent Collaboration Rules
+
+Untuk agent AI berikutnya:
+
+- Jangan langsung refactor besar. Baca README ini, lalu cek file aktual yang relevan.
+- Jangan revert perubahan user atau perubahan agent lain tanpa instruksi eksplisit.
+- Gunakan `rg` untuk mencari file/teks.
+- Ikuti flow Controller -> Service -> Repository -> Model.
+- Jangan membuat tabel permission/role_menu kecuali user meminta.
+- Jangan rename reference `group_id`/`code` existing tanpa migration dan koordinasi, terutama key typo yang sudah masuk data.
+- Jangan hardcode link internal di Blade. Gunakan `panel_route()` untuk panel route.
+- Jalankan minimal `php -l` untuk file PHP yang diedit dan `artisan optimize:clear` setelah mengubah config/routes/provider.
+- Jika mengubah arsitektur, update README ini agar session berikutnya tidak kehilangan konteks.
