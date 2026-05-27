@@ -12,6 +12,10 @@ class AuthService
     public const SESSION_ROLE_KEY = 'auth.role';
     public const SESSION_USER_KEY = 'auth.user';
 
+    public function __construct(private AttachmentSecurityService $attachmentSecurityService)
+    {
+    }
+
     public function attempt(string $email, string $password, bool $remember = false): bool
     {
         return Auth::attempt(['email' => $email, 'password' => $password], $remember);
@@ -71,6 +75,7 @@ class AuthService
 
     public function syncInternalSession(Request $request, User $user): void
     {
+        $user->loadMissing(['role', 'profileImageAttachment']);
         $routePrefix = $this->resolveRoutePrefix($user);
 
         if ($routePrefix === null) {
@@ -97,6 +102,7 @@ class AuthService
             'role' => $roleName,
             'route_prefix' => $routePrefix,
             'dashboard_route' => $dashboardRoute,
+            'profile_image_url' => $this->attachmentSecurityService->generateTemporaryPreviewUrl($user->profileImageAttachment),
             'panel_title' => $panelTitleByPrefix[$routePrefix] ?? null,
             'logged_in_at' => $currentUserSession['logged_in_at'] ?? now()->toDateTimeString(),
         ]);

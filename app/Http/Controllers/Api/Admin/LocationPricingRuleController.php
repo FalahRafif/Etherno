@@ -1,0 +1,81 @@
+<?php
+
+namespace App\Http\Controllers\Api\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\LocationPricingRule\StoreLocationPricingRuleRequest;
+use App\Http\Requests\Admin\LocationPricingRule\UpdateLocationPricingRuleRequest;
+use App\Models\LocationPricingRule;
+use App\Services\Admin\LocationPricingRuleService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use RuntimeException;
+
+class LocationPricingRuleController extends Controller
+{
+    public function __construct(private LocationPricingRuleService $locationPricingRuleService)
+    {
+    }
+
+    public function store(StoreLocationPricingRuleRequest $request): RedirectResponse
+    {
+        try {
+            $this->locationPricingRuleService->createRule($request->payload());
+        } catch (RuntimeException $exception) {
+            return back()
+                ->withInput()
+                ->withErrors(['general' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('admin.location.rules')
+            ->with('status', 'Aturan harga lokasi berhasil ditambahkan.');
+    }
+
+    public function update(UpdateLocationPricingRuleRequest $request, LocationPricingRule $locationPricingRule): RedirectResponse
+    {
+        try {
+            $this->locationPricingRuleService->updateRule($locationPricingRule, $request->payload());
+        } catch (RuntimeException $exception) {
+            return back()
+                ->withInput()
+                ->withErrors(['general' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('admin.location.rules')
+            ->with('status', 'Aturan harga lokasi berhasil diperbarui.');
+    }
+
+    public function destroy(LocationPricingRule $locationPricingRule): RedirectResponse
+    {
+        try {
+            $this->locationPricingRuleService->deleteRule($locationPricingRule);
+        } catch (RuntimeException $exception) {
+            return back()->withErrors(['general' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('admin.location.rules')
+            ->with('status', 'Aturan harga lokasi berhasil dihapus.');
+    }
+
+    public function locationOptions(Request $request): JsonResponse
+    {
+        $payload = $request->validate([
+            'level' => ['required', 'string', Rule::in(['LL_PV', 'LL_CT', 'LL_KC', 'LL_KL'])],
+            'parent_id' => ['nullable', 'integer'],
+        ]);
+
+        $level = strtoupper((string) $payload['level']);
+        $parentId = ($payload['parent_id'] ?? null) !== null ? (int) $payload['parent_id'] : null;
+
+        $options = $this->locationPricingRuleService->getLocationOptions($level, $parentId);
+
+        return response()->json([
+            'options' => $options,
+        ]);
+    }
+}
