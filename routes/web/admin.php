@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Web\Admin\AdminPreviewController;
 use App\Http\Controllers\Web\Admin\BlankController;
+use App\Http\Controllers\Web\Admin\ProfileController;
+use App\Http\Controllers\Web\Admin\UserManagementController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->group(function () {
@@ -20,6 +22,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->grou
     Route::get('/cancellations', [AdminPreviewController::class, 'cancellations'])->name('cancellations');
     Route::get('/force-majeure', [AdminPreviewController::class, 'forceMajeure'])->name('force.majeure');
     Route::get('/customers', [AdminPreviewController::class, 'customers'])->name('customers');
+    Route::get('/users', [UserManagementController::class, 'index'])->name('users');
+    Route::get('/users/create', [UserManagementController::class, 'create'])->name('users.create');
+    Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
+    Route::get('/users/{user}/edit', [UserManagementController::class, 'edit'])->name('users.edit');
+    Route::put('/users/{user}', [UserManagementController::class, 'update'])->name('users.update');
+    Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/settings', [AdminPreviewController::class, 'settings'])->name('settings');
     Route::get('/blank', [BlankController::class, 'index'])->name('blank');
 });

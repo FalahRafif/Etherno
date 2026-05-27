@@ -14,6 +14,10 @@
     $dashboardUrl = \Illuminate\Support\Facades\Route::has($dashboardRoute)
         ? route($dashboardRoute)
         : (\Illuminate\Support\Facades\Route::has('admin.dashboard') ? route('admin.dashboard') : url('/'));
+    $profileRoute = $sessionPrefix . '.profile';
+    $profileUrl = \Illuminate\Support\Facades\Route::has($profileRoute)
+        ? route($profileRoute)
+        : (\Illuminate\Support\Facades\Route::has('admin.profile') ? route('admin.profile') : $dashboardUrl);
 
     $logoutUrl = \Illuminate\Support\Facades\Route::has('logout') ? route('logout') : url('/api/logout');
     $displayName = trim((string) ($sessionUser['name'] ?? $authUser?->name ?? 'Internal User'));
@@ -34,12 +38,12 @@
                     <div class="header-element">
                         <div class="horizontal-logo">
                             <a href="{{ $dashboardUrl }}" class="header-logo">
-                                <img src="{{ asset('assets/images/brand-logos/desktop-logo.png') }}" alt="logo" class="desktop-logo">
-                                <img src="{{ asset('assets/images/brand-logos/toggle-logo.png') }}" alt="logo" class="toggle-logo">
-                                <img src="{{ asset('assets/images/brand-logos/desktop-dark.png') }}" alt="logo" class="desktop-dark">
-                                <img src="{{ asset('assets/images/brand-logos/toggle-dark.png') }}" alt="logo" class="toggle-dark">
-                                <img src="{{ asset('assets/images/brand-logos/desktop-white.png') }}" alt="logo" class="desktop-white">
-                                <img src="{{ asset('assets/images/brand-logos/toggle-white.png') }}" alt="logo" class="toggle-white">
+                                <img src="{{ asset('assets/etherno/public/icon_trans_2.png') }}" alt="logo" class="desktop-logo">
+                                <img src="{{ asset('assets/etherno/public/icon_trans_2.png') }}" alt="logo" class="toggle-logo">
+                                <img src="{{ asset('assets/etherno/public/icon_trans_white_1.png') }}" alt="logo" class="desktop-dark">
+                                <img src="{{ asset('assets/etherno/public/icon_trans_white_1.png') }}" alt="logo" class="toggle-dark">
+                                <img src="{{ asset('assets/etherno/public/icon_trans_2.png') }}" alt="logo" class="desktop-white">
+                                <img src="{{ asset('assets/etherno/public/icon_trans_2.png') }}" alt="logo" class="toggle-white">
                             </a>
                         </div>
                     </div>
@@ -54,10 +58,10 @@
                     <!-- End::header-element -->
 
                     <!-- Start::header-element -->
-                    <div class="main-header-center ms-3 d-sm-none d-md-none d-lg-block form-group">
+                    {{-- <div class="main-header-center ms-3 d-sm-none d-md-none d-lg-block form-group">
                         <input class="form-control" placeholder="Search..." type="search">
                         <button class="btn"><i class="fas fa-search"></i></button>  
-                    </div>  
+                    </div>   --}}
                     <!-- End::header-element -->
 
                 </div>
@@ -67,7 +71,7 @@
                 <div class="header-content-right">
 
                     <!-- Start::header-element -->
-                    <div class="header-element header-search d-block d-sm-none">
+                    {{-- <div class="header-element header-search d-block d-sm-none">
                         <!-- Start::header-link -->
                         <a href="javascript:void(0);" class="header-link dropdown-toggle" data-bs-auto-close="outside" data-bs-toggle="dropdown">
                             <svg xmlns="http://www.w3.org/2000/svg" class="header-link-icon" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
@@ -86,11 +90,11 @@
                         </ul>
                 
                         <!-- End::header-link -->
-                    </div>
+                    </div> --}}
                     <!-- End::header-element -->
 
                     <!-- Start::header-element -->
-                    <div class="header-element country-selector">
+                    {{-- <div class="header-element country-selector">
                         <!-- Start::header-link|dropdown-toggle -->
                         <a href="javascript:void(0);" class="header-link dropdown-toggle" data-bs-auto-close="outside" data-bs-toggle="dropdown">
                             <img src="{{ asset('assets/images/flags/us_flag.jpg') }}" alt="img" class="rounded-circle">
@@ -146,7 +150,7 @@
                                 </a>
                             </li>
                         </ul>
-                    </div>
+                    </div> --}}
                     <!-- End::header-element -->
 
                     <!-- Start::header-element -->
@@ -170,7 +174,7 @@
                     <!-- End::header-element -->
 
                     <!-- Start::header-element -->
-                    <div class="header-element cart-dropdown">
+                    {{-- <div class="header-element cart-dropdown">
                         <!-- Start::header-link|dropdown-toggle -->
                         <a href="javascript:void(0);" class="header-link dropdown-toggle" data-bs-auto-close="outside" data-bs-toggle="dropdown">
                             <svg xmlns="http://www.w3.org/2000/svg" class="header-link-icon" width="24" height="24" viewBox="0 0 24 24"><path d="M21.822 7.431A1 1 0 0 0 21 7H7.333L6.179 4.23A1.994 1.994 0 0 0 4.333 3H2v2h2.333l4.744 11.385A1 1 0 0 0 10 17h8c.417 0 .79-.259.937-.648l3-8a1 1 0 0 0-.115-.921zM17.307 15h-6.64l-2.5-6h11.39l-2.25 6z"/><circle cx="10.5" cy="19.5" r="1.5"/><circle cx="17.5" cy="19.5" r="1.5"/></svg>
@@ -288,7 +292,7 @@
                             </div>
                         </div>
                         <!-- End::main-header-dropdown -->
-                    </div>
+                    </div> --}}
                     <!-- End::header-element -->
 
                     <!-- Start::header-element -->
@@ -427,9 +431,9 @@
                     <!-- Start::header-element -->
                     <div class="header-element header-shortcuts-dropdown d-md-block d-none">
                         <!-- Start::header-link|dropdown-toggle -->
-                        <a href="javascript:void(0);" class="header-link dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" id="notificationDropdown" aria-expanded="false">
+                        {{-- <a href="javascript:void(0);" class="header-link dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" id="notificationDropdown" aria-expanded="false">
                         <svg xmlns="http://www.w3.org/2000/svg" class="header-link-icon" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
-                        </a>
+                        </a> --}}
                         <!-- End::header-link|dropdown-toggle -->
                         <!-- Start::main-header-dropdown -->
                         <div class="main-header-dropdown header-shortcuts-dropdown dropdown-menu pb-0 dropdown-menu-end" aria-labelledby="notificationDropdown">
@@ -544,24 +548,24 @@
                     <!-- End::header-element -->
 
                     <!-- Start::header-element -->
-                    <div class="header-element header-fullscreen">
+                    {{-- <div class="header-element header-fullscreen">
                         <!-- Start::header-link -->
                         <a onclick="openFullscreen();" href="#" class="header-link">
                             <i class="bx bx-fullscreen full-screen-open header-link-icon"></i>
                             <i class="bx bx-exit-fullscreen full-screen-close header-link-icon d-none"></i>
                         </a>
                         <!-- End::header-link -->
-                    </div>
+                    </div> --}}
                     <!-- End::header-element -->
 
                     <!-- Start::header-element -->
-                    <div class="header-element d-md-block d-none">
+                    {{-- <div class="header-element d-md-block d-none">
                         <!-- Start::header-link|switcher-icon -->
                         <a href="#" class="header-link" data-bs-toggle="offcanvas" data-bs-target="#sidebar-canvas">
                             <svg xmlns="http://www.w3.org/2000/svg" class="header-link-icon" width="24" height="24" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm4 5h12v2H8zm5 5h7v2h-7z"/></svg>
                         </a>
                         <!-- End::header-link|switcher-icon -->
-                    </div>
+                    </div> --}}
                     <!-- End::header-element -->
 
                     <!-- Start::header-element -->
@@ -591,6 +595,11 @@
                             <li>
                                 <a class="dropdown-item d-flex border-bottom" href="{{ $dashboardUrl }}">
                                     <i class="far fa-user-circle fs-16 me-2 op-7"></i>Dashboard
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item d-flex border-bottom" href="{{ $profileUrl }}">
+                                    <i class="far fa-id-badge fs-16 me-2 op-7"></i>Profil Saya
                                 </a>
                             </li>
                             <li>

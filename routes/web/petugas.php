@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Web\Admin\AdminPreviewController;
+use App\Http\Controllers\Web\Admin\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('petugas')->name('petugas.')->middleware(['auth', 'role:Petugas'])->group(function () {
@@ -17,6 +18,8 @@ Route::prefix('petugas')->name('petugas.')->middleware(['auth', 'role:Petugas'])
     Route::get('/cancellations', [AdminPreviewController::class, 'cancellations'])->name('cancellations');
     Route::get('/force-majeure', [AdminPreviewController::class, 'forceMajeure'])->name('force.majeure');
     Route::get('/customers', [AdminPreviewController::class, 'customers'])->name('customers');
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 });
 
 Route::prefix('petugas')->name('petugas.')->middleware(['auth', 'role:Admin'])->group(function () {

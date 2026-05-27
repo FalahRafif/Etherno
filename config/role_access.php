@@ -151,6 +151,12 @@ return [
                     'roles' => ['Admin', 'Petugas'],
                 ],
                 [
+                    'label' => 'Management User/Akun',
+                    'route_name' => 'users',
+                    'active' => ['users', 'users.create', 'users.edit'],
+                    'roles' => ['Admin'],
+                ],
+                [
                     'label' => 'Settings',
                     'route_name' => 'settings',
                     'active' => ['settings'],

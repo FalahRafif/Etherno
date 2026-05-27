@@ -115,15 +115,32 @@ Entry point route web ada di `routes/web.php` dan me-require file route lain:
 Entry point route API ada di `routes/api.php` dan saat ini me-require:
 
 - `routes/api/auth.php`: endpoint auth yang menerima request.
+- `routes/api/admin.php`: endpoint internal admin (CRUD akun internal, dll).
 
 Endpoint auth saat ini:
 
 - `POST /api/login` (name `login.post`), middleware `web` + `guest`.
 - `POST /api/logout` (name `logout`), middleware `web` + `auth`.
 
+Endpoint admin user management:
+
+- `GET /api/admin/users` (name `api.admin.users.index`), middleware `web` + `auth` + `role:Admin`.
+- `POST /api/admin/users` (name `api.admin.users.store`), middleware `web` + `auth` + `role:Admin`.
+- `PUT /api/admin/users/{user}` (name `api.admin.users.update`), middleware `web` + `auth` + `role:Admin`.
+- `DELETE /api/admin/users/{user}` (name `api.admin.users.destroy`), middleware `web` + `auth` + `role:Admin`.
+
 Public route memakai nama seperti `home`, `booking.page`, `booking.success`, `booking.status`, `booking.payment.dp`, `booking.payment.final`, `booking.reschedule`, dan `booking.cancellation.policy`.
 
 Admin route memakai prefix URL `/admin`, name prefix `admin.`, middleware `auth` dan `role:Admin`.
+
+Route admin untuk management akun internal:
+
+- `GET /admin/users` (name `admin.users`), hanya admin.
+- `GET /admin/users/create` (name `admin.users.create`), hanya admin.
+- `POST /admin/users` (name `admin.users.store`), hanya admin.
+- `GET /admin/users/{user}/edit` (name `admin.users.edit`), hanya admin.
+- `PUT /admin/users/{user}` (name `admin.users.update`), hanya admin.
+- `DELETE /admin/users/{user}` (name `admin.users.destroy`), hanya admin.
 
 Petugas route memakai prefix URL `/petugas`, name prefix `petugas.`, middleware `auth` dan `role:Petugas` untuk route operasional. Di file `routes/web/petugas.php` juga ada route admin-only dengan prefix `/petugas` dan middleware `role:Admin` untuk beberapa page master. Jika behavior ini berubah, update route dan dokumentasi bersamaan.
 
@@ -141,6 +158,19 @@ Petugas route memakai prefix URL `/petugas`, name prefix `petugas.`, middleware 
 - Error status views: `resources/views/errors/{401,403,404,419,422,429,500,503}.blade.php` + fallback `4xx.blade.php` dan `5xx.blade.php`.
 
 Guest/public tidak boleh mengambil menu internal. Admin dan Petugas berbagi layout admin yang sama, tetapi menu dan route difilter berdasarkan role.
+
+### View Scope Convention
+
+Untuk menjaga scaffold tetap rapi dan kolaboratif, view internal dipisah berdasarkan scope fitur:
+
+- `resources/views/pages/admin/management-user/*` untuk seluruh halaman management user (index/create/edit/partial).
+- `resources/views/pages/admin/profile/*` untuk halaman profile internal.
+- `resources/views/pages/admin/master/*` hanya untuk page master lain (contoh package/location rules), bukan untuk management user.
+
+Asset page-specific juga dipisah mengikuti scope view:
+
+- `public/assets/pages/admin/management-user/*`.
+- `public/assets/pages/admin/profile/*`.
 
 ### Error Handling (Production Mode)
 
@@ -300,6 +330,12 @@ Jika menambah page baru, update route, controller method tipis, service page map
 - `attachments`: file metadata, `type_file` join ke `references`.
 - `roles`: role aplikasi.
 - `users`: user internal/customer, `role_id` ke `roles`, `profile_image_attachment_id` ke `attachments`.
+
+Catatan implementasi user management internal:
+
+- Halaman admin management akun membatasi role yang bisa dipilih hanya `Admin` dan `Petugas`.
+- CRUD akun internal tidak mengelola role `Customer`.
+- Penghapusan akun memakai soft delete manual (`delete_status = true`) melalui repository.
 
 Reference group yang sudah ada:
 
@@ -476,9 +512,11 @@ Dalam Blade internal, gunakan `panel_route('admin.route.name')` saat membuat lin
 
 Langkah umum:
 
-- Tambahkan method tipis di `app/Http/Controllers/Web/Admin/AdminPreviewController.php`.
-- Tambahkan key page di `InternalPageService`.
-- Tambahkan view di `resources/views/pages/admin`.
+- Untuk page dashboard/preview sederhana, tambahkan method tipis di `app/Http/Controllers/Web/Admin/AdminPreviewController.php`.
+- Untuk modul feature (contoh management user), gunakan controller dedicated per scope di `app/Http/Controllers/Web/Admin/*Controller.php`.
+- Tambahkan key page di `InternalPageService` hanya jika page memang dikelola lewat service map preview.
+- Tambahkan view dalam folder scope yang spesifik, contoh `resources/views/pages/admin/management-user/index.blade.php`.
+- Tambahkan asset page-specific dalam folder scope yang sama pattern-nya, contoh `public/assets/pages/admin/management-user/index.css`.
 - Tambahkan route di `admin.php` dan/atau `petugas.php`.
 - Tambahkan menu di `config/role_access.php` jika perlu.
 
