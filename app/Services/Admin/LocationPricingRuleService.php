@@ -16,7 +16,13 @@ use RuntimeException;
 class LocationPricingRuleService
 {
     /**
-     * @var array{ids: array<int, int>, labels: array<int, string>}|null
+     * @var array{
+     *     ids: array<int, int>,
+     *     labels: array<int, string>,
+     *     codes: array<int, string>,
+     *     labels_by_code: array<string, string>,
+     *     ids_by_code: array<string, int>
+     * }|null
      */
     private ?array $locationLevelMeta = null;
 
@@ -24,11 +30,6 @@ class LocationPricingRuleService
      * @var Collection<int, Reference>|null
      */
     private ?Collection $priceTypeOptionsCache = null;
-
-    /**
-     * @var Collection<int, array<string, mixed>>|null
-     */
-    private ?Collection $locationOptionsCache = null;
 
     public function __construct(
         private LocationPricingRuleRepositoryInterface $locationPricingRuleRepository,
@@ -55,14 +56,18 @@ class LocationPricingRuleService
 
     /**
      * @return array{
-     *   locationOptions: Collection<int, array<string, mixed>>,
+     *   locationLevels: Collection<int, array{code: string, label: string}>,
+     *   locationPath: array<string, int|string>|null,
      *   priceTypeOptions: Collection<int, Reference>
      * }
      */
-    public function getFormPayload(): array
+    public function getFormPayload(?LocationPricingRule $managedRule = null): array
     {
         return [
-            'locationOptions' => $this->locationOptions(),
+            'locationLevels' => $this->locationLevelOptions(),
+            'locationPath' => $managedRule instanceof LocationPricingRule
+                ? $this->resolveLocationPath($managedRule)
+                : null,
             'priceTypeOptions' => $this->priceTypeOptions(),
         ];
     }
@@ -105,6 +110,56 @@ class LocationPricingRuleService
         return $updatedRule->loadMissing($this->rulesRelations());
     }
 
+    /**
+     * @return array<string, int|string>
+     */
+    private function resolveLocationPath(LocationPricingRule $rule): array
+    {
+        $rule->loadMissing($this->rulesRelations());
+        $location = $rule->location;
+
+        if (!$location instanceof Location) {
+            return [];
+        }
+
+        $levelCode = strtoupper((string) ($location->level?->code ?? ''));
+        $path = [
+            'level_code' => $levelCode,
+            'location_id' => (int) $location->getKey(),
+            'province_id' => 0,
+            'city_id' => 0,
+            'district_id' => 0,
+            'village_id' => 0,
+        ];
+
+        if ($levelCode === 'LL_PV') {
+            $path['province_id'] = (int) $location->getKey();
+            return $path;
+        }
+
+        if ($levelCode === 'LL_CT') {
+            $path['city_id'] = (int) $location->getKey();
+            $path['province_id'] = (int) ($location->parent?->getKey() ?? 0);
+            return $path;
+        }
+
+        if ($levelCode === 'LL_KC') {
+            $path['district_id'] = (int) $location->getKey();
+            $path['city_id'] = (int) ($location->parent?->getKey() ?? 0);
+            $path['province_id'] = (int) ($location->parent?->parent?->getKey() ?? 0);
+            return $path;
+        }
+
+        if ($levelCode === 'LL_KL') {
+            $path['village_id'] = (int) $location->getKey();
+            $path['district_id'] = (int) ($location->parent?->getKey() ?? 0);
+            $path['city_id'] = (int) ($location->parent?->parent?->getKey() ?? 0);
+            $path['province_id'] = (int) ($location->parent?->parent?->parent?->getKey() ?? 0);
+        }
+
+        return $path;
+    }
+
     public function deleteRule(LocationPricingRule $rule): bool
     {
         $managedRule = $this->resolveEditableRule($rule);
@@ -136,6 +191,8 @@ class LocationPricingRuleService
     {
         $provinceCount = 0;
         $cityCount = 0;
+        $districtCount = 0;
+        $villageCount = 0;
 
         foreach ($rules as $rule) {
             $levelCode = strtoupper((string) ($rule->location?->level?->code ?? ''));
@@ -147,6 +204,16 @@ class LocationPricingRuleService
 
             if ($levelCode === 'LL_CT') {
                 $cityCount++;
+                continue;
+            }
+
+            if ($levelCode === 'LL_KC') {
+                $districtCount++;
+                continue;
+            }
+
+            if ($levelCode === 'LL_KL') {
+                $villageCount++;
             }
         }
 
@@ -154,6 +221,8 @@ class LocationPricingRuleService
             'total' => $rules->count(),
             'province' => $provinceCount,
             'city' => $cityCount,
+            'district' => $districtCount,
+            'village' => $villageCount,
         ];
     }
 
@@ -175,6 +244,12 @@ class LocationPricingRuleService
                     $locationQuery
                         ->where('name', 'like', '%' . $keyword . '%')
                         ->orWhereHas('parent', function (Builder $parentQuery) use ($keyword): void {
+                            $parentQuery->where('name', 'like', '%' . $keyword . '%');
+                        })
+                        ->orWhereHas('parent.parent', function (Builder $parentQuery) use ($keyword): void {
+                            $parentQuery->where('name', 'like', '%' . $keyword . '%');
+                        })
+                        ->orWhereHas('parent.parent.parent', function (Builder $parentQuery) use ($keyword): void {
                             $parentQuery->where('name', 'like', '%' . $keyword . '%');
                         });
                 })
@@ -212,62 +287,53 @@ class LocationPricingRuleService
     }
 
     /**
-     * @return Collection<int, array<string, mixed>>
+     * @return Collection<int, array{code: string, label: string}>
      */
-    private function locationOptions(): Collection
+    private function locationLevelOptions(): Collection
     {
-        if ($this->locationOptionsCache instanceof Collection) {
-            return $this->locationOptionsCache;
-        }
+        $labelsByCode = $this->locationLevelLabelsByCode();
+        $orderedCodes = ['LL_PV', 'LL_CT', 'LL_KC', 'LL_KL'];
 
-        $allowedLevelIds = $this->allowedLocationLevelIds();
-
-        /** @var Collection<int, Location> $locations */
-        $locations = $this->locationRepository
-            ->query(true)
-            ->with([
-                'parent:id,name',
-                'level:id,code,description',
+        return collect($orderedCodes)
+            ->map(static fn (string $code): array => [
+                'code' => $code,
+                'label' => $labelsByCode[$code] ?? $code,
             ])
-            ->whereIn('level_id', $allowedLevelIds)
-            ->orderByRaw("CASE WHEN level_id = ? THEN 0 WHEN level_id = ? THEN 1 ELSE 99 END", [
-                $allowedLevelIds[0] ?? 0,
-                $allowedLevelIds[1] ?? 0,
-            ])
-            ->orderBy('name')
-            ->get(['id', 'name', 'level_id', 'parent_id']);
-
-        $this->locationOptionsCache = $locations
-            ->map(function (Location $location): array {
-                $levelId = (int) $location->level_id;
-                $levelLabel = $this->locationLevelLabelsById()[$levelId] ?? 'Lokasi';
-                $levelCode = strtoupper((string) ($location->level?->code ?? ''));
-                $parentName = trim((string) ($location->parent?->name ?? ''));
-                $displayName = $levelCode === 'LL_PV'
-                    ? $location->name
-                    : ($location->name . ($parentName !== '' ? ' - ' . $parentName : ''));
-
-                return [
-                    'id' => (int) $location->getKey(),
-                    'name' => $location->name,
-                    'level_id' => $levelId,
-                    'level_code' => $levelCode,
-                    'level_label' => $levelLabel,
-                    'parent_name' => $parentName,
-                    'display_name' => $displayName,
-                ];
-            })
             ->values();
-
-        return $this->locationOptionsCache;
     }
 
     /**
-     * @return array<int, string>
+     * @return Collection<int, array{id: int, name: string}>
      */
-    private function locationLevelLabelsById(): array
+    public function getLocationOptions(string $levelCode, ?int $parentId = null): Collection
     {
-        return $this->resolveLocationLevelMeta()['labels'];
+        $levelId = $this->locationLevelIdByCode($levelCode);
+        if (!is_int($levelId)) {
+            return collect();
+        }
+
+        $query = $this->locationRepository
+            ->query(true)
+            ->where('level_id', $levelId);
+
+        if (strtoupper($levelCode) === 'LL_PV') {
+            $query->whereNull('parent_id');
+        } else {
+            $parentId = is_int($parentId) && $parentId > 0 ? $parentId : null;
+            if ($parentId === null) {
+                return collect();
+            }
+            $query->where('parent_id', $parentId);
+        }
+
+        return $query
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(static fn (Location $location): array => [
+                'id' => (int) $location->getKey(),
+                'name' => $location->name,
+            ])
+            ->values();
     }
 
     /**
@@ -279,7 +345,13 @@ class LocationPricingRuleService
     }
 
     /**
-     * @return array{ids: array<int, int>, labels: array<int, string>}
+     * @return array{
+     *     ids: array<int, int>,
+     *     labels: array<int, string>,
+     *     codes: array<int, string>,
+     *     labels_by_code: array<string, string>,
+     *     ids_by_code: array<string, int>
+     * }
      */
     private function resolveLocationLevelMeta(): array
     {
@@ -290,39 +362,62 @@ class LocationPricingRuleService
         $references = $this->referenceRepository
             ->query(true)
             ->where('group_id', 'location_level')
-            ->whereIn('code', ['LL_PV', 'LL_CT'])
+            ->whereIn('code', ['LL_PV', 'LL_CT', 'LL_KC', 'LL_KL'])
             ->get(['id', 'code', 'description']);
 
-        $provinceId = null;
-        $cityId = null;
+        $requiredCodes = [
+            'LL_PV' => 'Provinsi',
+            'LL_CT' => 'Kota/Kabupaten',
+            'LL_KC' => 'Kecamatan',
+            'LL_KL' => 'Kelurahan',
+        ];
+        $meta = [
+            'ids' => [],
+            'labels' => [],
+            'codes' => [],
+            'labels_by_code' => [],
+            'ids_by_code' => [],
+        ];
 
         foreach ($references as $reference) {
-            $id = (int) $reference->id;
             $code = strtoupper((string) $reference->code);
-
-            if ($code === 'LL_PV') {
-                $provinceId = $id;
+            if (!array_key_exists($code, $requiredCodes)) {
                 continue;
             }
 
-            if ($code === 'LL_CT') {
-                $cityId = $id;
+            $id = (int) $reference->id;
+            $meta['ids'][] = $id;
+            $meta['labels'][$id] = $requiredCodes[$code];
+            $meta['codes'][$id] = $code;
+            $meta['labels_by_code'][$code] = $requiredCodes[$code];
+            $meta['ids_by_code'][$code] = $id;
+        }
+
+        foreach (array_keys($requiredCodes) as $code) {
+            if (!array_key_exists($code, $meta['ids_by_code'])) {
+                throw new RuntimeException('Reference level lokasi tidak lengkap.');
             }
         }
 
-        if (!is_int($provinceId) || !is_int($cityId)) {
-            throw new RuntimeException('Reference level lokasi Provinsi/Kota tidak lengkap.');
-        }
-
-        $this->locationLevelMeta = [
-            'ids' => [$provinceId, $cityId],
-            'labels' => [
-                $provinceId => 'Provinsi',
-                $cityId => 'Kota/Kabupaten',
-            ],
-        ];
+        $this->locationLevelMeta = $meta;
 
         return $this->locationLevelMeta;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function locationLevelLabelsByCode(): array
+    {
+        return $this->resolveLocationLevelMeta()['labels_by_code'];
+    }
+
+    private function locationLevelIdByCode(string $code): ?int
+    {
+        $code = strtoupper($code);
+        $meta = $this->resolveLocationLevelMeta();
+
+        return $meta['ids_by_code'][$code] ?? null;
     }
 
     private function resolveAllowedLocationOrFail(int $locationId): Location
@@ -376,7 +471,9 @@ class LocationPricingRuleService
         return [
             'location:id,name,level_id,parent_id',
             'location.level:id,code,description',
-            'location.parent:id,name',
+            'location.parent:id,name,level_id,parent_id',
+            'location.parent.parent:id,name,level_id,parent_id',
+            'location.parent.parent.parent:id,name',
             'priceType:id,code,description',
         ];
     }

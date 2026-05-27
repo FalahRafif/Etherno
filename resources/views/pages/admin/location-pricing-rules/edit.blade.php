@@ -10,7 +10,7 @@
 @section('content')
 @include('pages.admin.partials.page-header', [
     'heading' => 'Edit Aturan Harga Lokasi',
-    'summary' => 'Perbarui lokasi atau tipe harga untuk aturan yang sudah ada.',
+    'summary' => 'Perbarui lokasi atau tipe harga untuk aturan yang sudah ada (provinsi, kota/kabupaten, kecamatan, atau kelurahan).',
     'actions' => [
         ['label' => 'Kembali ke Daftar', 'url' => route('admin.location.rules'), 'class' => 'btn btn-outline-primary btn-sm'],
     ],
@@ -21,7 +21,8 @@
     'formAction' => route('admin.location.rules.update', $managedRule),
     'submitLabel' => 'Simpan Perubahan',
     'managedRule' => $managedRule,
-    'locationOptions' => $locationOptions,
+    'locationLevels' => $locationLevels,
+    'locationPath' => $locationPath ?? null,
     'priceTypeOptions' => $priceTypeOptions,
 ])
 @endsection
@@ -29,11 +30,5 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script>
-        $(function () {
-            $('.select2').select2({
-                width: '100%'
-            });
-        });
-    </script>
+    <script src="{{ asset('assets/pages/admin/location-pricing-rules/form.js') }}"></script>
 @endpush

@@ -19,6 +19,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->grou
     Route::get('/pricing/reviews', [AdminPreviewController::class, 'pricingReviews'])->name('pricing.reviews');
     Route::get('/packages', [AdminPreviewController::class, 'packages'])->name('packages');
     Route::get('/location-rules', [LocationPricingRuleController::class, 'index'])->name('location.rules');
+    Route::get('/location-rules/options', [LocationPricingRuleController::class, 'locationOptions'])->name('location.rules.options');
     Route::get('/location-rules/create', [LocationPricingRuleController::class, 'create'])->name('location.rules.create');
     Route::post('/location-rules', [LocationPricingRuleController::class, 'store'])->name('location.rules.store');
     Route::get('/location-rules/{locationPricingRule}/edit', [LocationPricingRuleController::class, 'edit'])->name('location.rules.edit');

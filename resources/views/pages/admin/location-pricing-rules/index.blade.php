@@ -16,7 +16,7 @@
 
 @include('pages.admin.partials.page-header', [
     'heading' => 'Aturan Harga Lokasi',
-    'summary' => 'Kelola mapping lokasi ke tipe harga tambahan. Anda bisa set aturan level provinsi maupun kota/kabupaten secara spesifik.',
+    'summary' => 'Kelola mapping lokasi ke tipe harga tambahan. Anda bisa set aturan level provinsi, kota/kabupaten, kecamatan, hingga kelurahan secara spesifik.',
     'actions' => $actions,
 ])
 
@@ -30,12 +30,12 @@
 
 @include('pages.admin.partials.alerts', [
     'alerts' => [
-        ['class' => 'alert-info', 'text' => 'Contoh penggunaan: Provinsi Jawa Barat = Tambahan Sedang, lalu kota Depok = Tambahan Ringan sebagai aturan yang lebih spesifik.'],
+        ['class' => 'alert-info', 'text' => 'Contoh penggunaan: Provinsi Jawa Barat = Tambahan Sedang, kota Depok = Tambahan Ringan, dan kelurahan spesifik untuk aturan yang lebih detail.'],
     ],
 ])
 
 <div class="row g-3 mb-3">
-    <div class="col-12 col-md-6 col-xl-4">
+    <div class="col-12 col-md-6 col-xl-3">
         <div class="card custom-card mb-0 h-100">
             <div class="card-body">
                 <p class="text-muted mb-1">Total Aturan</p>
@@ -44,7 +44,7 @@
             </div>
         </div>
     </div>
-    <div class="col-12 col-md-6 col-xl-4">
+    <div class="col-12 col-md-6 col-xl-3">
         <div class="card custom-card mb-0 h-100">
             <div class="card-body">
                 <p class="text-muted mb-1">Level Provinsi</p>
@@ -53,12 +53,30 @@
             </div>
         </div>
     </div>
-    <div class="col-12 col-md-6 col-xl-4">
+    <div class="col-12 col-md-6 col-xl-3">
         <div class="card custom-card mb-0 h-100">
             <div class="card-body">
                 <p class="text-muted mb-1">Level Kota/Kabupaten</p>
                 <h4 class="mb-1 text-info">{{ (int) ($stats['city'] ?? 0) }}</h4>
                 <small class="text-muted d-block">Aturan spesifik per kota/kabupaten</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card custom-card mb-0 h-100">
+            <div class="card-body">
+                <p class="text-muted mb-1">Level Kecamatan</p>
+                <h4 class="mb-1 text-warning">{{ (int) ($stats['district'] ?? 0) }}</h4>
+                <small class="text-muted d-block">Aturan spesifik per kecamatan</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card custom-card mb-0 h-100">
+            <div class="card-body">
+                <p class="text-muted mb-1">Level Kelurahan</p>
+                <h4 class="mb-1 text-secondary">{{ (int) ($stats['village'] ?? 0) }}</h4>
+                <small class="text-muted d-block">Aturan spesifik per kelurahan</small>
             </div>
         </div>
     </div>
@@ -87,7 +105,7 @@
                     <tr>
                         <th>Lokasi</th>
                         <th>Level</th>
-                        <th>Provinsi Induk</th>
+                        <th>Lokasi Induk</th>
                         <th>Tipe Harga</th>
                         <th>Dibuat</th>
                         <th class="text-end">Aksi</th>
@@ -98,14 +116,31 @@
                         @php
                             $location = $rule->location;
                             $levelCode = strtoupper((string) ($location?->level?->code ?? ''));
-                            $levelLabel = $levelCode === 'LL_PV' ? 'Provinsi' : 'Kota/Kabupaten';
-                            $parentName = trim((string) ($location?->parent?->name ?? ''));
+                            $levelLabel = trim((string) ($location?->level?->description ?? 'Lokasi'));
+                            $parentChain = [];
+                            $parentLocation = $location?->parent;
+
+                            while ($parentLocation) {
+                                $parentChain[] = $parentLocation->name;
+                                $parentLocation = $parentLocation->parent;
+                            }
+
+                            $parentLabel = $parentChain === []
+                                ? '-'
+                                : implode(' > ', array_reverse($parentChain));
                             $priceTypeCode = strtoupper((string) ($rule->priceType?->code ?? ''));
                             $priceTypeLabel = trim((string) ($rule->priceType?->description ?? '-'));
                             $priceBadgeClass = match ($priceTypeCode) {
                                 'PT_RG' => 'bg-success-transparent text-success',
                                 'PT_SD' => 'bg-warning-transparent text-warning',
                                 'PT_CS' => 'bg-danger-transparent text-danger',
+                                default => 'bg-secondary-transparent text-secondary',
+                            };
+                            $levelBadgeClass = match ($levelCode) {
+                                'LL_PV' => 'bg-success-transparent text-success',
+                                'LL_CT' => 'bg-info-transparent text-info',
+                                'LL_KC' => 'bg-warning-transparent text-warning',
+                                'LL_KL' => 'bg-secondary-transparent text-secondary',
                                 default => 'bg-secondary-transparent text-secondary',
                             };
                         @endphp
@@ -117,11 +152,11 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="badge rounded-pill {{ $levelCode === 'LL_PV' ? 'bg-success-transparent text-success' : 'bg-info-transparent text-info' }}">
+                                <span class="badge rounded-pill {{ $levelBadgeClass }}">
                                     {{ $levelLabel }}
                                 </span>
                             </td>
-                            <td>{{ $levelCode === 'LL_PV' ? '-' : ($parentName !== '' ? $parentName : '-') }}</td>
+                            <td>{{ $parentLabel }}</td>
                             <td>
                                 <span class="badge rounded-pill {{ $priceBadgeClass }}">{{ $priceTypeLabel }}</span>
                             </td>

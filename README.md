@@ -360,7 +360,7 @@ Catatan implementasi user management internal:
 Catatan implementasi aturan harga lokasi:
 
 - CRUD Aturan Harga Lokasi dikelola melalui `LocationPricingRuleController` + `LocationPricingRuleService`.
-- Scope lokasi untuk modul ini dibatasi ke level `Provinsi` (`LL_PV`) dan `Kota/Kabupaten` (`LL_CT`).
+- Scope lokasi untuk modul ini mencakup level `Provinsi` (`LL_PV`), `Kota/Kabupaten` (`LL_CT`), `Kecamatan` (`LL_KC`), dan `Kelurahan` (`LL_KL`).
 - Satu lokasi hanya boleh memiliki satu aturan harga aktif (`location_pricing_rules.location_id` unik untuk data aktif).
 
 Reference group yang sudah ada:

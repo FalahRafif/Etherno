@@ -7,8 +7,10 @@ use App\Http\Requests\Admin\LocationPricingRule\StoreLocationPricingRuleRequest;
 use App\Http\Requests\Admin\LocationPricingRule\UpdateLocationPricingRuleRequest;
 use App\Models\LocationPricingRule;
 use App\Services\Admin\LocationPricingRuleService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use RuntimeException;
 
@@ -63,7 +65,7 @@ class LocationPricingRuleController extends Controller
         }
 
         return view('pages.admin.location-pricing-rules.edit', array_merge(
-            $this->locationPricingRuleService->getFormPayload(),
+            $this->locationPricingRuleService->getFormPayload($managedRule),
             [
                 'title' => 'Edit Aturan Harga Lokasi - Etherno Admin',
                 'managedRule' => $managedRule,
@@ -97,5 +99,22 @@ class LocationPricingRuleController extends Controller
         return redirect()
             ->route('admin.location.rules')
             ->with('status', 'Aturan harga lokasi berhasil dihapus.');
+    }
+
+    public function locationOptions(Request $request): JsonResponse
+    {
+        $payload = $request->validate([
+            'level' => ['required', 'string', Rule::in(['LL_PV', 'LL_CT', 'LL_KC', 'LL_KL'])],
+            'parent_id' => ['nullable', 'integer'],
+        ]);
+
+        $level = strtoupper((string) $payload['level']);
+        $parentId = ($payload['parent_id'] ?? null) !== null ? (int) $payload['parent_id'] : null;
+
+        $options = $this->locationPricingRuleService->getLocationOptions($level, $parentId);
+
+        return response()->json([
+            'options' => $options,
+        ]);
     }
 }

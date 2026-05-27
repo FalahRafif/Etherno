@@ -87,7 +87,7 @@ class UpdateLocationPricingRuleRequest extends FormRequest
 
         $this->allowedLocationLevelIds = DB::table('references')
             ->where('group_id', 'location_level')
-            ->whereIn('code', ['LL_PV', 'LL_CT'])
+            ->whereIn('code', ['LL_PV', 'LL_CT', 'LL_KC', 'LL_KL'])
             ->where('delete_status', false)
             ->pluck('id')
             ->map(static fn (mixed $id): int => (int) $id)
