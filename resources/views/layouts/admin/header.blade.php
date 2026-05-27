@@ -1,3 +1,26 @@
+@php
+    $authUser = auth()->user();
+    $sessionUser = session(\App\Services\AuthService::SESSION_USER_KEY, []);
+    if (!is_array($sessionUser)) {
+        $sessionUser = [];
+    }
+    $sessionPrefix = session(\App\Services\AuthService::SESSION_ROLE_KEY, '');
+
+    if (!is_string($sessionPrefix) || $sessionPrefix === '') {
+        $sessionPrefix = is_string($sessionUser['route_prefix'] ?? null) ? $sessionUser['route_prefix'] : 'admin';
+    }
+
+    $dashboardRoute = $sessionPrefix . '.dashboard';
+    $dashboardUrl = \Illuminate\Support\Facades\Route::has($dashboardRoute)
+        ? route($dashboardRoute)
+        : (\Illuminate\Support\Facades\Route::has('admin.dashboard') ? route('admin.dashboard') : url('/'));
+
+    $logoutUrl = \Illuminate\Support\Facades\Route::has('logout') ? route('logout') : url('/api/logout');
+    $displayName = trim((string) ($sessionUser['name'] ?? $authUser?->name ?? 'Internal User'));
+    $displayRole = trim((string) ($sessionUser['role'] ?? (($authUser instanceof \App\Models\User) ? $authUser->roleName() : 'Internal')));
+    $displayEmail = trim((string) ($sessionUser['email'] ?? $authUser?->email ?? ''));
+@endphp
+
 <!-- app-header -->
          <header class="app-header">
 
@@ -10,7 +33,7 @@
                     <!-- Start::header-element -->
                     <div class="header-element">
                         <div class="horizontal-logo">
-                            <a href="index.html" class="header-logo">
+                            <a href="{{ $dashboardUrl }}" class="header-logo">
                                 <img src="{{ asset('assets/images/brand-logos/desktop-logo.png') }}" alt="logo" class="desktop-logo">
                                 <img src="{{ asset('assets/images/brand-logos/toggle-logo.png') }}" alt="logo" class="toggle-logo">
                                 <img src="{{ asset('assets/images/brand-logos/desktop-dark.png') }}" alt="logo" class="desktop-dark">
@@ -550,19 +573,34 @@
                                     <img src="{{ asset('assets/images/faces/2.jpg') }}" alt="img" width="32" height="32" class="rounded-circle">
                                 </div>
                                 <div class="d-xl-block d-none">
-                                    <p class="fw-semibold mb-0 lh-1">Ashton Cox</p>
-                                    <span class="op-7 fw-normal d-block fs-11">Web Developer</span>
+                                    <p class="fw-semibold mb-0 lh-1">{{ $displayName !== '' ? $displayName : 'Internal User' }}</p>
+                                    <span class="op-7 fw-normal d-block fs-11">{{ $displayRole !== '' ? $displayRole : 'Internal' }}</span>
                                 </div>
                             </div>
                         </a>
                         <!-- End::header-link|dropdown-toggle -->
                         <ul class="main-header-dropdown dropdown-menu pt-0 overflow-hidden header-profile-dropdown dropdown-menu-end" aria-labelledby="mainHeaderProfile">
-                            <li><a class="dropdown-item d-flex border-bottom" href="profile.html"><i class="far fa-user-circle fs-16 me-2 op-7"></i>Profile</a></li>
-                            <li><a class="dropdown-item d-flex border-bottom" href="chat.html"><i class="far fa-smile fs-16 me-2 op-7"></i>Chat</a></li>
-                            <li><a class="dropdown-item d-flex border-bottom" href="mail.html"><i class="far fa-envelope  fs-16 me-2 op-7"></i>Inbox <span class="badge bg-success-transparent ms-auto">25</span></a></li>
-                            <li><a class="dropdown-item d-flex border-bottom border-block-end" href="chat.html"><i class="far fa-comment-dots fs-16 me-2 op-7"></i>Messages</a></li>
-                            <li><a class="dropdown-item d-flex border-bottom" href="mail-settings.html"><i class="far fa-sun fs-16 me-2 op-7"></i>Settings</a></li>
-                            <li><a class="dropdown-item d-flex" href="signin.html"><i class="far fa-arrow-alt-circle-left fs-16 me-2 op-7"></i>Sign Out</a></li>
+                            <li class="dropdown-item border-bottom py-2">
+                                <div class="d-flex flex-column">
+                                    <span class="fw-semibold text-dark">{{ $displayName !== '' ? $displayName : 'Internal User' }}</span>
+                                    @if ($displayEmail !== '')
+                                        <small class="text-muted">{{ $displayEmail }}</small>
+                                    @endif
+                                </div>
+                            </li>
+                            <li>
+                                <a class="dropdown-item d-flex border-bottom" href="{{ $dashboardUrl }}">
+                                    <i class="far fa-user-circle fs-16 me-2 op-7"></i>Dashboard
+                                </a>
+                            </li>
+                            <li>
+                                <form method="POST" action="{{ $logoutUrl }}" class="m-0">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item d-flex w-100 border-0 bg-transparent text-start">
+                                        <i class="far fa-arrow-alt-circle-left fs-16 me-2 op-7"></i>Logout
+                                    </button>
+                                </form>
+                            </li>
                         </ul>
                     </div>  
                     <!-- End::header-element -->

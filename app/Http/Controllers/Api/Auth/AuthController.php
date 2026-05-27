@@ -22,7 +22,7 @@ class AuthController extends Controller
             $user = $request->user()?->loadMissing('role');
 
             if (!$user instanceof User || !$this->authService->isInternalUser($user)) {
-                $this->authService->clearRoleSession($request);
+                $this->authService->clearInternalSession($request);
                 $this->authService->logout();
 
                 return back()
@@ -30,7 +30,7 @@ class AuthController extends Controller
                     ->withInput($request->only('email'));
             }
 
-            $this->authService->syncRoleSession($request, $user);
+            $this->authService->syncInternalSession($request, $user);
             $dashboardRoute = $this->authService->resolveDashboardRoute($user) ?? 'admin.dashboard';
 
             return redirect()->route($dashboardRoute);
@@ -43,7 +43,7 @@ class AuthController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
-        $this->authService->clearRoleSession($request);
+        $this->authService->clearInternalSession($request);
         $this->authService->logout();
 
         return redirect()->route('login');

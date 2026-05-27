@@ -267,7 +267,7 @@
 
             <p class="auth-eyebrow">Selamat datang kembali</p>
             <h1 class="auth-heading">Masuk</h1>
-            <p class="auth-subheading">Gunakan akun admin Anda untuk melanjutkan.</p>
+            <p class="auth-subheading">Silahkan Masukan Email dan Password Anda Untuk Melanjutkan.</p>
             <div class="auth-form-sep"></div>
 
             <div class="auth-card">
