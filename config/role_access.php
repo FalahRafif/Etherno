@@ -144,6 +144,12 @@ return [
                     'active' => ['payment-date-rules', 'payment-date-rules.create', 'payment-date-rules.edit'],
                     'roles' => ['Admin'],
                 ],
+                [
+                    'label' => 'Aturan Persen DP',
+                    'route_name' => 'dp-percentage-rules',
+                    'active' => ['dp-percentage-rules', 'dp-percentage-rules.create', 'dp-percentage-rules.edit'],
+                    'roles' => ['Admin'],
+                ],
             ],
         ],
         [
@@ -159,12 +165,6 @@ return [
                     'label' => 'Management User/Akun',
                     'route_name' => 'users',
                     'active' => ['users', 'users.create', 'users.edit'],
-                    'roles' => ['Admin'],
-                ],
-                [
-                    'label' => 'Blank (Dev)',
-                    'route_name' => 'blank',
-                    'active' => ['blank'],
                     'roles' => ['Admin'],
                 ],
             ],
