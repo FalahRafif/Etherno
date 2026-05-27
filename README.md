@@ -15,6 +15,7 @@ Sebelum membuat fitur baru, mengubah flow booking, menambah migration, atau memi
 - Hak akses menu/route masih hardcoded di `config/role_access.php`, belum memakai tabel `role_menu` atau permission table.
 - Semua migration sudah dikelompokkan per folder versi di `database/migrations/*` dan diload lewat `AppServiceProvider`.
 - Banyak tabel memakai soft delete manual lewat kolom `delete_status`, `deleted_at`, dan `deleted_by`, bukan trait `SoftDeletes`.
+- Error page production sudah custom dan auto-switch layout: context public pakai layout public, context internal (`admin`/`petugas`) pakai shell admin.
 
 ## Product Principles
 
@@ -133,8 +134,41 @@ Petugas route memakai prefix URL `/petugas`, name prefix `petugas.`, middleware 
 - Guest alias layout: `resources/views/layouts/guest/guest.blade.php`.
 - Public header config-driven: `resources/views/layouts/public/header.blade.php`.
 - Auth layout: `resources/views/layouts/auth/auth.blade.php`.
+- Error layout wrapper (context-aware): `resources/views/errors/layout.blade.php`.
+- Error layout public: `resources/views/errors/public-layout.blade.php`.
+- Error layout internal panel: `resources/views/errors/admin-layout.blade.php`.
+- Error status views: `resources/views/errors/{401,403,404,419,422,429,500,503}.blade.php` + fallback `4xx.blade.php` dan `5xx.blade.php`.
 
 Guest/public tidak boleh mengambil menu internal. Admin dan Petugas berbagi layout admin yang sama, tetapi menu dan route difilter berdasarkan role.
+
+### Error Handling (Production Mode)
+
+Custom error view aktif saat `APP_DEBUG=false`:
+
+- Laravel akan memprioritaskan view status spesifik, misalnya `errors/404.blade.php`, `errors/500.blade.php`.
+- Jika status spesifik tidak ada, fallback ke `errors/4xx.blade.php` atau `errors/5xx.blade.php`.
+- Semua status view meng-extend `errors/layout.blade.php` sebagai wrapper context-aware.
+
+`errors/layout.blade.php` melakukan deteksi context internal (`admin`/`petugas`) dengan urutan sinyal:
+
+- Segment URL pertama (`/admin/*` atau `/petugas/*`).
+- Prefix route name (`admin.*` atau `petugas.*`).
+- Session `auth.role`.
+- Mapping role user login melalui `config('role_access.route_prefix_by_role')`.
+
+Jika internal context terdeteksi:
+
+- Render `errors/admin-layout.blade.php` (menggunakan shell internal: header + sidebar + footer admin).
+- Tombol utama diarahkan ke dashboard sesuai prefix (`admin.dashboard` atau `petugas.dashboard`).
+
+Jika internal context tidak terdeteksi:
+
+- Render `errors/public-layout.blade.php` (gaya halaman public).
+
+Catatan teknis:
+
+- Error layout memakai fallback URL aman (`/`, `/booking`, `/login`) jika route name tidak tersedia.
+- `resources/views/layouts/admin/assets.blade.php` sudah mendukung title dinamis (`$title`) agar judul tab browser mengikuti status error.
 
 ### Access Configuration
 
