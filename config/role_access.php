@@ -133,33 +133,15 @@ return [
             'section' => 'Management Data',
             'items' => [
                 [
-                    'label' => 'Packages',
-                    'route_name' => 'packages',
-                    'active' => ['packages'],
-                    'roles' => ['Admin'],
-                ],
-                [
-                    'label' => 'Location Rules',
+                    'label' => 'Aturan Harga Lokasi',
                     'route_name' => 'location.rules',
-                    'active' => ['location.rules'],
+                    'active' => ['location.rules', 'location.rules.create', 'location.rules.edit'],
                     'roles' => ['Admin'],
-                ],
-                [
-                    'label' => 'Customers',
-                    'route_name' => 'customers',
-                    'active' => ['customers'],
-                    'roles' => ['Admin', 'Petugas'],
                 ],
                 [
                     'label' => 'Management User/Akun',
                     'route_name' => 'users',
                     'active' => ['users', 'users.create', 'users.edit'],
-                    'roles' => ['Admin'],
-                ],
-                [
-                    'label' => 'Settings',
-                    'route_name' => 'settings',
-                    'active' => ['settings'],
                     'roles' => ['Admin'],
                 ],
                 [

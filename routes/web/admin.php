@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Web\Admin\AdminPreviewController;
 use App\Http\Controllers\Web\Admin\BlankController;
+use App\Http\Controllers\Web\Admin\LocationPricingRuleController;
 use App\Http\Controllers\Web\Admin\ProfileController;
 use App\Http\Controllers\Web\Admin\UserManagementController;
 use Illuminate\Support\Facades\Route;
@@ -17,7 +18,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->grou
     Route::get('/payments/final', [AdminPreviewController::class, 'finalPayment'])->name('payments.final');
     Route::get('/pricing/reviews', [AdminPreviewController::class, 'pricingReviews'])->name('pricing.reviews');
     Route::get('/packages', [AdminPreviewController::class, 'packages'])->name('packages');
-    Route::get('/location-rules', [AdminPreviewController::class, 'locationRules'])->name('location.rules');
+    Route::get('/location-rules', [LocationPricingRuleController::class, 'index'])->name('location.rules');
+    Route::get('/location-rules/create', [LocationPricingRuleController::class, 'create'])->name('location.rules.create');
+    Route::post('/location-rules', [LocationPricingRuleController::class, 'store'])->name('location.rules.store');
+    Route::get('/location-rules/{locationPricingRule}/edit', [LocationPricingRuleController::class, 'edit'])->name('location.rules.edit');
+    Route::put('/location-rules/{locationPricingRule}', [LocationPricingRuleController::class, 'update'])->name('location.rules.update');
+    Route::delete('/location-rules/{locationPricingRule}', [LocationPricingRuleController::class, 'destroy'])->name('location.rules.destroy');
     Route::get('/reschedules', [AdminPreviewController::class, 'reschedules'])->name('reschedules');
     Route::get('/cancellations', [AdminPreviewController::class, 'cancellations'])->name('cancellations');
     Route::get('/force-majeure', [AdminPreviewController::class, 'forceMajeure'])->name('force.majeure');

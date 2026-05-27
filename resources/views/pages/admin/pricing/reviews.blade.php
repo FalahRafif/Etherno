@@ -5,7 +5,7 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Location Rules', 'url' => panel_route('admin.location.rules'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Aturan Harga Lokasi', 'url' => panel_route('admin.location.rules'), 'class' => 'btn btn-outline-primary btn-sm'],
         ['label' => 'Packages', 'url' => panel_route('admin.packages'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
@@ -95,4 +95,3 @@
     </div>
 </div>
 @endsection
-

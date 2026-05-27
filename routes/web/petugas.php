@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Web\Admin\AdminPreviewController;
+use App\Http\Controllers\Web\Admin\LocationPricingRuleController;
 use App\Http\Controllers\Web\Admin\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,6 @@ Route::prefix('petugas')->name('petugas.')->middleware(['auth', 'role:Petugas'])
 
 Route::prefix('petugas')->name('petugas.')->middleware(['auth', 'role:Admin'])->group(function () {
     Route::get('/packages', [AdminPreviewController::class, 'packages'])->name('packages');
-    Route::get('/location-rules', [AdminPreviewController::class, 'locationRules'])->name('location.rules');
+    Route::get('/location-rules', [LocationPricingRuleController::class, 'index'])->name('location.rules');
     Route::get('/settings', [AdminPreviewController::class, 'settings'])->name('settings');
 });

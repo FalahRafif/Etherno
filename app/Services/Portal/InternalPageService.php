@@ -20,7 +20,6 @@ class InternalPageService
         'payments.final' => ['view' => 'pages.admin.payments.final', 'title' => 'Final Payment'],
         'pricing.reviews' => ['view' => 'pages.admin.pricing.reviews', 'title' => 'Pricing Review'],
         'packages' => ['view' => 'pages.admin.master.packages', 'title' => 'Packages'],
-        'location.rules' => ['view' => 'pages.admin.master.location-rules', 'title' => 'Location Rules'],
         'reschedules' => ['view' => 'pages.admin.reschedules', 'title' => 'Reschedule Requests'],
         'cancellations' => ['view' => 'pages.admin.cancellations', 'title' => 'Cancellations'],
         'force.majeure' => ['view' => 'pages.admin.force-majeure', 'title' => 'Force Majeure'],

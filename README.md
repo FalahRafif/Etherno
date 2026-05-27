@@ -149,6 +149,15 @@ Route admin untuk management akun internal:
 - `PUT /admin/users/{user}` (name `admin.users.update`), hanya admin.
 - `DELETE /admin/users/{user}` (name `admin.users.destroy`), hanya admin.
 
+Route admin untuk aturan harga lokasi:
+
+- `GET /admin/location-rules` (name `admin.location.rules`), hanya admin.
+- `GET /admin/location-rules/create` (name `admin.location.rules.create`), hanya admin.
+- `POST /admin/location-rules` (name `admin.location.rules.store`), hanya admin.
+- `GET /admin/location-rules/{locationPricingRule}/edit` (name `admin.location.rules.edit`), hanya admin.
+- `PUT /admin/location-rules/{locationPricingRule}` (name `admin.location.rules.update`), hanya admin.
+- `DELETE /admin/location-rules/{locationPricingRule}` (name `admin.location.rules.destroy`), hanya admin.
+
 Petugas route memakai prefix URL `/petugas`, name prefix `petugas.`, middleware `auth` dan `role:Petugas` untuk route operasional. Di file `routes/web/petugas.php` juga ada route admin-only dengan prefix `/petugas` dan middleware `role:Admin` untuk beberapa page master. Jika behavior ini berubah, update route dan dokumentasi bersamaan.
 
 ### Layout Structure
@@ -171,12 +180,14 @@ Guest/public tidak boleh mengambil menu internal. Admin dan Petugas berbagi layo
 Untuk menjaga scaffold tetap rapi dan kolaboratif, view internal dipisah berdasarkan scope fitur:
 
 - `resources/views/pages/admin/management-user/*` untuk seluruh halaman management user (index/create/edit/partial).
+- `resources/views/pages/admin/location-pricing-rules/*` untuk seluruh halaman Aturan Harga Lokasi (index/create/edit/partial).
 - `resources/views/pages/admin/profile/*` untuk halaman profile internal.
-- `resources/views/pages/admin/master/*` hanya untuk page master lain (contoh package/location rules), bukan untuk management user.
+- `resources/views/pages/admin/master/*` hanya untuk page master lain (contoh packages), bukan untuk modul CRUD dedicated.
 
 Asset page-specific juga dipisah mengikuti scope view:
 
 - `public/assets/pages/admin/management-user/*`.
+- `public/assets/pages/admin/location-pricing-rules/*`.
 - `public/assets/pages/admin/profile/*`.
 
 ### Error Handling (Production Mode)
@@ -345,6 +356,12 @@ Catatan implementasi user management internal:
 - Penghapusan akun memakai soft delete manual (`delete_status = true`) melalui repository.
 - Upload foto profile internal disimpan sebagai file terenkripsi di disk private (`local`) dan nilai `attachments.path` disimpan dalam format path terenkripsi.
 - Rendering avatar (list user, profile page, header internal) memakai temporary signed URL, bukan URL storage publik langsung.
+
+Catatan implementasi aturan harga lokasi:
+
+- CRUD Aturan Harga Lokasi dikelola melalui `LocationPricingRuleController` + `LocationPricingRuleService`.
+- Scope lokasi untuk modul ini dibatasi ke level `Provinsi` (`LL_PV`) dan `Kota/Kabupaten` (`LL_CT`).
+- Satu lokasi hanya boleh memiliki satu aturan harga aktif (`location_pricing_rules.location_id` unik untuk data aktif).
 
 Reference group yang sudah ada:
 
