@@ -21,6 +21,7 @@ class AuthController extends Controller
             $user = $request->user()?->loadMissing('role');
 
             if ($user instanceof User && $this->authService->isInternalUser($user)) {
+                $this->authService->syncInternalSession($request, $user);
                 $dashboardRoute = $this->authService->resolveDashboardRoute($user);
 
                 if (is_string($dashboardRoute)) {
@@ -28,7 +29,7 @@ class AuthController extends Controller
                 }
             }
 
-            $this->authService->clearRoleSession($request);
+            $this->authService->clearInternalSession($request);
             $this->authService->logout();
         }
 

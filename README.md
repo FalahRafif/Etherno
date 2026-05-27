@@ -16,6 +16,7 @@ Sebelum membuat fitur baru, mengubah flow booking, menambah migration, atau memi
 - Semua migration sudah dikelompokkan per folder versi di `database/migrations/*` dan diload lewat `AppServiceProvider`.
 - Banyak tabel memakai soft delete manual lewat kolom `delete_status`, `deleted_at`, dan `deleted_by`, bukan trait `SoftDeletes`.
 - Error page production sudah custom dan auto-switch layout: context public pakai layout public, context internal (`admin`/`petugas`) pakai shell admin.
+- Session internal auth menyimpan `auth.role` dan snapshot user di `auth.user` untuk kebutuhan panel/layout.
 
 ## Product Principles
 
@@ -231,14 +232,17 @@ Flow login:
 - `Api\Auth\AuthController@login` memakai `LoginRequest` lalu memanggil `AuthService->attempt()`.
 - Setelah berhasil login, user diload dengan relation `role`.
 - Jika role bukan `Admin` atau `Petugas`, user langsung logout dan mendapat error: akun belum memiliki akses panel internal.
-- Jika valid, session menyimpan `auth.role` dengan value prefix route, misalnya `admin` atau `petugas`.
+- Jika valid, `AuthService->syncInternalSession()` menyimpan session internal:
+  - `auth.role` (prefix route panel, misalnya `admin`/`petugas`).
+  - `auth.user` (snapshot user login: id, uuid, name, username, email, role, route prefix, dashboard route, panel title, logged in time).
 - Redirect dashboard mengikuti `config('role_access.dashboard_route_by_role')`.
 
 Flow logout:
 
 - Route logout ada di `POST /api/logout`.
-- `AuthService->clearRoleSession()` menghapus `auth.role`.
+- `AuthService->clearInternalSession()` menghapus `auth.role` dan `auth.user`.
 - `AuthService->logout()` logout, invalidate session, dan regenerate token.
+- Dropdown profile di layout internal (`resources/views/layouts/admin/header.blade.php`) sudah memakai form POST + CSRF ke route `logout`.
 
 Catatan: meskipun login/logout berada di file route API dan ber-prefix `/api`, endpoint ini tetap memakai middleware `web` supaya session auth dan CSRF flow browser tetap berjalan.
 
@@ -248,6 +252,7 @@ Middleware role:
 - Alias middleware `role` diregister di `bootstrap/app.php`.
 - Penggunaan: `role:Admin`, `role:Petugas`, atau `role:Admin,Petugas`.
 - Jika user tidak punya role sesuai, response `403`.
+- Middleware role juga melakukan sinkronisasi session internal (`syncInternalSession`) untuk menjaga data panel tetap konsisten di setiap request internal.
 
 User helper:
 
