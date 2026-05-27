@@ -5,8 +5,8 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Location Rules', 'url' => route('admin.location.rules'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Packages', 'url' => route('admin.packages'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Location Rules', 'url' => panel_route('admin.location.rules'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Packages', 'url' => panel_route('admin.packages'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
     $alerts = [
@@ -32,7 +32,7 @@
             ['type' => 'stack', 'primary' => 'Ringan', 'secondary' => 'Transport lokal'],
             'IDR 12.800.000',
             ['type' => 'badge', 'tone' => 'success', 'label' => 'final_sent'],
-            ['type' => 'link', 'label' => 'Detail', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-014'])],
+            ['type' => 'link', 'label' => 'Detail', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-014'])],
         ],
         [
             'ETH-2026-027',
@@ -41,7 +41,7 @@
             ['type' => 'stack', 'primary' => 'Custom', 'secondary' => 'Transport + akomodasi'],
             'Menunggu perhitungan',
             ['type' => 'badge', 'tone' => 'warning', 'label' => 'in_review'],
-            ['type' => 'link', 'label' => 'Hitung Final', 'url' => route('admin.location.rules')],
+            ['type' => 'link', 'label' => 'Hitung Final', 'url' => panel_route('admin.location.rules')],
         ],
         [
             'ETH-2026-028',
@@ -50,7 +50,7 @@
             ['type' => 'stack', 'primary' => 'Sedang', 'secondary' => 'Transport antar kota'],
             'IDR 7.200.000',
             ['type' => 'badge', 'tone' => 'info', 'label' => 'ready_to_send'],
-            ['type' => 'link', 'label' => 'Kirim ke WA', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-028'])],
+            ['type' => 'link', 'label' => 'Kirim ke WA', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-028'])],
         ],
     ];
 
@@ -95,3 +95,4 @@
     </div>
 </div>
 @endsection
+

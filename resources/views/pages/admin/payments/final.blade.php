@@ -5,8 +5,8 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'DP Verification', 'url' => route('admin.payments.dp'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Bookings Active', 'url' => route('admin.bookings.active'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'DP Verification', 'url' => panel_route('admin.payments.dp'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Bookings Active', 'url' => panel_route('admin.bookings.active'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
     $alerts = [
@@ -28,7 +28,7 @@
             'IDR 10.200.000',
             ['type' => 'stack', 'primary' => 'WhatsApp + Upload', 'secondary' => 'Masuk 17:20 WIB'],
             ['type' => 'badge', 'tone' => 'danger', 'label' => 'final_pending_verification'],
-            ['type' => 'link', 'label' => 'Verifikasi', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-018'])],
+            ['type' => 'link', 'label' => 'Verifikasi', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-018'])],
         ],
         [
             'ETH-2026-024',
@@ -36,7 +36,7 @@
             'IDR 0',
             ['type' => 'stack', 'primary' => 'WhatsApp', 'secondary' => 'Terverifikasi manual'],
             ['type' => 'badge', 'tone' => 'primary', 'label' => 'final_verified'],
-            ['type' => 'link', 'label' => 'Detail', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-024'])],
+            ['type' => 'link', 'label' => 'Detail', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-024'])],
         ],
         [
             'ETH-2026-026',
@@ -44,7 +44,7 @@
             'IDR 5.400.000',
             ['type' => 'stack', 'primary' => 'Upload Bukti', 'secondary' => 'Menunggu konfirmasi WA'],
             ['type' => 'badge', 'tone' => 'warning', 'label' => 'final_pending_verification'],
-            ['type' => 'link', 'label' => 'Review', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-026'])],
+            ['type' => 'link', 'label' => 'Review', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-026'])],
         ],
     ];
 
@@ -61,8 +61,8 @@
         [
             'title' => 'Aksi Cepat',
             'actions' => [
-                ['label' => 'Buka Booking Aktif', 'url' => route('admin.bookings.active'), 'class' => 'btn btn-outline-primary btn-sm'],
-                ['label' => 'Buka Pricing Review', 'url' => route('admin.pricing.reviews'), 'class' => 'btn btn-outline-primary btn-sm'],
+                ['label' => 'Buka Booking Aktif', 'url' => panel_route('admin.bookings.active'), 'class' => 'btn btn-outline-primary btn-sm'],
+                ['label' => 'Buka Pricing Review', 'url' => panel_route('admin.pricing.reviews'), 'class' => 'btn btn-outline-primary btn-sm'],
             ],
         ],
     ];
@@ -91,3 +91,4 @@
     </div>
 </div>
 @endsection
+

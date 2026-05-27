@@ -17,9 +17,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'event_date',
     'event_session',
     'event_detail',
-    'gogle_maps_pin',
-    'rechedule_date',
-    'rechedule_reason',
+    'google_maps_pin',
+    'reschedule_date',
+    'reschedule_reason',
     'force_majeure_date',
     'force_majeure_reason',
     'operator_id',
@@ -39,7 +39,7 @@ class Booking extends Model
     {
         return [
             'event_date' => 'date',
-            'rechedule_date' => 'date',
+            'reschedule_date' => 'date',
             'force_majeure_date' => 'date',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',

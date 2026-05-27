@@ -5,8 +5,8 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Final Payment Queue', 'url' => route('admin.payments.final'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Booking Requests', 'url' => route('admin.bookings.requests'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Final Payment Queue', 'url' => panel_route('admin.payments.final'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Booking Requests', 'url' => panel_route('admin.bookings.requests'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
     $alerts = [
@@ -30,7 +30,7 @@
             ['type' => 'stack', 'primary' => 'WhatsApp + Upload Bukti', 'secondary' => 'Transfer BCA 10:23 WIB'],
             ['type' => 'badge', 'tone' => 'warning', 'label' => 'dp_pending_verification'],
             'Hari ke-1',
-            ['type' => 'link', 'label' => 'Verifikasi', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-022'])],
+            ['type' => 'link', 'label' => 'Verifikasi', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-022'])],
         ],
         [
             'ETH-2026-023',
@@ -40,7 +40,7 @@
             ['type' => 'stack', 'primary' => 'WhatsApp', 'secondary' => 'Belum upload bukti di sistem'],
             ['type' => 'badge', 'tone' => 'warning', 'label' => 'dp_pending_verification'],
             'Hari ke-2',
-            ['type' => 'link', 'label' => 'Verifikasi', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-023'])],
+            ['type' => 'link', 'label' => 'Verifikasi', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-023'])],
         ],
         [
             'ETH-2026-025',
@@ -50,7 +50,7 @@
             ['type' => 'stack', 'primary' => 'Upload Bukti', 'secondary' => 'Tidak ada konfirmasi WA'],
             ['type' => 'badge', 'tone' => 'danger', 'label' => 'need_recheck'],
             'Hari ke-3',
-            ['type' => 'link', 'label' => 'Review', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-025'])],
+            ['type' => 'link', 'label' => 'Review', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-025'])],
         ],
     ];
 
@@ -99,3 +99,4 @@
     </div>
 </div>
 @endsection
+

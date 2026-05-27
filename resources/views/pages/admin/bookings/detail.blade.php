@@ -5,9 +5,9 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Approve Booking', 'url' => route('admin.bookings.requests'), 'class' => 'btn btn-success btn-sm'],
-        ['label' => 'Verifikasi DP', 'url' => route('admin.payments.dp'), 'class' => 'btn btn-primary btn-sm'],
-        ['label' => 'Set Final Price', 'url' => route('admin.pricing.reviews'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Approve Booking', 'url' => panel_route('admin.bookings.requests'), 'class' => 'btn btn-success btn-sm'],
+        ['label' => 'Verifikasi DP', 'url' => panel_route('admin.payments.dp'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Set Final Price', 'url' => panel_route('admin.pricing.reviews'), 'class' => 'btn btn-outline-primary btn-sm'],
     ];
 
     $alerts = [
@@ -42,8 +42,8 @@
         [
             'title' => 'Aksi Cepat',
             'actions' => [
-                ['label' => 'Buka Queue DP', 'url' => route('admin.payments.dp'), 'class' => 'btn btn-outline-primary btn-sm'],
-                ['label' => 'Buka Calendar', 'url' => route('admin.calendar'), 'class' => 'btn btn-outline-primary btn-sm'],
+                ['label' => 'Buka Queue DP', 'url' => panel_route('admin.payments.dp'), 'class' => 'btn btn-outline-primary btn-sm'],
+                ['label' => 'Buka Calendar', 'url' => panel_route('admin.calendar'), 'class' => 'btn btn-outline-primary btn-sm'],
             ],
         ],
     ];
@@ -110,3 +110,4 @@
     </div>
 </div>
 @endsection
+

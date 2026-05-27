@@ -3,16 +3,22 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
+use App\Services\Portal\GuestPageService;
+use Illuminate\View\View;
 
 class LandingPageController extends Controller
 {
-    public function index()
+    public function __construct(private GuestPageService $guestPageService)
     {
-        return view('pages.public.landing-page.landingpage', ['title' => 'Etherno - Wedding Photography']);
     }
 
-    public function booking()
+    public function index(): View
     {
-        return view('pages.public.booking-page.bookingpage', ['title' => 'Form Booking - Etherno']);
+        return $this->guestPageService->render('landing');
+    }
+
+    public function booking(): View
+    {
+        return $this->guestPageService->render('booking.form');
     }
 }

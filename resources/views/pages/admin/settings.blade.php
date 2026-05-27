@@ -5,8 +5,8 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'DP Verification', 'url' => route('admin.payments.dp'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Final Payment', 'url' => route('admin.payments.final'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'DP Verification', 'url' => panel_route('admin.payments.dp'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Final Payment', 'url' => panel_route('admin.payments.final'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
     $alerts = [
@@ -64,3 +64,4 @@
     </div>
 </div>
 @endsection
+

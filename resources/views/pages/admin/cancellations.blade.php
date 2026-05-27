@@ -5,8 +5,8 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Customers', 'url' => route('admin.customers'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Bookings Active', 'url' => route('admin.bookings.active'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Customers', 'url' => panel_route('admin.customers'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Bookings Active', 'url' => panel_route('admin.bookings.active'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
     $alerts = [
@@ -53,3 +53,4 @@
     </div>
 </div>
 @endsection
+

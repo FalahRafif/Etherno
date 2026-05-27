@@ -5,8 +5,8 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Bookings Active', 'url' => route('admin.bookings.active'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Booking Requests', 'url' => route('admin.bookings.requests'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Bookings Active', 'url' => panel_route('admin.bookings.active'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Booking Requests', 'url' => panel_route('admin.bookings.requests'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
     $alerts = [
@@ -28,7 +28,7 @@
             ['type' => 'badge', 'tone' => 'success', 'label' => 'Tersedia'],
             '1 / 2',
             ['type' => 'badge', 'tone' => 'info', 'label' => 'Partially Filled'],
-            ['type' => 'link', 'label' => 'Lihat Request', 'url' => route('admin.bookings.requests')],
+            ['type' => 'link', 'label' => 'Lihat Request', 'url' => panel_route('admin.bookings.requests')],
         ],
         [
             '2026-06-21',
@@ -36,7 +36,7 @@
             ['type' => 'badge', 'tone' => 'danger', 'label' => 'Penuh'],
             '2 / 2',
             ['type' => 'badge', 'tone' => 'danger', 'label' => 'Full Capacity'],
-            ['type' => 'link', 'label' => 'Buka Active', 'url' => route('admin.bookings.active')],
+            ['type' => 'link', 'label' => 'Buka Active', 'url' => panel_route('admin.bookings.active')],
         ],
         [
             '2026-06-22',
@@ -44,7 +44,7 @@
             ['type' => 'badge', 'tone' => 'success', 'label' => 'Tersedia'],
             '0 / 2',
             ['type' => 'badge', 'tone' => 'light', 'label' => 'Open'],
-            ['type' => 'link', 'label' => 'Review Request', 'url' => route('admin.bookings.requests')],
+            ['type' => 'link', 'label' => 'Review Request', 'url' => panel_route('admin.bookings.requests')],
         ],
     ];
 
@@ -92,3 +92,4 @@
     </div>
 </div>
 @endsection
+
