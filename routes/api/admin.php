@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Admin\LocationPricingRuleController;
 use App\Http\Controllers\Api\Admin\PackageController;
 use App\Http\Controllers\Api\Admin\DpPercentageRuleController;
+use App\Http\Controllers\Api\Admin\PackageDateRuleController;
 use App\Http\Controllers\Api\Admin\PaymentDateRuleController;
 use App\Http\Controllers\Api\Admin\ProfileController;
 use App\Http\Controllers\Api\Admin\UserManagementController;
@@ -33,6 +34,10 @@ Route::prefix('admin')
         Route::post('/dp-percentage-rules', [DpPercentageRuleController::class, 'store'])->name('dp-percentage-rules.store');
         Route::put('/dp-percentage-rules/{setting}', [DpPercentageRuleController::class, 'update'])->name('dp-percentage-rules.update');
         Route::delete('/dp-percentage-rules/{setting}', [DpPercentageRuleController::class, 'destroy'])->name('dp-percentage-rules.destroy');
+
+        Route::post('/package-date-rules', [PackageDateRuleController::class, 'store'])->name('package-date-rules.store');
+        Route::put('/package-date-rules/{setting}', [PackageDateRuleController::class, 'update'])->name('package-date-rules.update');
+        Route::delete('/package-date-rules/{setting}', [PackageDateRuleController::class, 'destroy'])->name('package-date-rules.destroy');
     });
 
 Route::prefix('admin')

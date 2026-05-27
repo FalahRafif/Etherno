@@ -5,6 +5,7 @@ use App\Http\Controllers\Web\Admin\BlankController;
 use App\Http\Controllers\Web\Admin\LocationPricingRuleController;
 use App\Http\Controllers\Web\Admin\PackageController;
 use App\Http\Controllers\Web\Admin\DpPercentageRuleController;
+use App\Http\Controllers\Web\Admin\PackageDateRuleController;
 use App\Http\Controllers\Web\Admin\PaymentDateRuleController;
 use App\Http\Controllers\Web\Admin\ProfileController;
 use App\Http\Controllers\Web\Admin\UserManagementController;
@@ -32,6 +33,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->grou
     Route::get('/dp-percentage-rules', [DpPercentageRuleController::class, 'index'])->name('dp-percentage-rules');
     Route::get('/dp-percentage-rules/create', [DpPercentageRuleController::class, 'create'])->name('dp-percentage-rules.create');
     Route::get('/dp-percentage-rules/{setting}/edit', [DpPercentageRuleController::class, 'edit'])->name('dp-percentage-rules.edit');
+    Route::get('/package-date-rules', [PackageDateRuleController::class, 'index'])->name('package-date-rules');
+    Route::get('/package-date-rules/create', [PackageDateRuleController::class, 'create'])->name('package-date-rules.create');
+    Route::get('/package-date-rules/{setting}/edit', [PackageDateRuleController::class, 'edit'])->name('package-date-rules.edit');
     Route::get('/reschedules', [AdminPreviewController::class, 'reschedules'])->name('reschedules');
     Route::get('/cancellations', [AdminPreviewController::class, 'cancellations'])->name('cancellations');
     Route::get('/force-majeure', [AdminPreviewController::class, 'forceMajeure'])->name('force.majeure');

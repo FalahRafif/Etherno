@@ -150,6 +150,12 @@ return [
                     'active' => ['dp-percentage-rules', 'dp-percentage-rules.create', 'dp-percentage-rules.edit'],
                     'roles' => ['Admin'],
                 ],
+                [
+                    'label' => 'Aturan Waktu Paket',
+                    'route_name' => 'package-date-rules',
+                    'active' => ['package-date-rules', 'package-date-rules.create', 'package-date-rules.edit'],
+                    'roles' => ['Admin'],
+                ],
             ],
         ],
         [
