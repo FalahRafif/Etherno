@@ -1,4 +1,4 @@
-@extends('layouts.public.public')
+@extends('layouts.guest.guest')
 
 @section('content')
     @include('pages.public.landing-page.sections.hero')
@@ -8,3 +8,4 @@
     @include('pages.public.landing-page.sections.faq')
     @include('pages.public.landing-page.sections.cta')
 @endsection
+

@@ -1,3 +1,27 @@
+@php
+    $rawGuestMenu = config('role_access.guest.menu', []);
+    $guestCta = config('role_access.guest.cta', []);
+    $guestMenuSections = $rawGuestMenu;
+
+    // Backward compatibility for old flat structure: [ ['label' => ...], ... ]
+    if (!empty($guestMenuSections) && isset($guestMenuSections[0]['label'])) {
+        $guestMenuSections = [
+            [
+                'section' => 'Main',
+                'items' => $guestMenuSections,
+            ],
+        ];
+    }
+
+    $buildGuestMenuUrl = static function (array $item): string {
+        $routeName = $item['route'] ?? 'home';
+        $fragment = trim((string) ($item['fragment'] ?? ''));
+        $url = route($routeName);
+
+        return $fragment !== '' ? "{$url}#{$fragment}" : $url;
+    };
+@endphp
+
 <header class="public-header">
     <div class="container header-inner">
         <a class="brand" href="{{ url('/') }}" aria-label="Beranda Etherno">
@@ -22,11 +46,30 @@
 
         <div class="header-menu" id="public-menu">
             <nav class="nav small-uppercase" aria-label="Navigasi utama">
-                <a href="{{ route('home') }}#portfolio">Portofolio</a>
-                <a href="{{ route('home') }}#packages">Paket</a>
-                <a href="{{ route('home') }}#faq">FAQ</a>
+                @foreach ($guestMenuSections as $section)
+                    @foreach (($section['items'] ?? []) as $item)
+                        @if (($item['type'] ?? 'link') === 'dropdown' && !empty($item['items']))
+                            <details class="nav-dropdown">
+                                <summary>{{ $item['label'] ?? '' }}</summary>
+                                <div class="nav-dropdown-menu">
+                                    @foreach ($item['items'] as $dropdownItem)
+                                        <a href="{{ $buildGuestMenuUrl($dropdownItem) }}">{{ $dropdownItem['label'] ?? '' }}</a>
+                                    @endforeach
+                                </div>
+                            </details>
+                        @else
+                            <a href="{{ $buildGuestMenuUrl($item) }}">{{ $item['label'] ?? '' }}</a>
+                        @endif
+                    @endforeach
+                @endforeach
             </nav>
-            <a class="cta header-cta" href="{{ route('booking.page') }}" aria-label="Pesan Sekarang">Pesan Sekarang</a>
+
+            @php
+                $ctaLabel = $guestCta['label'] ?? 'Pesan Sekarang';
+                $ctaAriaLabel = $guestCta['aria_label'] ?? $ctaLabel;
+                $ctaRoute = $guestCta['route'] ?? 'booking.page';
+            @endphp
+            <a class="cta header-cta" href="{{ route($ctaRoute) }}" aria-label="{{ $ctaAriaLabel }}">{{ $ctaLabel }}</a>
         </div>
     </div>
 </header>

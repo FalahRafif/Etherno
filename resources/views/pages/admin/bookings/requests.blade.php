@@ -5,9 +5,9 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Bookings Active', 'url' => route('admin.bookings.active'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Calendar & Slots', 'url' => route('admin.calendar'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'DP Verification', 'url' => route('admin.payments.dp'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Bookings Active', 'url' => panel_route('admin.bookings.active'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Calendar & Slots', 'url' => panel_route('admin.calendar'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'DP Verification', 'url' => panel_route('admin.payments.dp'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
     $alerts = [
@@ -36,7 +36,7 @@
             'Bandung',
             ['type' => 'badge', 'tone' => 'success', 'label' => 'Valid'],
             ['type' => 'badge', 'tone' => 'warning', 'label' => 'under_review'],
-            ['type' => 'link', 'label' => 'Review', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-021'])],
+            ['type' => 'link', 'label' => 'Review', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-021'])],
         ],
         [
             'ETH-2026-022',
@@ -48,7 +48,7 @@
             'Jakarta',
             ['type' => 'badge', 'tone' => 'success', 'label' => 'Valid'],
             ['type' => 'badge', 'tone' => 'info', 'label' => 'approved'],
-            ['type' => 'link', 'label' => 'Detail', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-022'])],
+            ['type' => 'link', 'label' => 'Detail', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-022'])],
         ],
         [
             'ETH-2026-023',
@@ -60,7 +60,7 @@
             'Yogyakarta',
             ['type' => 'badge', 'tone' => 'danger', 'label' => 'Missing'],
             ['type' => 'badge', 'tone' => 'light', 'label' => 'submitted'],
-            ['type' => 'link', 'label' => 'Follow Up', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-023'])],
+            ['type' => 'link', 'label' => 'Follow Up', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-023'])],
         ],
     ];
 
@@ -110,3 +110,4 @@
     </div>
 </div>
 @endsection
+

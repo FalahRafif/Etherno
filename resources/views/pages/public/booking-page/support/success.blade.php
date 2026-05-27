@@ -1,4 +1,4 @@
-@extends('layouts.public.public')
+@extends('layouts.guest.guest')
 
 @section('content')
 <section class="section-block container booking-section">
@@ -23,3 +23,4 @@
   @include('pages.public.booking-page.sections.support-links')
 </section>
 @endsection
+

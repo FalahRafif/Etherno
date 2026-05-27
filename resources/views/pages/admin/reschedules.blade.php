@@ -5,8 +5,8 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Calendar & Slots', 'url' => route('admin.calendar'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Bookings Active', 'url' => route('admin.bookings.active'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Calendar & Slots', 'url' => panel_route('admin.calendar'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Bookings Active', 'url' => panel_route('admin.bookings.active'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
     $alerts = [
@@ -22,7 +22,7 @@
             '24 hari',
             ['type' => 'badge', 'tone' => 'success', 'label' => 'Tersedia'],
             ['type' => 'badge', 'tone' => 'warning', 'label' => 'reschedule_requested'],
-            ['type' => 'link', 'label' => 'Review', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-011'])],
+            ['type' => 'link', 'label' => 'Review', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-011'])],
         ],
         [
             'ETH-2026-009',
@@ -31,7 +31,7 @@
             '8 hari',
             ['type' => 'badge', 'tone' => 'danger', 'label' => 'Perlu eskalasi'],
             ['type' => 'badge', 'tone' => 'danger', 'label' => 'over_policy_window'],
-            ['type' => 'link', 'label' => 'Escalate', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-009'])],
+            ['type' => 'link', 'label' => 'Escalate', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-009'])],
         ],
     ];
 
@@ -70,3 +70,4 @@
     </div>
 </div>
 @endsection
+

@@ -5,7 +5,7 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Pricing Review', 'url' => route('admin.pricing.reviews'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Pricing Review', 'url' => panel_route('admin.pricing.reviews'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
     $alerts = [
@@ -59,3 +59,4 @@
     </div>
 </div>
 @endsection
+

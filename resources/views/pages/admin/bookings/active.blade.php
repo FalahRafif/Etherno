@@ -5,8 +5,8 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Calendar & Slots', 'url' => route('admin.calendar'), 'class' => 'btn btn-primary btn-sm'],
-        ['label' => 'Final Payment Queue', 'url' => route('admin.payments.final'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Calendar & Slots', 'url' => panel_route('admin.calendar'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Final Payment Queue', 'url' => panel_route('admin.payments.final'), 'class' => 'btn btn-outline-primary btn-sm'],
     ];
 
     $alerts = [
@@ -33,7 +33,7 @@
             'Bandung',
             ['type' => 'badge', 'tone' => 'success', 'label' => 'active'],
             ['type' => 'badge', 'tone' => 'info', 'label' => 'dp_verified'],
-            ['type' => 'link', 'label' => 'Detail', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-014'])],
+            ['type' => 'link', 'label' => 'Detail', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-014'])],
         ],
         [
             'ETH-2026-018',
@@ -43,7 +43,7 @@
             'Jakarta',
             ['type' => 'badge', 'tone' => 'success', 'label' => 'active'],
             ['type' => 'badge', 'tone' => 'danger', 'label' => 'final_pending_verification'],
-            ['type' => 'link', 'label' => 'Verifikasi Final', 'url' => route('admin.payments.final')],
+            ['type' => 'link', 'label' => 'Verifikasi Final', 'url' => panel_route('admin.payments.final')],
         ],
         [
             'ETH-2026-024',
@@ -53,7 +53,7 @@
             'Surabaya',
             ['type' => 'badge', 'tone' => 'primary', 'label' => 'paid'],
             ['type' => 'badge', 'tone' => 'primary', 'label' => 'final_verified'],
-            ['type' => 'link', 'label' => 'Detail', 'url' => route('admin.bookings.detail', ['booking' => 'eth-2026-024'])],
+            ['type' => 'link', 'label' => 'Detail', 'url' => panel_route('admin.bookings.detail', ['booking' => 'eth-2026-024'])],
         ],
     ];
 
@@ -101,3 +101,4 @@
     </div>
 </div>
 @endsection
+
