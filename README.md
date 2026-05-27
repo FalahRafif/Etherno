@@ -326,6 +326,7 @@ Model domain yang sudah ada di `app/Models`:
 - Laravel infrastructure: `Cache`, `CacheLock`, `Job`, `JobBatch`, `FailedJob`, `PasswordResetToken`, `Session`.
 
 Model relation sudah dibuat mengikuti foreign key migration. Saat membuat query feature baru, prefer eager loading relation yang sudah tersedia daripada join manual, kecuali ada alasan performa yang jelas.
+Model yang memakai `delete_status` sekarang menggunakan trait `App\Models\Concerns\HasManualSoftDeletes` untuk global scope aktif, `withInactive()`, dan `onlyInactive()`.
 
 ## Migration Version Map
 
@@ -337,6 +338,8 @@ Migrations diload dari `app/Providers/AppServiceProvider.php`:
 - `1.1.6`: roles, default users, alter users role/profile, customers, bookings, booking history, booking/event session references.
 - `1.1.7`: billing, billing details, billing installments, payments, billing/payment references.
 - `1.1.8`: PostgreSQL performance indexes.
+- `1.1.9`: perbaikan typo kolom bookings (`gogle_maps_pin`, `rechedule_*` -> `google_maps_pin`, `reschedule_*`).
+- `1.1.10`: perbaikan kompatibilitas partial index `idx_bookings_reschedule_date_act` pasca rename kolom bookings.
 
 Migration per versi:
 
@@ -357,6 +360,7 @@ Catatan migration:
 - Nama file migration harus unik dan urut dengan prefix angka.
 - Jika menambah folder versi baru, tambahkan `loadMigrationsFrom(...)` di `AppServiceProvider`.
 - Index migration `1.1.8` hanya berjalan untuk driver `pgsql`.
+- Migration `1.1.10` memperbaiki index reschedule agar mengikuti nama kolom final (`reschedule_date`) tanpa mengubah migration lama.
 - Reference insert migration umumnya punya `down()` yang menghapus berdasarkan `group_id` dan `code`.
 
 ## Default Development Users

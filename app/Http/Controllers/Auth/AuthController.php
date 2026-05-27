@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use App\Services\AuthService;
 use Illuminate\Http\RedirectResponse;
@@ -35,14 +36,9 @@ class AuthController extends Controller
         return view('pages.auth.login', ['title' => 'Login - Etherno Admin']);
     }
 
-    public function login(Request $request): RedirectResponse
+    public function login(LoginRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-        ]);
-
-        if ($this->authService->attempt($validated['email'], $validated['password'], $request->boolean('remember'))) {
+        if ($this->authService->attempt($request->email(), $request->password(), $request->remember())) {
             $request->session()->regenerate();
             $user = $request->user()?->loadMissing('role');
 

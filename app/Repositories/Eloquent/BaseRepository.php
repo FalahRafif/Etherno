@@ -6,10 +6,25 @@ use App\Repositories\Contracts\BaseRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 
 abstract class BaseRepository implements BaseRepositoryInterface
 {
+    /**
+     * @var array<int, string>
+     */
+    protected array $systemWriteProtectedAttributes = [
+        'id',
+        'created_at',
+        'updated_at',
+        'deleted_at',
+        'created_by',
+        'updated_by',
+        'deleted_by',
+        'delete_status',
+    ];
+
     public function __construct(protected Model $model)
     {
     }
@@ -18,8 +33,12 @@ abstract class BaseRepository implements BaseRepositoryInterface
     {
         $query = $this->model->newQuery();
 
-        if ($onlyActive && $this->supportsSoftDeleteFlag()) {
-            $query->where('delete_status', false);
+        if ($onlyActive) {
+            return $this->applyOnlyActiveScope($query);
+        }
+
+        if ($this->supportsManualSoftDeleteTrait()) {
+            return $query->withoutGlobalScope('manual_soft_deletes');
         }
 
         return $query;
@@ -57,13 +76,13 @@ abstract class BaseRepository implements BaseRepositoryInterface
 
     public function create(array $data): Model
     {
-        return $this->model->newQuery()->create($data);
+        return $this->model->newQuery()->create($this->sanitizeMassAssignmentData($data));
     }
 
     public function update(int|string|Model $model, array $data): Model
     {
         $entity = $this->resolveModel($model, false);
-        $entity->fill($data);
+        $entity->fill($this->sanitizeMassAssignmentData($data));
         $entity->save();
 
         return $entity->refresh();
@@ -73,39 +92,38 @@ abstract class BaseRepository implements BaseRepositoryInterface
     {
         $entity = $this->resolveModel($model, false);
 
-        if (!$this->supportsSoftDeleteFlag()) {
+        if (!$this->supportsManualSoftDelete()) {
             return (bool) $entity->delete();
         }
 
+        if ($this->supportsManualSoftDeleteTrait() && method_exists($entity, 'markAsDeleted')) {
+            /** @var bool $deleted */
+            $deleted = $entity->markAsDeleted($deletedBy);
+
+            return $deleted;
+        }
+
         $entity->setAttribute('delete_status', true);
-
-        if ($this->hasFillable('deleted_at')) {
-            $entity->setAttribute('deleted_at', now());
-        }
-
-        if ($deletedBy !== null && $this->hasFillable('deleted_by')) {
-            $entity->setAttribute('deleted_by', $deletedBy);
-        }
 
         return $entity->save();
     }
 
     public function restore(int|string|Model $model): bool
     {
-        if (!$this->supportsSoftDeleteFlag()) {
+        if (!$this->supportsManualSoftDelete()) {
             return false;
         }
 
         $entity = $this->resolveModel($model, false);
+
+        if ($this->supportsManualSoftDeleteTrait() && method_exists($entity, 'restoreManualDelete')) {
+            /** @var bool $restored */
+            $restored = $entity->restoreManualDelete();
+
+            return $restored;
+        }
+
         $entity->setAttribute('delete_status', false);
-
-        if ($this->hasFillable('deleted_at')) {
-            $entity->setAttribute('deleted_at', null);
-        }
-
-        if ($this->hasFillable('deleted_by')) {
-            $entity->setAttribute('deleted_by', null);
-        }
 
         return $entity->save();
     }
@@ -128,13 +146,46 @@ abstract class BaseRepository implements BaseRepositoryInterface
         return $query->with($relations);
     }
 
-    protected function supportsSoftDeleteFlag(): bool
+    protected function supportsManualSoftDelete(): bool
     {
-        return $this->hasFillable('delete_status');
+        return $this->supportsManualSoftDeleteTrait() || $this->hasDeleteStatusAttribute();
     }
 
-    protected function hasFillable(string $attribute): bool
+    protected function supportsManualSoftDeleteTrait(): bool
     {
-        return in_array($attribute, $this->model->getFillable(), true);
+        if (!method_exists($this->model, 'supportsManualSoftDelete')) {
+            return false;
+        }
+
+        $supports = $this->model->supportsManualSoftDelete();
+
+        return is_bool($supports) ? $supports : false;
+    }
+
+    protected function hasDeleteStatusAttribute(): bool
+    {
+        return in_array('delete_status', $this->model->getFillable(), true);
+    }
+
+    protected function applyOnlyActiveScope(Builder $query): Builder
+    {
+        if ($this->supportsManualSoftDeleteTrait()) {
+            return $query;
+        }
+
+        if ($this->hasDeleteStatusAttribute()) {
+            $query->where($this->model->qualifyColumn('delete_status'), false);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function sanitizeMassAssignmentData(array $data): array
+    {
+        return Arr::except($data, $this->systemWriteProtectedAttributes);
     }
 }

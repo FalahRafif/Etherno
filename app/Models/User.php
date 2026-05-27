@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Concerns\HasManualSoftDeletes;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -17,7 +18,9 @@ use Illuminate\Notifications\Notifiable;
     'name',
     'username',
     'email',
+    'email_verified_at',
     'password',
+    'remember_token',
     'role_id',
     'profile_image_attachment_id',
     'created_by',
@@ -30,7 +33,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasManualSoftDeletes;
 
     /**
      * Get the attributes that should be cast.

@@ -1,19 +1,21 @@
 <?php
 
+use App\Enums\RoleName;
+
 return [
     'roles' => [
-        'internal' => ['Admin', 'Petugas'],
-        'admin_only' => ['Admin'],
+        'internal' => [RoleName::Admin->value, RoleName::Petugas->value],
+        'admin_only' => [RoleName::Admin->value],
     ],
 
     'route_prefix_by_role' => [
-        'Admin' => 'admin',
-        'Petugas' => 'petugas',
+        RoleName::Admin->value => 'admin',
+        RoleName::Petugas->value => 'petugas',
     ],
 
     'dashboard_route_by_role' => [
-        'Admin' => 'admin.dashboard',
-        'Petugas' => 'petugas.dashboard',
+        RoleName::Admin->value => 'admin.dashboard',
+        RoleName::Petugas->value => 'petugas.dashboard',
     ],
 
     'panel_title_by_prefix' => [
