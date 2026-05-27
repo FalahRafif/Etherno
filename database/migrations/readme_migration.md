@@ -2,6 +2,18 @@
 
 Dokumentasi singkat untuk menjalankan migration per versi folder.
 
+## Migrate All
+
+```bash
+php artisan migrate
+```
+
+## Migrate Rollback ALL or base on batch migrate
+
+```bash
+php artisan migrate:rollback
+```
+
 ## Reset Per Versi
 
 Perintah ini akan rollback semua migration yang ada di folder versi tersebut:
