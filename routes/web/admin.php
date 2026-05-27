@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Admin\AdminPreviewController;
-use App\Http\Controllers\Admin\BlankController;
+use App\Http\Controllers\Web\Admin\AdminPreviewController;
+use App\Http\Controllers\Web\Admin\BlankController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->group(function () {
