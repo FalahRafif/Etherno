@@ -278,9 +278,141 @@
     </div>
 
     <div class="booking-actions">
-      <button class="cta booking-submit" type="submit">Kirim Request Booking</button>
+      <button class="cta booking-submit" id="booking_submit_button" type="submit">Kirim Request Booking</button>
       <p class="booking-disclaimer">Data request akan masuk ke tim admin untuk proses review sebelum tahap pembayaran DP.</p>
       <p class="booking-disclaimer"><a href="{{ route('booking.status') }}">Sudah pernah booking? Cek status di sini.</a></p>
     </div>
   </form>
+
+  <div class="booking-confirm-modal" id="booking_confirmation_modal" hidden>
+    <div class="booking-confirm-backdrop" data-booking-confirm-close></div>
+    <div class="booking-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="booking_confirm_title">
+      <div class="booking-confirm-header">
+        <div class="booking-confirm-header-content">
+          <div class="booking-confirm-badge">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <div>
+            <h4 id="booking_confirm_title">Konfirmasi Data Booking</h4>
+            <p class="booking-confirm-subtitle">Mohon periksa kembali data yang Anda masukkan</p>
+          </div>
+        </div>
+        <button class="booking-confirm-close" type="button" aria-label="Tutup konfirmasi" data-booking-confirm-close>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <p class="booking-confirm-intro">Pastikan semua data di bawah ini sudah benar dan sesuai sebelum mengirim request booking.</p>
+
+      <div class="booking-confirm-list">
+        <div class="booking-confirm-row booking-confirm-row-highlight">
+          <span class="booking-confirm-key">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="booking-confirm-icon">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Nama
+          </span>
+          <span class="booking-confirm-value" id="confirm_name">-</span>
+        </div>
+        <div class="booking-confirm-row">
+          <span class="booking-confirm-key">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="booking-confirm-icon">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+            No WhatsApp
+          </span>
+          <span class="booking-confirm-value" id="confirm_whatsapp">-</span>
+        </div>
+        <div class="booking-confirm-row booking-confirm-row-highlight">
+          <span class="booking-confirm-key">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="booking-confirm-icon">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            Tanggal & Sesi
+          </span>
+          <span class="booking-confirm-value" id="confirm_schedule">-</span>
+        </div>
+        <div class="booking-confirm-row">
+          <span class="booking-confirm-key">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="booking-confirm-icon">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+            </svg>
+            Tipe & Paket
+          </span>
+          <span class="booking-confirm-value" id="confirm_package">-</span>
+        </div>
+        <div class="booking-confirm-row">
+          <span class="booking-confirm-key">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="booking-confirm-icon">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            Lokasi Acara
+          </span>
+          <span class="booking-confirm-value" id="confirm_location">-</span>
+        </div>
+        <div class="booking-confirm-row">
+          <span class="booking-confirm-key">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="booking-confirm-icon">
+              <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+            </svg>
+            Pin Lokasi
+          </span>
+          <span class="booking-confirm-value" id="confirm_pin">-</span>
+        </div>
+        <div class="booking-confirm-row">
+          <span class="booking-confirm-key">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="booking-confirm-icon">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            Detail Alamat
+          </span>
+          <span class="booking-confirm-value" id="confirm_address_detail">-</span>
+        </div>
+        <div class="booking-confirm-row">
+          <span class="booking-confirm-key">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="booking-confirm-icon">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          Detail Acara
+        </span>
+        <span class="booking-confirm-value" id="confirm_event_detail">-</span>
+      </div>
+    </div>
+
+    <label class="booking-confirm-checkbox" for="booking_confirm_checkbox">
+      <input type="checkbox" id="booking_confirm_checkbox">
+      <span class="booking-confirm-checkbox-text">
+        <span class="booking-confirm-checkbox-main">Saya sudah melakukan pengecekan dan data yang saya isi sudah benar.</span>
+        <span class="booking-confirm-checkbox-note">Data yang sudah dikirim tidak dapat diubah</span>
+      </span>
+    </label>
+
+    <div class="booking-confirm-actions">
+      <button class="cta cta-outline booking-confirm-cancel" type="button" data-booking-confirm-close>Periksa Ulang</button>
+      <button class="cta booking-confirm-submit" id="booking_confirm_submit" type="button" disabled>
+        <span class="booking-confirm-submit-text">Kirim Request Sekarang</span>
+      </button>
+    </div>
+  </div>
+</div>
 </div>

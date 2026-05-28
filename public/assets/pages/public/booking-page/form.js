@@ -625,6 +625,156 @@
             queueEstimateRender();
         }
 
+        function setupBookingSubmitConfirmation() {
+            var modal = document.getElementById("booking_confirmation_modal");
+            var confirmSubmitButton = document.getElementById("booking_confirm_submit");
+            var confirmCheckbox = document.getElementById("booking_confirm_checkbox");
+            if (!modal || !confirmSubmitButton || !confirmCheckbox) {
+                return;
+            }
+
+            var closeButtons = Array.from(modal.querySelectorAll("[data-booking-confirm-close]"));
+            var isConfirmedSubmit = false;
+            var lastFocusedElement = null;
+
+            function setSummaryValue(id, value) {
+                var node = document.getElementById(id);
+                if (!node) {
+                    return;
+                }
+
+                var normalized = String(value || "").trim();
+                node.textContent = normalized !== "" ? normalized : "-";
+            }
+
+            function getValue(id) {
+                var el = document.getElementById(id);
+                if (!el) {
+                    return "";
+                }
+
+                return String(el.value || "").trim();
+            }
+
+            function getSelectedText(id) {
+                var el = document.getElementById(id);
+                if (!el || !el.options || el.selectedIndex < 0) {
+                    return "";
+                }
+
+                var selectedOption = el.options[el.selectedIndex];
+                if (!selectedOption) {
+                    return "";
+                }
+
+                return String(selectedOption.textContent || "").trim();
+            }
+
+            function formatDateForSummary(rawDate) {
+                var normalized = String(rawDate || "").trim();
+                if (normalized === "") {
+                    return "";
+                }
+
+                var parts = normalized.split("-");
+                if (parts.length !== 3) {
+                    return normalized;
+                }
+
+                return parts[2] + "/" + parts[1] + "/" + parts[0];
+            }
+
+            function joinNonEmpty(values, separator) {
+                return values.filter(function (value) {
+                    return String(value || "").trim() !== "";
+                }).join(separator);
+            }
+
+            function populateSummary() {
+                var dateLabel = formatDateForSummary(getValue("booking_date_check"));
+                var sessionLabel = getSelectedText("booking_session");
+                var packageTypeLabel = getSelectedText("booking_package_type");
+                var packageLabel = getSelectedText("booking_package");
+                var provinceLabel = getSelectedText("booking_location_province");
+                var cityLabel = getSelectedText("booking_location_city");
+                var districtLabel = getSelectedText("booking_location_district");
+                var villageLabel = getSelectedText("booking_location_village");
+                var latitude = getValue("booking_pin_lat");
+                var longitude = getValue("booking_pin_lng");
+                var pinLabel = latitude !== "" && longitude !== ""
+                    ? latitude + ", " + longitude
+                    : "";
+
+                setSummaryValue("confirm_name", getValue("booking_name"));
+                setSummaryValue("confirm_whatsapp", getValue("booking_whatsapp"));
+                setSummaryValue("confirm_schedule", joinNonEmpty([dateLabel, sessionLabel], " - "));
+                setSummaryValue("confirm_package", joinNonEmpty([packageTypeLabel, packageLabel], " - "));
+                setSummaryValue("confirm_location", joinNonEmpty([provinceLabel, cityLabel, districtLabel, villageLabel], ", "));
+                setSummaryValue("confirm_pin", pinLabel);
+                setSummaryValue("confirm_address_detail", getValue("booking_pin_address"));
+                setSummaryValue("confirm_event_detail", getValue("booking_detail"));
+            }
+
+            function openModal() {
+                modal.hidden = false;
+                document.body.classList.add("booking-confirm-open");
+                confirmCheckbox.checked = false;
+                confirmSubmitButton.disabled = true;
+                lastFocusedElement = document.activeElement;
+                confirmCheckbox.focus();
+            }
+
+            function closeModal() {
+                modal.hidden = true;
+                document.body.classList.remove("booking-confirm-open");
+                if (lastFocusedElement && typeof lastFocusedElement.focus === "function") {
+                    lastFocusedElement.focus();
+                }
+            }
+
+            closeButtons.forEach(function (button) {
+                button.addEventListener("click", function () {
+                    closeModal();
+                });
+            });
+
+            confirmCheckbox.addEventListener("change", function () {
+                confirmSubmitButton.disabled = !confirmCheckbox.checked;
+            });
+
+            confirmSubmitButton.addEventListener("click", function () {
+                if (!confirmCheckbox.checked) {
+                    return;
+                }
+
+                isConfirmedSubmit = true;
+                closeModal();
+                form.submit();
+            });
+
+            form.addEventListener("submit", function (event) {
+                if (isConfirmedSubmit) {
+                    return;
+                }
+
+                event.preventDefault();
+                if (typeof form.reportValidity === "function" && !form.reportValidity()) {
+                    return;
+                }
+
+                populateSummary();
+                openModal();
+            });
+
+            document.addEventListener("keydown", function (event) {
+                if (event.key !== "Escape" || modal.hidden) {
+                    return;
+                }
+
+                closeModal();
+            });
+        }
+
         function setupMapPinPicker() {
             var mapElement = document.getElementById("booking_map_picker");
             var latInput = document.getElementById("booking_pin_lat");
@@ -703,6 +853,7 @@
         setupPackageFilter();
         setupLocationCascade();
         setupBookingEstimate();
+        setupBookingSubmitConfirmation();
         setupMapPinPicker();
     });
 })();

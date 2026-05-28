@@ -4,7 +4,9 @@
 <section class="section-block container booking-section">
   @php
     $requestCode = trim((string) session('booking_request_code', '-'));
+    $bookingCaseId = trim((string) session('booking_case_id', '-'));
     $customerName = trim((string) session('booking_customer_name', 'Customer'));
+    $proofDownloadUrl = trim((string) session('booking_proof_download_url', ''));
   @endphp
   <div class="booking-grid booking-grid-single">
     <article class="booking-panel booking-support-card">
@@ -18,10 +20,14 @@
       </div>
 
       <div class="availability-summary mt-3">
+        <strong>Case ID:</strong> {{ $bookingCaseId }}<br>
         <strong>Kode Request:</strong> {{ $requestCode }}
       </div>
 
       <div class="booking-form-grid booking-support-actions">
+        @if($proofDownloadUrl !== '')
+          <a class="cta cta-outline" href="{{ $proofDownloadUrl }}">Unduh Bukti Pengajuan (PDF)</a>
+        @endif
         <a class="cta" href="{{ route('booking.status') }}">Cek Status Booking</a>
         <a class="cta cta-outline" href="{{ route('home') }}">Kembali ke Landing Page</a>
       </div>

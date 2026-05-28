@@ -102,7 +102,7 @@ class BookingListService
         return [
             'status' => isset($filters['status']) ? trim((string) $filters['status']) : '',
             'case_id' => isset($filters['case_id']) ? trim((string) $filters['case_id']) : '',
-            'date_range' => isset($filters['date_range']) ? trim((string) $filters['date_range']) : 'month',
+            'date_range' => isset($filters['date_range']) ? trim((string) $filters['date_range']) : 'week',
             'date_start' => isset($filters['date_start']) ? trim((string) $filters['date_start']) : '',
             'date_end' => isset($filters['date_end']) ? trim((string) $filters['date_end']) : '',
         ];
@@ -146,17 +146,20 @@ class BookingListService
     private function applyDateRangeFilter(Builder $query, array $filters): void
     {
         $range = strtolower(trim((string) ($filters['date_range'] ?? '')));
+        if ($range === '' || $range === 'all') {
+            return;
+        }
         if ($range === 'week') {
             $start = Carbon::now()->startOfWeek();
             $end = Carbon::now()->endOfWeek();
-            $query->whereBetween('event_date', [$start->toDateString(), $end->toDateString()]);
+            $query->whereBetween('created_at', [$start->startOfDay(), $end->endOfDay()]);
             return;
         }
 
         if ($range === 'month') {
             $start = Carbon::now()->startOfMonth();
             $end = Carbon::now()->endOfMonth();
-            $query->whereBetween('event_date', [$start->toDateString(), $end->toDateString()]);
+            $query->whereBetween('created_at', [$start->startOfDay(), $end->endOfDay()]);
             return;
         }
 
@@ -165,17 +168,17 @@ class BookingListService
             $end = trim((string) ($filters['date_end'] ?? ''));
 
             if ($start !== '' && $end !== '') {
-                $query->whereBetween('event_date', [$start, $end]);
+                $query->whereBetween('created_at', [Carbon::parse($start)->startOfDay(), Carbon::parse($end)->endOfDay()]);
                 return;
             }
 
             if ($start !== '') {
-                $query->whereDate('event_date', '>=', $start);
+                $query->whereDate('created_at', '>=', $start);
                 return;
             }
 
             if ($end !== '') {
-                $query->whereDate('event_date', '<=', $end);
+                $query->whereDate('created_at', '<=', $end);
             }
         }
     }

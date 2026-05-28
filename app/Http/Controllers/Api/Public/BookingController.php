@@ -8,6 +8,7 @@ use App\Services\Portal\GuestBookingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use RuntimeException;
 
@@ -27,6 +28,16 @@ class BookingController extends Controller
                 ->withErrors(['general' => $exception->getMessage()]);
         }
 
+        $proofDownloadUrl = null;
+        try {
+            $this->guestBookingService->ensureSubmissionProofDocument($booking);
+            $proofDownloadUrl = URL::temporarySignedRoute('booking.proof.download', now()->addDays(7), [
+                'bookingUuid' => $booking->uuid,
+            ]);
+        } catch (\Throwable) {
+            $proofDownloadUrl = null;
+        }
+
         $customerName = trim(implode(' ', array_filter([
             $booking->customer?->first_name,
             $booking->customer?->last_name,
@@ -36,8 +47,10 @@ class BookingController extends Controller
             ->route('booking.success')
             ->with([
                 'booking_request_code' => $this->guestBookingService->buildRequestCode($booking),
+                'booking_case_id' => $this->guestBookingService->buildBookingCaseId($booking),
                 'booking_uuid' => $booking->uuid,
                 'booking_customer_name' => $customerName !== '' ? $customerName : 'Customer',
+                'booking_proof_download_url' => $proofDownloadUrl,
             ]);
     }
 

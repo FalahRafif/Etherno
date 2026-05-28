@@ -1,5 +1,9 @@
 @extends('layouts.admin.admin')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('assets/pages/admin/bookings/list.css') }}">
+@endpush
+
 @section('title', $title)
 
 @section('content')
@@ -59,6 +63,7 @@
             <div class="col-12 col-md-3 col-xl-2">
                 <label for="date_range" class="form-label">Rentang Tanggal</label>
                 <select id="date_range" name="date_range" class="form-select">
+                    <option value="all" {{ ($filters['date_range'] ?? '') === 'all' || ($filters['date_range'] ?? '') === '' ? 'selected' : '' }}>Semua</option>
                     <option value="week" {{ ($filters['date_range'] ?? '') === 'week' ? 'selected' : '' }}>Mingguan</option>
                     <option value="month" {{ ($filters['date_range'] ?? '') === 'month' ? 'selected' : '' }}>Bulanan</option>
                     <option value="custom" {{ ($filters['date_range'] ?? '') === 'custom' ? 'selected' : '' }}>Custom Range</option>
@@ -88,3 +93,7 @@
     'emptyMessage' => 'Belum ada booking yang cocok dengan filter.',
 ])
 @endsection
+
+@push('scripts')
+<script src="{{ asset('assets/pages/admin/bookings/list.js') }}"></script>
+@endpush

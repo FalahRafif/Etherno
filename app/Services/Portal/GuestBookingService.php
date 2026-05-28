@@ -2,6 +2,7 @@
 
 namespace App\Services\Portal;
 
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Location;
@@ -19,6 +20,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -55,6 +57,10 @@ class GuestBookingService
     private const PAYMENT_DATE_RULE_FINAL_CODE = 'PDR_MAX_FINAL';
 
     private const DP_PERCENTAGE_GROUP_ID = 'payment_type_price_percentage';
+
+    private const SUBMISSION_PROOF_DIRECTORY = 'booking-submission-proofs';
+
+    private const BOOKING_CASE_ID_PREFIX = 'ETH';
 
     /**
      * @var array<int, string>
@@ -188,7 +194,8 @@ class GuestBookingService
 
             return $booking->loadMissing([
                 'customer:id,first_name,last_name,phone_number',
-                'package:id,name,price',
+                'package:id,case_id,name,address,price,package_type',
+                'package.packageType:id,code,description',
                 'status:id,code,description',
                 'eventSession:id,code,description',
                 'location:id,name',
@@ -202,6 +209,67 @@ class GuestBookingService
         $bookingId = (int) $booking->getKey();
 
         return sprintf('ETH-REQ-%s-%06d', $createdAt->format('Y'), $bookingId);
+    }
+
+    public function buildBookingCaseId(Booking $booking): string
+    {
+        $createdAt = $booking->created_at instanceof Carbon ? $booking->created_at : now();
+        $bookingId = (int) $booking->getKey();
+
+        return sprintf('%s-%s-%05d', self::BOOKING_CASE_ID_PREFIX, $createdAt->format('Ymd'), $bookingId);
+    }
+
+    /**
+     * @return array{path:string,filename:string}
+     */
+    public function ensureSubmissionProofDocument(Booking $booking): array
+    {
+        $resolvedBooking = $this->hydrateBookingForSubmissionProof($booking);
+        $relativePath = $this->resolveSubmissionProofRelativePath($resolvedBooking);
+
+        if (!Storage::disk('local')->exists($relativePath)) {
+            $payload = $this->buildSubmissionProofPayload($resolvedBooking);
+            $pdf = Pdf::setPaper('a4')
+                ->loadView('pages.public.booking-page.support.submission-proof-pdf', $payload);
+
+            Storage::disk('local')->put($relativePath, $pdf->output());
+        }
+
+        return [
+            'path' => $relativePath,
+            'filename' => $this->buildSubmissionProofFileName($resolvedBooking),
+        ];
+    }
+
+    public function getBookingForSubmissionProofByUuidOrFail(string $bookingUuid): Booking
+    {
+        $normalizedUuid = trim($bookingUuid);
+        if ($normalizedUuid === '') {
+            throw new RuntimeException('Data booking tidak valid.');
+        }
+
+        $booking = $this->bookingRepository
+            ->query(true)
+            ->where('uuid', $normalizedUuid)
+            ->first([
+                'id',
+                'uuid',
+                'customer_id',
+                'package_id',
+                'status_id',
+                'location_id',
+                'event_date',
+                'event_session',
+                'event_detail',
+                'google_maps_pin',
+                'created_at',
+            ]);
+
+        if (!$booking instanceof Booking) {
+            throw new RuntimeException('Data booking tidak ditemukan.');
+        }
+
+        return $this->hydrateBookingForSubmissionProof($booking);
     }
 
     /**
@@ -834,6 +902,123 @@ class GuestBookingService
     private function formatRupiah(float $amount): string
     {
         return 'Rp ' . number_format($amount, 0, ',', '.');
+    }
+
+    private function hydrateBookingForSubmissionProof(Booking $booking): Booking
+    {
+        return $booking->loadMissing([
+            'customer:id,first_name,last_name,phone_number',
+            'package:id,case_id,name,address,price,package_type',
+            'package.packageType:id,code,description',
+            'status:id,code,description',
+            'eventSession:id,code,description',
+            'location:id,name,parent_id,level_id',
+            'location.level:id,code,description',
+            'location.parent:id,name,parent_id,level_id',
+            'location.parent.parent:id,name,parent_id,level_id',
+            'location.parent.parent.parent:id,name,parent_id,level_id',
+        ]);
+    }
+
+    private function resolveSubmissionProofRelativePath(Booking $booking): string
+    {
+        $uuid = trim((string) ($booking->uuid ?? ''));
+        if ($uuid === '') {
+            $uuid = (string) Str::uuid();
+        }
+
+        return self::SUBMISSION_PROOF_DIRECTORY . '/' . $uuid . '.pdf';
+    }
+
+    private function buildSubmissionProofFileName(Booking $booking): string
+    {
+        $caseId = $this->buildBookingCaseId($booking);
+        $safeCaseId = preg_replace('/[^A-Za-z0-9\-]/', '-', $caseId) ?: 'booking-proof';
+
+        return 'Bukti-Pengajuan-' . $safeCaseId . '.pdf';
+    }
+
+    /**
+     * @return array{
+     *   booking_case_id:string,
+     *   request_code:string,
+     *   booking_date_label:string,
+     *   submitted_at_label:string,
+     *   customer_name:string,
+     *   customer_phone:string,
+     *   package_name:string,
+     *   package_case_id:string,
+     *   package_type:string,
+     *   package_price:string,
+     *   package_address:string,
+     *   event_session:string,
+     *   location_label:string,
+     *   event_detail:string,
+     *   google_maps_pin:string
+     * }
+     */
+    private function buildSubmissionProofPayload(Booking $booking): array
+    {
+        $eventDateLabel = '-';
+        if ($booking->event_date instanceof Carbon) {
+            $eventDateLabel = $booking->event_date->translatedFormat('d F Y');
+        } elseif (!empty($booking->event_date)) {
+            try {
+                $eventDateLabel = Carbon::parse((string) $booking->event_date)->translatedFormat('d F Y');
+            } catch (\Throwable) {
+                $eventDateLabel = (string) $booking->event_date;
+            }
+        }
+
+        $submittedAt = $booking->created_at instanceof Carbon ? $booking->created_at : now();
+        $eventDetail = trim((string) ($booking->event_detail ?? ''));
+        $eventDetail = $eventDetail !== '' ? $eventDetail : '-';
+
+        return [
+            'booking_case_id' => $this->buildBookingCaseId($booking),
+            'request_code' => $this->buildRequestCode($booking),
+            'booking_date_label' => $eventDateLabel,
+            'submitted_at_label' => $submittedAt->translatedFormat('d F Y H:i'),
+            'customer_name' => trim(implode(' ', array_filter([
+                $booking->customer?->first_name,
+                $booking->customer?->last_name,
+            ]))) ?: '-',
+            'customer_phone' => trim((string) ($booking->customer?->phone_number ?? '')) ?: '-',
+            'package_name' => trim((string) ($booking->package?->name ?? '')) ?: '-',
+            'package_case_id' => trim((string) ($booking->package?->case_id ?? '')) ?: '-',
+            'package_type' => trim((string) ($booking->package?->packageType?->description ?? '')) ?: '-',
+            'package_price' => $this->formatRupiah((float) ($booking->package?->price ?? 0)),
+            'package_address' => trim((string) ($booking->package?->address ?? '')) ?: '-',
+            'event_session' => trim((string) ($booking->eventSession?->description ?? '')) ?: '-',
+            'location_label' => $this->resolveLocationHierarchyLabel($booking->location),
+            'event_detail' => $eventDetail,
+            'google_maps_pin' => trim((string) ($booking->google_maps_pin ?? '')) ?: '-',
+        ];
+    }
+
+    private function resolveLocationHierarchyLabel(?Location $location): string
+    {
+        if (!$location instanceof Location) {
+            return '-';
+        }
+
+        $segments = [];
+        $current = $location;
+
+        while ($current instanceof Location) {
+            $name = trim((string) ($current->name ?? ''));
+            if ($name !== '') {
+                $segments[] = $name;
+            }
+
+            $current = $current->parent;
+        }
+
+        if ($segments === []) {
+            return '-';
+        }
+
+        return implode(', ', array_reverse($segments));
     }
 
     private function resolveActivePackageForEstimateOrFail(int $packageId): Package
