@@ -85,70 +85,6 @@ return [
                     'active' => ['dashboard'],
                     'roles' => ['Admin', 'Petugas'],
                 ],
-                [
-                    'label' => 'Calendar & Slots',
-                    'route_name' => 'calendar',
-                    'active' => ['calendar'],
-                    'roles' => ['Admin', 'Petugas'],
-                ],
-            ],
-        ],
-        [
-            'section' => 'Booking Flow',
-            'items' => [
-                [
-                    'label' => 'Booking Requests',
-                    'route_name' => 'bookings.requests',
-                    'active' => ['bookings.requests'],
-                    'roles' => ['Admin', 'Petugas'],
-                ],
-                [
-                    'label' => 'Bookings Active',
-                    'route_name' => 'bookings.active',
-                    'active' => ['bookings.active', 'bookings.detail'],
-                    'roles' => ['Admin', 'Petugas'],
-                ],
-                [
-                    'label' => 'Reschedule Requests',
-                    'route_name' => 'reschedules',
-                    'active' => ['reschedules'],
-                    'roles' => ['Admin', 'Petugas'],
-                ],
-                [
-                    'label' => 'Cancellations',
-                    'route_name' => 'cancellations',
-                    'active' => ['cancellations'],
-                    'roles' => ['Admin', 'Petugas'],
-                ],
-                [
-                    'label' => 'Force Majeure',
-                    'route_name' => 'force.majeure',
-                    'active' => ['force.majeure'],
-                    'roles' => ['Admin', 'Petugas'],
-                ],
-            ],
-        ],
-        [
-            'section' => 'Payments',
-            'items' => [
-                [
-                    'label' => 'DP Verification',
-                    'route_name' => 'payments.dp',
-                    'active' => ['payments.dp'],
-                    'roles' => ['Admin', 'Petugas'],
-                ],
-                [
-                    'label' => 'Final Payment',
-                    'route_name' => 'payments.final',
-                    'active' => ['payments.final'],
-                    'roles' => ['Admin', 'Petugas'],
-                ],
-                [
-                    'label' => 'Pricing Review',
-                    'route_name' => 'pricing.reviews',
-                    'active' => ['pricing.reviews'],
-                    'roles' => ['Admin', 'Petugas'],
-                ],
             ],
         ],
         [
@@ -158,6 +94,12 @@ return [
                     'label' => 'Daftar Booking',
                     'route_name' => 'bookings.list',
                     'active' => ['bookings.list', 'bookings.detail'],
+                    'roles' => ['Admin', 'Petugas'],
+                ],
+                [
+                    'label' => 'Calender Booking',
+                    'route_name' => 'calendar',
+                    'active' => ['calendar'],
                     'roles' => ['Admin', 'Petugas'],
                 ],
             ],

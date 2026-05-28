@@ -9,6 +9,14 @@
 <script src="{{ asset('assets/pages/public/booking-page/form.js') }}?v={{ $bookingFormScriptVersion }}"></script>
 @endif
 
+@if(request()->routeIs('booking.status'))
+@php
+  $bookingStatusScriptPath = public_path('assets/pages/public/booking-page/status.js');
+  $bookingStatusScriptVersion = file_exists($bookingStatusScriptPath) ? filemtime($bookingStatusScriptPath) : time();
+@endphp
+<script src="{{ asset('assets/pages/public/booking-page/status.js') }}?v={{ $bookingStatusScriptVersion }}"></script>
+@endif
+
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const header = document.querySelector('.public-header');

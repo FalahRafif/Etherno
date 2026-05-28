@@ -103,4 +103,35 @@ class BookingController extends Controller
 
         return response()->json($estimate);
     }
+
+    public function statusLookup(Request $request): JsonResponse
+    {
+        $payload = $request->validate([
+            'booking_code' => ['required', 'string', 'max:120'],
+            'phone_last4' => ['required', 'digits:4'],
+        ]);
+
+        try {
+            $statusPayload = $this->guestBookingService->getBookingStatusPayload(
+                (string) $payload['booking_code'],
+                (string) $payload['phone_last4']
+            );
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        $bookingUuid = trim((string) ($statusPayload['booking_uuid'] ?? ''));
+        $proofDownloadUrl = null;
+        if ($bookingUuid !== '') {
+            $proofDownloadUrl = URL::temporarySignedRoute('booking.proof.download', now()->addDays(7), [
+                'bookingUuid' => $bookingUuid,
+            ]);
+        }
+
+        return response()->json(array_merge($statusPayload, [
+            'proof_download_url' => $proofDownloadUrl,
+        ]));
+    }
 }

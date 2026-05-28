@@ -16,7 +16,7 @@ class InternalPageService
         'bookings.requests' => ['view' => 'pages.admin.bookings.requests', 'title' => 'Booking Requests'],
         'bookings.active' => ['view' => 'pages.admin.bookings.active', 'title' => 'Bookings Active'],
         'bookings.detail' => ['view' => 'pages.admin.bookings.detail', 'title' => 'Booking Detail'],
-        'calendar' => ['view' => 'pages.admin.calendar', 'title' => 'Calendar & Slots'],
+        'calendar' => ['view' => 'pages.admin.calendar', 'title' => 'Calender Booking'],
         'payments.dp' => ['view' => 'pages.admin.payments.dp', 'title' => 'DP Verification'],
         'payments.final' => ['view' => 'pages.admin.payments.final', 'title' => 'Final Payment'],
         'pricing.reviews' => ['view' => 'pages.admin.pricing.reviews', 'title' => 'Pricing Review'],
