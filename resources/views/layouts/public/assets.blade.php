@@ -19,7 +19,15 @@
         @if(file_exists(public_path('assets/css/icons.css')))
             <link rel="stylesheet" href="{{ asset('assets/css/icons.css') }}">
         @endif
-        <link rel="stylesheet" href="{{ asset('assets/css/public-custom.css') }}">
+        @php
+            $publicCustomCssPath = public_path('assets/css/public-custom.css');
+            $publicCustomCssVersion = file_exists($publicCustomCssPath) ? filemtime($publicCustomCssPath) : time();
+        @endphp
+        <link rel="stylesheet" href="{{ asset('assets/css/public-custom.css') }}?v={{ $publicCustomCssVersion }}">
+        @if(request()->routeIs('booking.page'))
+            <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+        @endif
 
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
 

@@ -65,7 +65,7 @@
             </nav>
 
             @php
-                $ctaLabel = $guestCta['label'] ?? 'Pesan Sekarang';
+                $ctaLabel = $guestCta['label'] ?? 'Booking Sekarang';
                 $ctaAriaLabel = $guestCta['aria_label'] ?? $ctaLabel;
                 $ctaRoute = $guestCta['route'] ?? 'booking.page';
             @endphp
