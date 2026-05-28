@@ -12,6 +12,7 @@ class InternalPageService
      */
     private array $pages = [
         'dashboard' => ['view' => 'pages.admin.dashboard', 'title' => 'Dashboard'],
+        'bookings.list' => ['view' => 'pages.admin.bookings.list', 'title' => 'Daftar Booking'],
         'bookings.requests' => ['view' => 'pages.admin.bookings.requests', 'title' => 'Booking Requests'],
         'bookings.active' => ['view' => 'pages.admin.bookings.active', 'title' => 'Bookings Active'],
         'bookings.detail' => ['view' => 'pages.admin.bookings.detail', 'title' => 'Booking Detail'],

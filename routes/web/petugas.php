@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('petugas')->name('petugas.')->middleware(['auth', 'role:Petugas'])->group(function () {
     Route::redirect('/', '/petugas/dashboard')->name('home');
     Route::get('/dashboard', [AdminPreviewController::class, 'dashboard'])->name('dashboard');
+    Route::get('/bookings', [AdminPreviewController::class, 'bookingsList'])->name('bookings.list');
     Route::get('/bookings/requests', [AdminPreviewController::class, 'bookingRequests'])->name('bookings.requests');
     Route::get('/bookings/active', [AdminPreviewController::class, 'bookingsActive'])->name('bookings.active');
     Route::get('/bookings/{booking}', [AdminPreviewController::class, 'bookingDetail'])->name('bookings.detail');

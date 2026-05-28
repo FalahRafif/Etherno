@@ -124,41 +124,49 @@ Endpoint auth saat ini:
 - `POST /api/login` (name `login.post`), middleware `web` + `guest`.
 - `POST /api/logout` (name `logout`), middleware `web` + `auth`.
 
-Endpoint admin user management:
+Endpoint public booking request:
 
-- `GET /api/admin/users` (name `api.admin.users.index`), middleware `web` + `auth` + `role:Admin`.
-- `POST /api/admin/users` (name `api.admin.users.store`), middleware `web` + `auth` + `role:Admin`.
-- `PUT /api/admin/users/{user}` (name `api.admin.users.update`), middleware `web` + `auth` + `role:Admin`.
-- `DELETE /api/admin/users/{user}` (name `api.admin.users.destroy`), middleware `web` + `auth` + `role:Admin`.
+- `GET /api/booking/location-options` (name `booking.location.options`), middleware `web`.
+- `POST /api/booking` (name `booking.store`), middleware `web`.
+
+Controller dan route dibagi jelas antara Web dan API:
+
+- Web controllers ada di `app/Http/Controllers/Web/*` untuk render page (GET) dan redirect.
+- API controllers ada di `app/Http/Controllers/Api/*` untuk submit/CRUD (POST/PUT/DELETE) dengan response JSON.
+- Mayoritas endpoint API tetap memakai middleware `web` agar session dan CSRF browser tetap jalan.
+- Internal API dipisah di prefix `/api/internal` untuk signed URL attachment.
+
+Endpoint admin API (mutasi data internal):
+
+- Users: `GET/POST/PUT/DELETE /api/admin/users` (name `api.admin.users.*`), middleware `web` + `auth` + `role:Admin`.
+- Packages: `POST/PUT/DELETE /api/admin/packages` (name `api.admin.packages.*`), middleware `web` + `auth` + `role:Admin`.
+- Location pricing rules: `POST/PUT/DELETE /api/admin/location-rules` (name `api.admin.location-rules.*`), middleware `web` + `auth` + `role:Admin`.
+- Location options: `GET /api/admin/location-rules/options` (name `api.admin.location-rules.options`), middleware `web` + `auth` + `role:Admin`.
+- Payment date rules: `POST/PUT/DELETE /api/admin/payment-date-rules` (name `api.admin.payment-date-rules.*`), middleware `web` + `auth` + `role:Admin`.
+- DP percentage rules: `POST/PUT/DELETE /api/admin/dp-percentage-rules` (name `api.admin.dp-percentage-rules.*`), middleware `web` + `auth` + `role:Admin`.
+- Package date rules: `POST/PUT/DELETE /api/admin/package-date-rules` (name `api.admin.package-date-rules.*`), middleware `web` + `auth` + `role:Admin`.
+- Profile internal: `PUT /api/admin/profile` (name `api.admin.profile.update`), middleware `web` + `auth`.
 
 Endpoint secure preview attachment internal:
 
 - `GET /api/internal/attachments/{attachmentUuid}/preview` (name `api.internal.attachments.preview`), middleware `web` + `auth` + `signed` + validasi role internal (`Admin`/`Petugas`) di controller.
 - URL selalu temporary signed URL (default TTL 30 menit) dan wajib digenerate ulang setelah expired.
 
-Public route memakai nama seperti `home`, `booking.page`, `booking.success`, `booking.status`, `booking.payment.dp`, `booking.payment.final`, `booking.reschedule`, dan `booking.cancellation.policy`.
+Public route memakai nama seperti `home`, `packages.page`, `booking.page`, `booking.success`, `booking.status`, `booking.payment.dp`, `booking.payment.final`, `booking.reschedule`, dan `booking.cancellation.policy`.
 
 Admin route memakai prefix URL `/admin`, name prefix `admin.`, middleware `auth` dan `role:Admin`.
 
-Route admin untuk management akun internal:
+Route admin web (GET only) untuk render UI:
 
-- `GET /admin/users` (name `admin.users`), hanya admin.
-- `GET /admin/users/create` (name `admin.users.create`), hanya admin.
-- `POST /admin/users` (name `admin.users.store`), hanya admin.
-- `GET /admin/users/{user}/edit` (name `admin.users.edit`), hanya admin.
-- `PUT /admin/users/{user}` (name `admin.users.update`), hanya admin.
-- `DELETE /admin/users/{user}` (name `admin.users.destroy`), hanya admin.
+- Users management: `GET /admin/users`, `GET /admin/users/create`, `GET /admin/users/{user}/edit`.
+- Packages: `GET /admin/packages`, `GET /admin/packages/create`, `GET /admin/packages/{package}/edit`.
+- Location pricing rules: `GET /admin/location-rules`, `GET /admin/location-rules/create`, `GET /admin/location-rules/{locationPricingRule}/edit`.
+- Payment date rules: `GET /admin/payment-date-rules`, `GET /admin/payment-date-rules/create`, `GET /admin/payment-date-rules/{setting}/edit`.
+- DP percentage rules: `GET /admin/dp-percentage-rules`, `GET /admin/dp-percentage-rules/create`, `GET /admin/dp-percentage-rules/{setting}/edit`.
+- Package date rules: `GET /admin/package-date-rules`, `GET /admin/package-date-rules/create`, `GET /admin/package-date-rules/{setting}/edit`.
+- Preview pages: `GET /admin/dashboard`, `GET /admin/bookings/requests`, `GET /admin/bookings/active`, `GET /admin/bookings/{booking}`, `GET /admin/calendar`, `GET /admin/payments/dp`, `GET /admin/payments/final`, `GET /admin/pricing/reviews`, `GET /admin/reschedules`, `GET /admin/cancellations`, `GET /admin/force-majeure`, `GET /admin/customers`, `GET /admin/settings`, `GET /admin/blank`.
 
-Route admin untuk aturan harga lokasi:
-
-- `GET /admin/location-rules` (name `admin.location.rules`), hanya admin.
-- `GET /admin/location-rules/create` (name `admin.location.rules.create`), hanya admin.
-- `POST /admin/location-rules` (name `admin.location.rules.store`), hanya admin.
-- `GET /admin/location-rules/{locationPricingRule}/edit` (name `admin.location.rules.edit`), hanya admin.
-- `PUT /admin/location-rules/{locationPricingRule}` (name `admin.location.rules.update`), hanya admin.
-- `DELETE /admin/location-rules/{locationPricingRule}` (name `admin.location.rules.destroy`), hanya admin.
-
-Petugas route memakai prefix URL `/petugas`, name prefix `petugas.`, middleware `auth` dan `role:Petugas` untuk route operasional. Di file `routes/web/petugas.php` juga ada route admin-only dengan prefix `/petugas` dan middleware `role:Admin` untuk beberapa page master. Jika behavior ini berubah, update route dan dokumentasi bersamaan.
+Petugas route memakai prefix URL `/petugas`, name prefix `petugas.`, middleware `auth` dan `role:Petugas` untuk route operasional. Di file `routes/web/petugas.php` juga ada route admin-only dengan prefix `/petugas` dan middleware `role:Admin` untuk page master seperti `packages`, `location-rules`, dan `settings`. Jika behavior ini berubah, update route dan dokumentasi bersamaan.
 
 ### Layout Structure
 

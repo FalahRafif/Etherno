@@ -3,9 +3,9 @@
 @section('content')
 <section class="section-block container booking-section">
   <div class="section-heading booking-heading">
-    <p class="eyebrow">Status Booking</p>
-    <h2>Cek status request dan progress pembayaran</h2>
-    <p class="section-lead">Gunakan kode booking atau nomor WhatsApp untuk melihat ringkasan status terbaru secara cepat.</p>
+    <p class="eyebrow">Detail Booking</p>
+    <h2>Detail booking Anda</h2>
+    <p class="section-lead">Gunakan kode booking atau nomor WhatsApp untuk melihat status terbaru dan progres pembayaran.</p>
   </div>
 
   <div class="booking-grid booking-grid-single">
