@@ -327,20 +327,24 @@ class BookingDetailService
             throw new RuntimeException('Installment DP tidak ditemukan.');
         }
 
-        $dpPaid = $this->calculateSuccessfulPayments($dpInstallment);
+        $dpPaid = $this->calculateTotalPayments($dpInstallment);
         $dpAmount = (float) $dpInstallment->amount;
 
         if ($dpPaid < $dpAmount) {
             throw new RuntimeException('DP belum terbayar penuh. Terbayar: ' . $this->formatRupiah($dpPaid) . ' dari ' . $this->formatRupiah($dpAmount) . '.');
         }
 
+        $this->approvePendingPayments($dpInstallment);
+
+        $effectivePaid = min($dpPaid, $dpAmount);
         $this->billingInstallmentRepository->update($dpInstallment, [
-            'paid_amount' => $dpPaid,
+            'paid_amount' => $effectivePaid,
         ]);
-        $this->syncInstallmentStatus($dpInstallment, $dpPaid);
+        $this->syncInstallmentStatus($dpInstallment, $effectivePaid);
 
         $totalPaid = $this->recalculateBillingTotalPaid($billing);
         $this->billingRepository->update($billing, ['total_paid' => $totalPaid]);
+        $billing->total_paid = $totalPaid;
         $this->syncBillingStatus($billing);
 
         $finalRef = $this->findReference('booking_status', 'BS_APPROVED_WAITING_FINAL_PAYMENT');
@@ -421,9 +425,10 @@ class BookingDetailService
         $totalScheduled = 0;
 
         foreach ($billing->installments as $inst) {
-            $paid = round($this->calculateSuccessfulPayments($inst), 2);
+            $paid = round($this->calculateTotalPayments($inst), 2);
             $totalSuccessful += $paid;
             $effectivePaid = min($paid, (float) $inst->amount);
+            $this->approvePendingPayments($inst);
             $this->billingInstallmentRepository->update($inst, [
                 'paid_amount' => $effectivePaid,
             ]);
@@ -439,6 +444,7 @@ class BookingDetailService
         }
 
         $this->billingRepository->update($billing, ['total_paid' => $totalSuccessful]);
+        $billing->total_paid = $totalSuccessful;
         $this->syncBillingStatus($billing);
 
         $confirmedRef = $this->findReference('booking_status', 'BS_CONFIRMED');
@@ -916,6 +922,26 @@ class BookingDetailService
             ->where('billing_installment_id', $installment->id)
             ->where('status_id', $successRef->id)
             ->sum('amount');
+    }
+
+    private function calculateTotalPayments($installment): float
+    {
+        return (float) $this->paymentRepository
+            ->query(true)
+            ->where('billing_installment_id', $installment->id)
+            ->sum('amount');
+    }
+
+    private function approvePendingPayments($installment): void
+    {
+        $successRef = $this->findReference('payment_status', 'PYS_SUCCESS');
+        $pendingRef = $this->findReference('payment_status', 'PYS_PEDING');
+
+        $this->paymentRepository
+            ->query(true)
+            ->where('billing_installment_id', $installment->id)
+            ->where('status_id', $pendingRef->id)
+            ->update(['status_id' => $successRef->id]);
     }
 
     private function recalculateBillingTotalPaid(Billing $billing): float

@@ -7,6 +7,8 @@
     $bookingCaseId = trim((string) session('booking_case_id', '-'));
     $customerName = trim((string) session('booking_customer_name', 'Customer'));
     $proofDownloadUrl = trim((string) session('booking_proof_download_url', ''));
+    $adminWhatsapp = trim((string) session('admin_whatsapp', ''));
+    $whatsappTemplate = trim((string) session('whatsapp_template', ''));
   @endphp
   <div class="booking-grid booking-grid-single">
     <article class="booking-panel booking-support-card">
@@ -28,7 +30,12 @@
         @if($proofDownloadUrl !== '')
           <a class="cta cta-outline" href="{{ $proofDownloadUrl }}">Unduh Bukti Pengajuan (PDF)</a>
         @endif
-        <a class="cta" href="{{ route('booking.status') }}">Cek Status Booking</a>
+        @if($adminWhatsapp !== '' && $whatsappTemplate !== '')
+          <a class="cta" href="https://wa.me/{{ preg_replace('/^0/', '62', preg_replace('/[^0-9]/', '', $adminWhatsapp)) }}?text={{ urlencode($whatsappTemplate) }}" target="_blank" rel="noopener">
+            Hubungi Admin via WhatsApp
+          </a>
+        @endif
+        <a class="cta cta-outline" href="{{ route('booking.status') }}">Cek Status Booking</a>
         <a class="cta cta-outline" href="{{ route('home') }}">Kembali ke Landing Page</a>
       </div>
     </article>

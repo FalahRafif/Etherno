@@ -1244,6 +1244,68 @@ body.booking-confirm-open{
   color:#5f4715;
 }
 
+.booking-detail-tabs{margin-top:16px}
+.booking-detail-tabs .booking-tab-list{
+  display:flex;
+  gap:0;
+  border-bottom:1px solid rgba(15,15,15,.1);
+  margin-bottom:0;
+}
+.booking-detail-tabs .booking-tab{
+  padding:10px 18px;
+  font-size:14px;
+  font-weight:600;
+  color:#67635d;
+  background:transparent;
+  border:none;
+  border-bottom:2px solid transparent;
+  cursor:pointer;
+  transition:color .15s,border-color .15s;
+}
+.booking-detail-tabs .booking-tab:hover{color:#221f18}
+.booking-detail-tabs .booking-tab.is-active{
+  color:var(--gold);
+  border-bottom-color:var(--gold);
+}
+.booking-detail-tabs .booking-tab-panel{padding-top:0}
+
+.billing-installment-card{
+  border:1px solid rgba(15,15,15,.08);
+  border-radius:10px;
+  background:#fff;
+  padding:14px 16px;
+  margin-bottom:12px;
+}
+.billing-installment-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+}
+.billing-installment-type{
+  font-size:13px;
+  font-weight:700;
+  color:#221f18;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+.billing-installment-status{
+  font-size:12px;
+  font-weight:600;
+  padding:3px 10px;
+  border-radius:20px;
+  background:rgba(181,143,66,.1);
+  color:var(--gold);
+}
+.booking-status-history-desc{
+  display:block;
+  font-size:12px;
+  color:#999;
+  margin-top:2px;
+}
+
+.booking-confirm-dialog-wide{max-width:520px}
+
 @keyframes bookingFade{
   from{opacity:0;transform:translateY(4px)}
   to{opacity:1;transform:translateY(0)}
