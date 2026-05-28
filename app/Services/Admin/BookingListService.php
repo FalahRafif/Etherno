@@ -3,11 +3,11 @@
 namespace App\Services\Admin;
 
 use App\Models\Booking;
+use App\Models\Location;
 use App\Repositories\Contracts\BookingRepositoryInterface;
 use App\Repositories\Contracts\ReferenceRepositoryInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
-
 class BookingListService
 {
     private const STATUS_GROUP = 'booking_status';
@@ -49,13 +49,16 @@ class BookingListService
             ])));
             $customerName = $customerName !== '' ? $customerName : '-';
             $phone = trim((string) ($booking->customer?->phone_number ?? '-'));
+            $createdDate = $booking->created_at?->format('Y-m-d') ?? '-';
             $eventDate = $booking->event_date?->format('Y-m-d') ?? (string) ($booking->event_date ?? '-');
             $sessionLabel = trim((string) ($booking->eventSession?->description ?? '-'));
             $packageName = trim((string) ($booking->package?->name ?? '-'));
             $locationName = trim((string) ($booking->location?->name ?? '-'));
             $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
             $statusBadge = $this->resolveStatusBadge($statusCode);
-            $paymentBadge = $this->resolvePaymentBadge($statusCode);
+            $locationDetails = $this->resolveLocationDetails($booking->location);
+            $mapsPin = trim((string) ($booking->google_maps_pin ?? ''));
+            $mapsUrl = $this->buildMapsUrl($mapsPin);
 
             return [
                 [
@@ -69,12 +72,19 @@ class BookingListService
                     'primary' => $customerName,
                     'secondary' => $phone,
                 ],
+                $createdDate,
                 $eventDate,
                 $sessionLabel,
                 $packageName,
-                $locationName,
+                [
+                    'type' => 'location',
+                    'tone' => 'info',
+                    'label' => $locationName !== '' ? $locationName : '-',
+                    'details' => $locationDetails,
+                    'maps_pin' => $mapsPin,
+                    'maps_url' => $mapsUrl,
+                ],
                 $statusBadge,
-                $paymentBadge,
                 [
                     'type' => 'link',
                     'label' => 'Detail',
@@ -120,7 +130,18 @@ class BookingListService
                 'package:id,name',
                 'status:id,code,description',
                 'eventSession:id,code,description',
-                'location:id,name',
+                'location:id,name,parent_id,level_id,wilayah_id',
+                'location.parent:id,name,parent_id,level_id,wilayah_id',
+                'location.parent.parent:id,name,parent_id,level_id,wilayah_id',
+                'location.parent.parent.parent:id,name,parent_id,level_id,wilayah_id',
+                'location.level:id,description',
+                'location.parent.level:id,description',
+                'location.parent.parent.level:id,description',
+                'location.parent.parent.parent.level:id,description',
+                'location.wilayah:kode,nama',
+                'location.parent.wilayah:kode,nama',
+                'location.parent.parent.wilayah:kode,nama',
+                'location.parent.parent.parent.wilayah:kode,nama',
             ]);
 
         $this->applyDateRangeFilter($query, $filters);
@@ -236,7 +257,7 @@ class BookingListService
 
     /**
      * @param  array<int, array{code:string,label:string}>  $statusOptions
-     * @return array<int, array{code:string,label:string,count:int,is_active:bool}>
+     * @return array<int, array{code:string,label:string,count:int,is_active:bool,tone:string}>
      */
     private function buildStatusFilters(array $statusOptions, array $filters, Builder $baseQuery, int $totalCount): array
     {
@@ -247,6 +268,7 @@ class BookingListService
                 'label' => 'Semua',
                 'count' => $totalCount,
                 'is_active' => $currentStatus === '',
+                'tone' => 'primary',
             ],
         ];
 
@@ -264,6 +286,7 @@ class BookingListService
                 'label' => $status['label'],
                 'count' => $count,
                 'is_active' => $currentStatus === $status['code'],
+                'tone' => $this->resolveStatusTone($status['code']),
             ];
         }
 
@@ -278,7 +301,7 @@ class BookingListService
         $total = (clone $baseQuery)->count();
         $waitingApproval = $this->countByStatusCodes($baseQuery, ['BS_WAITING_APPROVAL']);
         $active = $this->countByStatusCodes($baseQuery, ['BS_APPROVED_WAITING_FINAL_PAYMENT', 'BS_CONFIRMED', 'BS_COMPLETE']);
-        $inactive = $this->countByStatusCodes($baseQuery, ['BS_CANCEL', 'BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_REFUND']);
+        $inactive = $this->countByStatusCodes($baseQuery, ['BS_CANCEL', 'BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_REFUND', 'BS_REJECTED']);
 
         return [
             ['label' => 'Total Booking', 'value' => $total, 'hint' => 'Semua status', 'tone' => 'primary'],
@@ -304,6 +327,11 @@ class BookingListService
 
     private function buildCaseId(Booking $booking): string
     {
+        $storedCaseId = trim((string) ($booking->case_id ?? ''));
+        if ($storedCaseId !== '') {
+            return $storedCaseId;
+        }
+
         $createdAt = $booking->created_at ?? now();
         $id = (int) $booking->getKey();
 
@@ -347,5 +375,106 @@ class BookingListService
             'BS_CANCEL', 'BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_REFUND' => ['type' => 'badge', 'tone' => 'danger', 'label' => 'inactive'],
             default => ['type' => 'badge', 'tone' => 'light', 'label' => 'n/a'],
         };
+    }
+
+    private function resolveStatusTone(string $statusCode): string
+    {
+        $normalized = strtoupper(trim($statusCode));
+
+        return match ($normalized) {
+            'BS_WAITING_APPROVAL' => 'warning',
+            'BS_APPROVED_WAITING_DP', 'BS_APPROVED_WAITING_FINAL_PAYMENT' => 'info',
+            'BS_CONFIRMED', 'BS_COMPLETE' => 'success',
+            'BS_CANCEL', 'BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_REFUND' => 'danger',
+            default => 'secondary',
+        };
+    }
+
+    /**
+     * @return array{provinsi:string,kota:string,kecamatan:string,kelurahan:string}
+     */
+    private function resolveLocationDetails(?Location $location): array
+    {
+        $details = [
+            'provinsi' => '-',
+            'kota' => '-',
+            'kecamatan' => '-',
+            'kelurahan' => '-',
+        ];
+
+        if (!$location) {
+            return $details;
+        }
+
+        $fallbackNames = [];
+        $node = $location;
+        $loop = 0;
+
+        while ($node && $loop < 5) {
+            $name = trim((string) ($node->name ?? ''));
+            $levelLabel = strtolower(trim((string) ($node->level?->description ?? '')));
+            $mappedKey = $this->mapLocationLevel($levelLabel);
+
+            if ($mappedKey !== '' && $name !== '') {
+                $details[$mappedKey] = $name;
+            } elseif ($name !== '') {
+                $fallbackNames[] = $name;
+            }
+
+            $node = $node->parent;
+            $loop++;
+        }
+
+        if ($details['provinsi'] === '-' && !empty($location->wilayah?->nama)) {
+            $details['provinsi'] = (string) $location->wilayah->nama;
+        }
+
+        $fallbackKeys = ['kelurahan', 'kecamatan', 'kota', 'provinsi'];
+        foreach ($fallbackKeys as $index => $key) {
+            if ($details[$key] === '-' && isset($fallbackNames[$index])) {
+                $details[$key] = $fallbackNames[$index];
+            }
+        }
+
+        return $details;
+    }
+
+    private function mapLocationLevel(string $label): string
+    {
+        if ($label === '') {
+            return '';
+        }
+
+        if (str_contains($label, 'prov')) {
+            return 'provinsi';
+        }
+
+        if (str_contains($label, 'kota') || str_contains($label, 'kab')) {
+            return 'kota';
+        }
+
+        if (str_contains($label, 'kecamatan') || str_contains($label, 'kec')) {
+            return 'kecamatan';
+        }
+
+        if (str_contains($label, 'kelurahan') || str_contains($label, 'kel') || str_contains($label, 'desa')) {
+            return 'kelurahan';
+        }
+
+        return '';
+    }
+
+    private function buildMapsUrl(string $mapsPin): string
+    {
+        $mapsPin = trim($mapsPin);
+        if ($mapsPin === '') {
+            return '';
+        }
+
+        if (preg_match('/^https?:\/\//i', $mapsPin) === 1) {
+            return $mapsPin;
+        }
+
+        return 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($mapsPin);
     }
 }

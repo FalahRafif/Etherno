@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'booking_id',
     'status_id',
     'operator_id',
+    'description',
     'created_at',
     'created_by',
     'updated_at',

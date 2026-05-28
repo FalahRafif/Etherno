@@ -1,9 +1,5 @@
 @extends('layouts.admin.admin')
 
-@push('styles')
-<link rel="stylesheet" href="{{ asset('assets/pages/admin/bookings/list.css') }}">
-@endpush
-
 @section('title', $title)
 
 @section('content')
@@ -13,7 +9,7 @@
         ['label' => 'Bookings Active', 'url' => panel_route('admin.bookings.active'), 'class' => 'btn btn-outline-primary btn-sm'],
         ['label' => 'Calendar & Slots', 'url' => panel_route('admin.calendar'), 'class' => 'btn btn-primary btn-sm'],
     ];
-    $columns = ['Case ID', 'Customer', 'Tanggal', 'Sesi', 'Paket', 'Lokasi', 'Status', 'Pembayaran', 'Aksi'];
+    $columns = ['Case ID', 'Customer', 'Tanggal Pengajuan', 'Tanggal Acara', 'Sesi', 'Paket', 'Lokasi', 'Status', 'Aksi'];
     $stats = $stats ?? [];
     $rows = $rows ?? [];
     $statusFilters = $statusFilters ?? [];
@@ -43,18 +39,32 @@
                 @php
                     $isActive = $filter['is_active'] ?? false;
                     $filterCode = trim((string) ($filter['code'] ?? ''));
+                    $tone = (string) ($filter['tone'] ?? 'primary');
+                    $tone = in_array($tone, ['primary', 'secondary', 'success', 'warning', 'danger', 'info', 'light', 'dark'], true)
+                        ? $tone
+                        : 'primary';
+                    $toneBadgeClass = match ($tone) {
+                        'light' => 'bg-light text-dark',
+                        'dark' => 'bg-dark text-white',
+                        default => 'bg-' . $tone . '-transparent text-' . $tone,
+                    };
+                    $activeBadgeClass = match ($tone) {
+                        'light', 'dark' => 'bg-white text-dark',
+                        default => 'bg-white text-' . $tone,
+                    };
+                    $badgeClass = $isActive ? $activeBadgeClass : $toneBadgeClass;
                     $baseFilters = $queryFilters;
                     unset($baseFilters['status']);
                     $targetFilters = $filterCode !== '' ? array_merge($baseFilters, ['status' => $filterCode]) : $baseFilters;
                 @endphp
-                <a href="{{ route('admin.bookings.list', $targetFilters) }}" class="btn btn-sm {{ $isActive ? 'btn-primary' : 'btn-outline-primary' }}">
+                <a href="{{ route('admin.bookings.list', $targetFilters) }}" class="btn btn-sm {{ $isActive ? 'btn-' . $tone : 'btn-outline-' . $tone }}">
                     {{ $filter['label'] ?? '-' }}
-                    <span class="badge bg-light text-dark ms-2">{{ $filter['count'] ?? 0 }}</span>
+                    <span class="badge {{ $badgeClass }} ms-2">{{ $filter['count'] ?? 0 }}</span>
                 </a>
             @endforeach
         </div>
 
-        <form method="GET" action="{{ route('admin.bookings.list') }}" class="row g-3 align-items-end">
+        <form method="GET" action="{{ route('admin.bookings.list') }}" class="row g-3 align-items-end" id="booking_filter_form">
             <input type="hidden" name="status" value="{{ $currentStatus }}">
             <div class="col-12 col-md-4 col-xl-3">
                 <label for="case_id" class="form-label">Case ID</label>
@@ -69,11 +79,11 @@
                     <option value="custom" {{ ($filters['date_range'] ?? '') === 'custom' ? 'selected' : '' }}>Custom Range</option>
                 </select>
             </div>
-            <div class="col-6 col-md-3 col-xl-2">
+            <div class="col-6 col-md-3 col-xl-2" id="date_start_wrap">
                 <label for="date_start" class="form-label">Tanggal Mulai</label>
                 <input type="date" id="date_start" name="date_start" class="form-control" value="{{ $filters['date_start'] ?? '' }}">
             </div>
-            <div class="col-6 col-md-3 col-xl-2">
+            <div class="col-6 col-md-3 col-xl-2" id="date_end_wrap">
                 <label for="date_end" class="form-label">Tanggal Akhir</label>
                 <input type="date" id="date_end" name="date_end" class="form-control" value="{{ $filters['date_end'] ?? '' }}">
             </div>
@@ -95,5 +105,23 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('assets/pages/admin/bookings/list.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var dateRange = document.getElementById('date_range');
+    var startWrap = document.getElementById('date_start_wrap');
+    var endWrap = document.getElementById('date_end_wrap');
+    if (!dateRange || !startWrap || !endWrap) return;
+
+    function toggleDateInputs() {
+        var isCustom = dateRange.value === 'custom';
+        startWrap.style.display = isCustom ? '' : 'none';
+        endWrap.style.display = isCustom ? '' : 'none';
+        document.getElementById('date_start').disabled = !isCustom;
+        document.getElementById('date_end').disabled = !isCustom;
+    }
+
+    dateRange.addEventListener('change', toggleDateInputs);
+    toggleDateInputs();
+});
+</script>
 @endpush

@@ -19,6 +19,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->grou
     Route::get('/bookings/active', [AdminPreviewController::class, 'bookingsActive'])->name('bookings.active');
     Route::get('/bookings/{booking}', [AdminPreviewController::class, 'bookingDetail'])->name('bookings.detail');
     Route::get('/calendar', [AdminPreviewController::class, 'calendar'])->name('calendar');
+    Route::get('/calendar/events', [AdminPreviewController::class, 'calendarEvents'])->name('calendar.events');
     Route::get('/payments/dp', [AdminPreviewController::class, 'dpVerification'])->name('payments.dp');
     Route::get('/payments/final', [AdminPreviewController::class, 'finalPayment'])->name('payments.final');
     Route::get('/pricing/reviews', [AdminPreviewController::class, 'pricingReviews'])->name('pricing.reviews');

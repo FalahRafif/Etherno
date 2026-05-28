@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Web\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\Admin\BookingCalendarService;
+use App\Services\Admin\BookingDetailService;
 use App\Services\Admin\BookingListService;
 use App\Services\Portal\InternalPageService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -12,9 +15,10 @@ class AdminPreviewController extends Controller
 {
     public function __construct(
         private InternalPageService $internalPageService,
-        private BookingListService $bookingListService
-    )
-    {
+        private BookingListService $bookingListService,
+        private BookingDetailService $bookingDetailService,
+        private BookingCalendarService $bookingCalendarService
+    ) {
     }
 
     public function dashboard(): View
@@ -41,14 +45,42 @@ class AdminPreviewController extends Controller
 
     public function bookingDetail(string $booking): View
     {
-        return $this->internalPageService->render($this->resolvePanelPrefix(), 'bookings.detail', [
-            'bookingCode' => strtoupper($booking),
-        ]);
+        $payload = $this->bookingDetailService->getPagePayload(strtoupper($booking));
+
+        $prefix = $this->resolvePanelPrefix();
+
+        if (!$payload['booking']) {
+            return $this->internalPageService->render($prefix, 'bookings.detail', [
+                'bookingCode' => strtoupper($booking),
+                'booking' => null,
+            ]);
+        }
+
+        return $this->internalPageService->render($prefix, 'bookings.detail', $payload);
     }
 
-    public function calendar(): View
+    public function calendar(Request $request): View
     {
-        return $this->internalPageService->render($this->resolvePanelPrefix(), 'calendar');
+        $payload = $this->bookingCalendarService->getPagePayload($request->all());
+
+        return $this->internalPageService->render($this->resolvePanelPrefix(), 'calendar', $payload);
+    }
+
+    public function calendarEvents(Request $request): JsonResponse
+    {
+        $payload = $request->validate([
+            'start' => ['nullable', 'date'],
+            'end' => ['nullable', 'date'],
+            'status' => ['nullable', 'string', 'max:120'],
+            'date_start' => ['nullable', 'date'],
+            'date_end' => ['nullable', 'date'],
+        ]);
+
+        $events = $this->bookingCalendarService->getCalendarEvents($payload);
+
+        return response()->json([
+            'events' => $events,
+        ]);
     }
 
     public function dpVerification(): View
@@ -107,3 +139,4 @@ class AdminPreviewController extends Controller
         return 'admin';
     }
 }
+
