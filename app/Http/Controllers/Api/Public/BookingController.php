@@ -43,14 +43,20 @@ class BookingController extends Controller
             $booking->customer?->last_name,
         ])));
 
+        $caseId = $this->guestBookingService->buildBookingCaseId($booking);
+        $adminWhatsapp = $this->guestBookingService->getAdminWhatsApp();
+        $whatsappTemplate = 'Halo tim Etherno, saya ' . ($customerName !== '' ? $customerName : 'Customer') . '. Saya baru saja mengajukan booking dengan Case ID ' . $caseId . '. Mohon informasi lebih lanjut. Terima kasih.';
+
         return redirect()
             ->route('booking.success')
             ->with([
                 'booking_request_code' => $this->guestBookingService->buildRequestCode($booking),
-                'booking_case_id' => $this->guestBookingService->buildBookingCaseId($booking),
+                'booking_case_id' => $caseId,
                 'booking_uuid' => $booking->uuid,
                 'booking_customer_name' => $customerName !== '' ? $customerName : 'Customer',
                 'booking_proof_download_url' => $proofDownloadUrl,
+                'admin_whatsapp' => $adminWhatsapp,
+                'whatsapp_template' => $whatsappTemplate,
             ]);
     }
 
@@ -133,5 +139,33 @@ class BookingController extends Controller
         return response()->json(array_merge($statusPayload, [
             'proof_download_url' => $proofDownloadUrl,
         ]));
+    }
+
+    public function uploadPaymentProof(Request $request): JsonResponse
+    {
+        $payload = $request->validate([
+            'booking_code' => ['required', 'string', 'max:120'],
+            'phone_last4' => ['required', 'digits:4'],
+            'billing_installment_id' => ['required', 'integer'],
+            'transfer_receipt' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:10240'],
+        ]);
+
+        try {
+            $result = $this->guestBookingService->uploadPaymentProof(
+                (string) $payload['booking_code'],
+                (string) $payload['phone_last4'],
+                (int) $payload['billing_installment_id'],
+                $payload['transfer_receipt'] ?? null
+            );
+
+            return response()->json([
+                'message' => 'Bukti pembayaran berhasil dikirim. Tim kami akan memverifikasi pembayaran Anda.',
+                'payment' => $result,
+            ]);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
     }
 }

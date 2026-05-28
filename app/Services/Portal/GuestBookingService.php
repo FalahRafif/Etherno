@@ -14,8 +14,12 @@ use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\Contracts\LocationPricingRuleRepositoryInterface;
 use App\Repositories\Contracts\LocationRepositoryInterface;
 use App\Repositories\Contracts\PackageRepositoryInterface;
+use App\Repositories\Contracts\PaymentRepositoryInterface;
+use App\Repositories\Contracts\BillingInstallmentRepositoryInterface;
 use App\Repositories\Contracts\ReferenceRepositoryInterface;
 use App\Repositories\Contracts\SettingRepositoryInterface;
+use App\Repositories\Contracts\AttachmentRepositoryInterface;
+use App\Services\AttachmentSecurityService;
 use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -23,6 +27,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\UploadedFile;
 
 class GuestBookingService
 {
@@ -108,7 +113,11 @@ class GuestBookingService
         private LocationPricingRuleRepositoryInterface $locationPricingRuleRepository,
         private CustomerRepositoryInterface $customerRepository,
         private BookingRepositoryInterface $bookingRepository,
-        private BookingHistoryRepositoryInterface $bookingHistoryRepository
+        private BookingHistoryRepositoryInterface $bookingHistoryRepository,
+        private PaymentRepositoryInterface $paymentRepository,
+        private BillingInstallmentRepositoryInterface $billingInstallmentRepository,
+        private AttachmentRepositoryInterface $attachmentRepository,
+        private AttachmentSecurityService $attachmentSecurityService
     ) {
     }
 
@@ -358,14 +367,65 @@ class GuestBookingService
         if ($latestBilling !== null) {
             $totalAmount = (float) ($latestBilling->total_amount ?? 0);
             $paidAmount = (float) ($latestBilling->total_paid ?? 0);
+            $refundedAmount = (float) ($latestBilling->refunded_amount ?? 0);
             $remainingAmount = max($totalAmount - $paidAmount, 0);
 
+            $billingStatusCode = strtoupper(trim((string) ($latestBilling->status?->code ?? '')));
             $billingStatusDescription = trim((string) ($latestBilling->status?->description ?? ''));
+
+            $detailsPayload = $latestBilling->details->map(function ($d) {
+                return [
+                    'name' => trim((string) ($d->name ?? '-')),
+                    'type' => trim((string) ($d->billingType?->description ?? '-')),
+                    'amount' => (float) $d->amount,
+                    'amount_label' => $this->formatRupiah((float) $d->amount),
+                ];
+            })->values()->all();
+
+            $installmentsPayload = $latestBilling->installments->map(function ($inst) {
+                $remainingAmount = max((float) $inst->amount - (float) $inst->paid_amount, 0);
+                $hasPendingPayment = $inst->payments->contains(function ($p) {
+                    return strtoupper(trim((string) ($p->status?->code ?? ''))) === 'PYS_PEDING';
+                });
+                return [
+                    'id' => (int) $inst->id,
+                    'type_code' => strtoupper(trim((string) ($inst->installmentType?->code ?? ''))),
+                    'type' => trim((string) ($inst->installmentType?->description ?? '-')),
+                    'amount' => (float) $inst->amount,
+                    'amount_label' => $this->formatRupiah((float) $inst->amount),
+                    'paid_amount' => (float) $inst->paid_amount,
+                    'paid_label' => $this->formatRupiah((float) $inst->paid_amount),
+                    'remaining_amount' => $remainingAmount,
+                    'remaining_label' => $this->formatRupiah($remainingAmount),
+                    'due_date' => $inst->due_date instanceof Carbon ? $inst->due_date->translatedFormat('d F Y') : trim((string) ($inst->due_date ?? '-')),
+                    'status_code' => strtoupper(trim((string) ($inst->status?->code ?? ''))),
+                    'status' => trim((string) ($inst->status?->description ?? '-')),
+                    'has_pending_payment' => $hasPendingPayment,
+                    'payments' => $inst->payments->map(function ($p) {
+                        return [
+                            'amount' => (float) $p->amount,
+                            'amount_label' => $this->formatRupiah((float) $p->amount),
+                            'method' => trim((string) ($p->paymentMethod?->description ?? '-')),
+                            'status' => trim((string) ($p->status?->description ?? '-')),
+                            'status_code' => strtoupper(trim((string) ($p->status?->code ?? ''))),
+                            'paid_at' => $p->paid_at instanceof Carbon ? $p->paid_at->translatedFormat('d M Y H:i') : '-',
+                        ];
+                    })->values()->all(),
+                ];
+            })->values()->all();
+
             $billingPayload = [
+                'status_code' => $billingStatusCode,
                 'status' => $billingStatusDescription !== '' ? $billingStatusDescription : '-',
                 'total' => $this->formatRupiah($totalAmount),
+                'total_raw' => $totalAmount,
                 'paid' => $this->formatRupiah($paidAmount),
+                'paid_raw' => $paidAmount,
+                'refunded' => $this->formatRupiah($refundedAmount),
                 'remaining' => $this->formatRupiah($remainingAmount),
+                'remaining_raw' => $remainingAmount,
+                'details' => $detailsPayload,
+                'installments' => $installmentsPayload,
             ];
         }
 
@@ -400,6 +460,7 @@ class GuestBookingService
                 return [
                     'status' => $statusLabel,
                     'time' => $timeLabel,
+                    'description' => trim((string) ($history->description ?? '')),
                 ];
             })
             ->all();
@@ -437,6 +498,9 @@ class GuestBookingService
             'google_maps_pin' => trim((string) ($booking->google_maps_pin ?? '')) ?: '-',
             'billing' => $billingPayload,
             'history' => $historyPayload,
+            'customer_actions' => $this->resolveCustomerActions($statusCode, $billingPayload),
+            'admin_whatsapp' => $this->getAdminWhatsApp(),
+            'whatsapp_templates' => $this->buildWhatsAppTemplates($statusCode, $booking),
         ];
     }
 
@@ -1072,6 +1136,97 @@ class GuestBookingService
         return 'Rp ' . number_format($amount, 0, ',', '.');
     }
 
+    public function uploadPaymentProof(string $bookingCode, string $phoneLast4, int $installmentId, $transferReceipt): array
+    {
+        $booking = $this->resolveBookingForStatusLookupOrFail(trim($bookingCode));
+        $this->assertPhoneLastFourMatchesBooking($booking, preg_replace('/\D+/', '', trim($phoneLast4)) ?? '');
+
+        $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+        if (!in_array($statusCode, ['BS_APPROVED_WAITING_DP', 'BS_APPROVED_WAITING_FINAL_PAYMENT'], true)) {
+            throw new RuntimeException('Upload bukti pembayaran tidak tersedia untuk status booking saat ini.');
+        }
+
+        $billing = $booking->billings->sortByDesc('id')->first();
+        if (!$billing) {
+            throw new RuntimeException('Billing tidak ditemukan.');
+        }
+
+        $billing->loadMissing([
+            'installments.installmentType:id,code,description',
+            'installments.status:id,code,description',
+        ]);
+
+        $installment = $billing->installments->first(function ($inst) use ($installmentId) {
+            return (int) $inst->id === $installmentId;
+        });
+
+        if (!$installment) {
+            throw new RuntimeException('Tagihan tidak ditemukan.');
+        }
+
+        $remainingAmount = max((float) $installment->amount - (float) $installment->paid_amount, 0);
+        if ($remainingAmount <= 0) {
+            throw new RuntimeException('Tagihan ini sudah lunas.');
+        }
+
+        $typeCode = strtoupper(trim((string) ($installment->installmentType?->code ?? '')));
+        $pendingRef = $this->resolveReferenceByGroupAndCode('payment_status', 'PYS_PEDING', 'Status pembayaran tidak ditemukan.');
+
+        $pendingCount = $this->paymentRepository
+            ->query(true)
+            ->where('billing_installment_id', $installment->id)
+            ->where('status_id', $pendingRef->id)
+            ->count();
+
+        if ($pendingCount > 0) {
+            throw new RuntimeException('Masih ada bukti pembayaran yang sedang menunggu verifikasi. Harap tunggu verifikasi dari tim kami.');
+        }
+
+        $paymentTypeCode = $typeCode === 'INS_DP' ? 'PYT_DP' : 'PYT_FINAL';
+        $paymentTypeRef = $this->resolveReferenceByGroupAndCode('payment_type', $paymentTypeCode, 'Tipe pembayaran tidak ditemukan.');
+        $bankTransferRef = $this->resolveReferenceByGroupAndCode('payment_method', 'PYM_BANK_TRANSFER', 'Metode pembayaran tidak ditemukan.');
+
+        $paymentData = [
+            'uuid' => Str::uuid()->toString(),
+            'billing_installment_id' => $installment->id,
+            'payment_type' => $paymentTypeRef->id,
+            'status_id' => $pendingRef->id,
+            'payment_method' => $bankTransferRef->id,
+            'amount' => $remainingAmount,
+            'paid_at' => now()->toDateTimeString(),
+            'created_by' => null,
+        ];
+
+        if ($transferReceipt instanceof UploadedFile) {
+            $storagePayload = $this->attachmentSecurityService->storeEncryptedUploadedFile($transferReceipt, 'transfer-receipts');
+            $encryptedPath = trim((string) ($storagePayload['encrypted_path'] ?? ''));
+            if ($encryptedPath !== '') {
+                $mimeType = strtolower(trim((string) ($transferReceipt->getMimeType() ?? '')));
+                $typeCode = str_contains($mimeType, 'pdf') ? 'TF_DOC' : 'TF_IMG';
+                $typeRef = $this->referenceRepository->query(true)
+                    ->where('group_id', 'type_file')
+                    ->where('code', $typeCode)
+                    ->firstOrFail();
+
+                $attachment = $this->attachmentRepository->create([
+                    'uuid' => Str::uuid()->toString(),
+                    'name' => $transferReceipt->getClientOriginalName() ?: 'transfer-receipt',
+                    'path' => $encryptedPath,
+                    'type_file' => $typeRef->id,
+                ]);
+                $paymentData['transfer_receipt_attachment_id'] = (int) $attachment->getKey();
+            }
+        }
+
+        $payment = $this->paymentRepository->create($paymentData);
+
+        return [
+            'payment_id' => (int) $payment->id,
+            'amount' => $this->formatRupiah($remainingAmount),
+            'status' => 'Menunggu verifikasi',
+        ];
+    }
+
     private function resolveBookingForStatusLookupOrFail(string $bookingCode): Booking
     {
         $query = $this->bookingRepository->query(true);
@@ -1134,6 +1289,79 @@ class GuestBookingService
         return $this->hydrateBookingForStatusLookup($booking);
     }
 
+    public function getAdminWhatsApp(): string
+    {
+        $setting = $this->settingRepository->query(true)
+            ->where('group_id', 'operational_config')
+            ->where('code', 'ADMIN_WHATSAPP')
+            ->first();
+
+        return trim((string) ($setting?->value ?? ''));
+    }
+
+    private function buildWhatsAppTemplates(string $statusCode, Booking $booking): array
+    {
+        $caseId = $this->buildBookingCaseId($booking);
+        $customerName = trim(implode(' ', array_filter([
+            $booking->customer?->first_name,
+            $booking->customer?->last_name,
+        ])));
+
+        $templates = [
+            'support' => 'Halo tim Etherno, saya ' . $customerName . ' dengan Case ID ' . $caseId . '. Saya butuh bantuan terkait booking saya.',
+        ];
+
+        if ($statusCode === 'BS_APPROVED_WAITING_DP') {
+            $templates['dp_paid'] = 'Halo tim Etherno, saya ' . $customerName . ' dengan Case ID ' . $caseId . '. Saya sudah melakukan pembayaran DP. Mohon diproses verifikasinya. Terima kasih.';
+        }
+
+        if ($statusCode === 'BS_APPROVED_WAITING_FINAL_PAYMENT') {
+            $templates['final_paid'] = 'Halo tim Etherno, saya ' . $customerName . ' dengan Case ID ' . $caseId . '. Saya sudah melakukan pembayaran pelunasan. Mohon diproses verifikasinya. Terima kasih.';
+        }
+
+        return $templates;
+    }
+
+    private function resolveCustomerActions(string $statusCode, ?array $billingPayload): array
+    {
+        $actions = [];
+
+        $dpInstallment = null;
+        $payableInstallments = [];
+
+        if ($billingPayload !== null) {
+            foreach ($billingPayload['installments'] ?? [] as $inst) {
+                $typeCode = strtoupper(trim((string) ($inst['type_code'] ?? '')));
+                if ($typeCode === 'INS_DP') {
+                    $dpInstallment = $inst;
+                }
+                if ((float) ($inst['remaining_amount'] ?? 0) > 0 && $typeCode !== 'INS_REFUND') {
+                    $payableInstallments[] = $inst;
+                }
+            }
+        }
+
+        if ($statusCode === 'BS_APPROVED_WAITING_DP' && $dpInstallment !== null && (float) ($dpInstallment['remaining_amount'] ?? 0) > 0) {
+            $actions[] = 'upload_dp';
+        }
+
+        if ($statusCode === 'BS_APPROVED_WAITING_FINAL_PAYMENT') {
+            foreach ($payableInstallments as $inst) {
+                $typeCode = strtoupper(trim((string) ($inst['type_code'] ?? '')));
+                if ($typeCode !== 'INS_DP') {
+                    $actions[] = 'upload_final';
+                    break;
+                }
+            }
+        }
+
+        if ($statusCode === 'BS_CONFIRMED') {
+            $actions[] = 'reschedule_request';
+        }
+
+        return $actions;
+    }
+
     private function hydrateBookingForStatusLookup(Booking $booking): Booking
     {
         return $booking->loadMissing([
@@ -1147,10 +1375,20 @@ class GuestBookingService
             'location.parent:id,name,parent_id,level_id',
             'location.parent.parent:id,name,parent_id,level_id',
             'location.parent.parent.parent:id,name,parent_id,level_id',
-            'history:id,booking_id,status_id,created_at',
+            'history:id,booking_id,status_id,operator_id,description,created_at',
             'history.status:id,code,description',
-            'billings:id,booking_id,total_amount,total_paid,status_id,created_at',
+            'history.operator:id,name',
+            'billings:id,booking_id,total_amount,total_paid,refunded_amount,status_id,created_at',
             'billings.status:id,code,description',
+            'billings.details:id,billing_id,billing_type,name,description,amount',
+            'billings.details.billingType:id,code,description',
+            'billings.installments:id,billing_id,installment_type,status_id,amount,due_date,paid_amount',
+            'billings.installments.installmentType:id,code,description',
+            'billings.installments.status:id,code,description',
+            'billings.installments.payments:id,billing_installment_id,payment_type,status_id,payment_method,amount,paid_at',
+            'billings.installments.payments.paymentType:id,code,description',
+            'billings.installments.payments.status:id,code,description',
+            'billings.installments.payments.paymentMethod:id,code,description',
         ]);
     }
 
