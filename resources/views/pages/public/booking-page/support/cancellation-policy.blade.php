@@ -3,20 +3,21 @@
 @section('content')
 <section class="section-block container booking-section">
   <div class="section-heading booking-heading">
-    <p class="eyebrow">Kebijakan Pembatalan</p>
-    <h2>Informasi resmi reschedule, cancellation, dan force majeure</h2>
-    <p class="section-lead">Silakan baca kebijakan berikut sebelum melakukan perubahan jadwal atau pembatalan.</p>
+    <p class="eyebrow">Kebijakan Booking</p>
+    <h2>Aturan DP, reschedule, cancellation, dan force majeure</h2>
+    <p class="section-lead">Silakan baca kebijakan berikut sebelum melakukan pembayaran atau perubahan jadwal.</p>
   </div>
 
   <div class="booking-grid booking-grid-single">
     <article class="booking-panel">
       <h3>Kebijakan Utama</h3>
       <ul class="estimate-list">
-        <li>DP bersifat non-refundable jika customer melakukan pembatalan.</li>
-        <li>Reschedule maksimal 2 minggu sebelum acara dan menyesuaikan ketersediaan jadwal.</li>
-        <li>Jika fotografer berhalangan, Etherno menyediakan pengganti tanpa biaya tambahan.</li>
-        <li>Pada cuaca buruk, sesi dapat dihentikan atau dipindahkan sesuai keputusan lapangan.</li>
-        <li>Untuk kondisi ekstrem, refund dapat diproses setelah dikurangi biaya operasional.</li>
+        <li>Booking dianggap fix setelah DP dibayar dan diverifikasi admin.</li>
+        <li>DP wajib dibayarkan maksimal H+3 setelah approval.</li>
+        <li>Reschedule maksimal 14 hari sebelum acara dan mengikuti ketersediaan slot.</li>
+        <li>Pembatalan setelah DP menyebabkan DP hangus (non-refundable).</li>
+        <li>Jika fotografer berhalangan, Etherno menyiapkan pengganti tanpa biaya tambahan.</li>
+        <li>Force majeure dapat diproses dengan penggantian jadwal atau refund setelah biaya operasional.</li>
       </ul>
 
       <div class="estimate-box">

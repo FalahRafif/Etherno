@@ -3,12 +3,17 @@
 namespace App\Http\Controllers\Web\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\Admin\BookingListService;
 use App\Services\Portal\InternalPageService;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AdminPreviewController extends Controller
 {
-    public function __construct(private InternalPageService $internalPageService)
+    public function __construct(
+        private InternalPageService $internalPageService,
+        private BookingListService $bookingListService
+    )
     {
     }
 
@@ -20,6 +25,13 @@ class AdminPreviewController extends Controller
     public function bookingRequests(): View
     {
         return $this->internalPageService->render($this->resolvePanelPrefix(), 'bookings.requests');
+    }
+
+    public function bookingsList(Request $request): View
+    {
+        $payload = $this->bookingListService->getPagePayload($request->all());
+
+        return $this->internalPageService->render($this->resolvePanelPrefix(), 'bookings.list', $payload);
     }
 
     public function bookingsActive(): View

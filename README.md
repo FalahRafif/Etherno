@@ -124,6 +124,11 @@ Endpoint auth saat ini:
 - `POST /api/login` (name `login.post`), middleware `web` + `guest`.
 - `POST /api/logout` (name `logout`), middleware `web` + `auth`.
 
+Endpoint public booking request:
+
+- `GET /api/booking/location-options` (name `booking.location.options`), middleware `web`.
+- `POST /api/booking` (name `booking.store`), middleware `web`.
+
 Controller dan route dibagi jelas antara Web dan API:
 
 - Web controllers ada di `app/Http/Controllers/Web/*` untuk render page (GET) dan redirect.

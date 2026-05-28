@@ -16,11 +16,20 @@ class UpdatePackageDateRuleRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'description' => ['required', 'string', 'max:255'],
-            'value_type' => ['required', 'string', 'in:H+,H-'],
-            'value_days' => ['required', 'integer', 'min:1', 'max:365'],
         ];
+
+        $isQuota = $this->boolean('is_quota') || $this->filled('value_number');
+
+        if ($isQuota) {
+            $rules['value_number'] = ['required', 'integer', 'min:1', 'max:100'];
+        } else {
+            $rules['value_type'] = ['required', 'string', 'in:H+,H-'];
+            $rules['value_days'] = ['required', 'integer', 'min:1', 'max:365'];
+        }
+
+        return $rules;
     }
 
     /**
@@ -32,6 +41,8 @@ class UpdatePackageDateRuleRequest extends FormRequest
             'value_type.in' => 'Tipe perhitungan harus H+ atau H-.',
             'value_days.min' => 'Jumlah hari minimal 1.',
             'value_days.max' => 'Jumlah hari maksimal 365.',
+            'value_number.min' => 'Jumlah kuota minimal 1.',
+            'value_number.max' => 'Jumlah kuota maksimal 100.',
         ];
     }
 
@@ -40,12 +51,20 @@ class UpdatePackageDateRuleRequest extends FormRequest
      */
     public function payload(): array
     {
-        $type = $this->input('value_type');
-        $days = (int) $this->input('value_days');
+        $isQuota = $this->boolean('is_quota') || $this->filled('value_number');
+        $value = '';
+
+        if ($isQuota) {
+            $value = (string) ((int) $this->input('value_number'));
+        } else {
+            $type = $this->input('value_type');
+            $days = (int) $this->input('value_days');
+            $value = $type . $days;
+        }
 
         return [
             'description' => trim((string) $this->input('description')),
-            'value' => $type . $days,
+            'value' => $value,
         ];
     }
 }

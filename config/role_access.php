@@ -29,6 +29,10 @@ return [
                 'section' => 'Main',
                 'items' => [
                     [
+                        'label' => 'Tentang Kami',
+                        'route' => 'about.etherno',
+                    ],
+                    [
                         'label' => 'Portofolio',
                         'route' => 'home',
                         'fragment' => 'portfolio',
@@ -42,6 +46,24 @@ return [
                         'label' => 'FAQ',
                         'route' => 'home',
                         'fragment' => 'faq',
+                    ],
+                    [
+                        'type' => 'dropdown',
+                        'label' => 'Info Booking',
+                        'items' => [
+                            [
+                                'label' => 'Alur Proses Booking',
+                                'route' => 'booking.page',
+                            ],
+                            [
+                                'label' => 'Kebijakan Booking',
+                                'route' => 'booking.cancellation.policy',
+                            ],
+                            [
+                                'label' => 'Detail Booking Anda',
+                                'route' => 'booking.status',
+                            ],
+                        ],
                     ],
                 ],
             ],
@@ -130,6 +152,17 @@ return [
             ],
         ],
         [
+            'section' => 'Menu Utama',
+            'items' => [
+                [
+                    'label' => 'Daftar Booking',
+                    'route_name' => 'bookings.list',
+                    'active' => ['bookings.list', 'bookings.detail'],
+                    'roles' => ['Admin', 'Petugas'],
+                ],
+            ],
+        ],
+        [
             'section' => 'Aturan',
             'items' => [
                 [
@@ -151,7 +184,7 @@ return [
                     'roles' => ['Admin'],
                 ],
                 [
-                    'label' => 'Aturan Waktu Paket',
+                    'label' => 'Aturan Paket',
                     'route_name' => 'package-date-rules',
                     'active' => ['package-date-rules', 'package-date-rules.create', 'package-date-rules.edit'],
                     'roles' => ['Admin'],
