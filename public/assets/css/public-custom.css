@@ -194,6 +194,53 @@ body{
 .package-featured .price{font-size:16px}
 .package-list{margin:0;padding-left:18px;color:rgba(15,15,15,.72)}
 .package-list li{margin:8px 0}
+.package-group{margin-top:32px}
+.package-group:first-of-type{margin-top:0}
+.package-group+.package-group{margin-top:42px}
+.package-group-heading{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-bottom:16px;
+}
+.package-group-title{
+  margin:0;
+  font-family:'Playfair Display',var(--serif);
+  font-size:clamp(28px,3.4vw,36px);
+  line-height:1.12;
+  color:#121212;
+}
+.package-group-copy{
+  margin:0;
+  max-width:620px;
+  color:rgba(15,15,15,.66);
+  font-size:14px;
+  line-height:1.65;
+}
+.package-empty{
+  grid-column:1/-1;
+  border:1px dashed rgba(15,15,15,.18);
+  border-radius:14px;
+  background:rgba(255,255,255,.75);
+  padding:22px;
+  color:rgba(15,15,15,.64);
+}
+.package-empty p{margin:0}
+.packages-more{
+  margin-top:30px;
+  text-align:center;
+}
+.packages-more-button{min-width:250px}
+.packages-page-section{padding-top:72px}
+.packages-page-actions{
+  margin-top:36px;
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:12px;
+}
 
 .portfolio{display:grid;grid-template-columns:1.7fr 1fr 1fr;gap:22px;align-items:start}
 .portfolio .feature{grid-column:1/2}
@@ -274,6 +321,101 @@ body{
 
 .booking-section{padding-top:72px;scroll-margin-top:96px}
 .booking-heading{margin-bottom:24px}
+.booking-tabs{margin-top:10px}
+.booking-tab-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:18px;
+  padding-bottom:12px;
+  border-bottom:1px solid rgba(15,15,15,.08);
+}
+.booking-tab{
+  border:1px solid rgba(15,15,15,.16);
+  border-radius:999px;
+  background:#fff;
+  color:#6a5321;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.12em;
+  padding:10px 16px;
+  text-transform:uppercase;
+  transition:all .2s ease;
+}
+.booking-tab:hover{
+  border-color:rgba(181,143,66,.6);
+  color:#5d4414;
+}
+.booking-tab.is-active{
+  border-color:transparent;
+  background:linear-gradient(135deg,#9e7a30,#c9a154);
+  box-shadow:0 10px 20px rgba(11,10,9,.12);
+  color:#fff;
+}
+.booking-tab-panel{display:none}
+.booking-tab-panel.is-active{display:block;animation:bookingFade .2s ease}
+.booking-tab-panel[hidden]{display:none}
+.booking-flow{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+.booking-flow-intro{max-width:720px}
+.booking-flow-steps{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+.booking-flow-step{
+  border:1px solid rgba(15,15,15,.08);
+  border-radius:16px;
+  background:linear-gradient(180deg,#ffffff,#fcfaf7);
+  padding:16px;
+  display:flex;
+  gap:14px;
+  align-items:flex-start;
+  min-height:120px;
+}
+.booking-flow-step-number{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:38px;
+  height:38px;
+  border-radius:12px;
+  background:rgba(181,143,66,.14);
+  color:#6a5222;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.08em;
+}
+.booking-flow-title{
+  margin:0 0 6px;
+  font-family:'Playfair Display',var(--serif);
+  font-size:20px;
+  color:#1a1a1a;
+}
+.booking-flow-text{
+  margin:0;
+  color:rgba(15,15,15,.7);
+  font-size:14px;
+  line-height:1.6;
+}
+.booking-flow-actions{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+}
+.booking-flow-note{
+  margin:0;
+  color:rgba(15,15,15,.58);
+  font-size:12px;
+}
 .booking-grid{
   display:grid;
   grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr);
@@ -477,6 +619,11 @@ body{
   color:#5f4715;
 }
 
+@keyframes bookingFade{
+  from{opacity:0;transform:translateY(4px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
 .public-footer{margin-top:56px;padding:44px 0 24px;background:#11110f;color:#f6f1e8}
 .footer-grid{
   display:grid;
@@ -577,6 +724,9 @@ body{
   .hero-frame-primary{width:min(100%,430px)}
   .hero-frame-secondary{right:-6px;bottom:-10px;width:min(52%,220px)}
 
+  .package-group{margin-top:24px}
+  .package-group+.package-group{margin-top:34px}
+  .package-group-heading{align-items:flex-start;flex-direction:column}
   .package-grid,.faq-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
   .testimonial-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
   .testimonial-card-large{grid-column:1/-1}
@@ -586,6 +736,9 @@ body{
   .booking-grid{grid-template-columns:1fr}
   .booking-panel{padding:20px}
   .booking-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .booking-tab-list{gap:8px}
+  .booking-flow-steps{grid-template-columns:1fr}
+  .booking-flow-step{min-height:auto}
   .booking-support-link-list{grid-template-columns:repeat(2,minmax(0,1fr))}
 
   .footer-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
@@ -605,10 +758,13 @@ body{
   .hero-frame-secondary{width:min(52%,170px);right:0;bottom:-8px}
   .decor-sep{margin:10px 0 16px}
 
+  .packages-page-section{padding-top:56px}
+  .packages-more-button{width:100%}
   .package-grid,.testimonial-grid,.faq-grid,.footer-grid{grid-template-columns:1fr}
   .package{padding:24px}
   .package h3{font-size:22px}
   .package-featured{transform:none}
+  .packages-page-actions a{width:100%}
   .testimonial-card{padding:24px}
   .faq-card summary{font-size:18px}
   .final-cta{padding:36px 0 12px}
@@ -616,6 +772,9 @@ body{
   .final-cta-copy{font-size:14px}
 
   .booking-section{padding-top:56px}
+  .booking-tab-list{flex-direction:column;align-items:stretch}
+  .booking-tab{text-align:center;width:100%}
+  .booking-flow-actions{flex-direction:column;align-items:stretch}
   .booking-form-grid{grid-template-columns:1fr}
   .slot-list{grid-template-columns:1fr}
   .booking-panel h3{font-size:24px}

@@ -42,6 +42,51 @@
       });
     }
 
+    const bookingTabs = document.querySelector('[data-booking-tabs]');
+    if (bookingTabs) {
+      const tabButtons = bookingTabs.querySelectorAll('[data-booking-tab]');
+      const tabPanels = bookingTabs.querySelectorAll('[data-booking-panel]');
+
+      const setActiveTab = function (tabName) {
+        tabButtons.forEach(function (button) {
+          const isActive = button.getAttribute('data-booking-tab') === tabName;
+          button.classList.toggle('is-active', isActive);
+          button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        tabPanels.forEach(function (panel) {
+          const isActive = panel.getAttribute('data-booking-panel') === tabName;
+          panel.classList.toggle('is-active', isActive);
+          panel.hidden = !isActive;
+        });
+      };
+
+      tabButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+          setActiveTab(button.getAttribute('data-booking-tab'));
+        });
+      });
+
+      bookingTabs.querySelectorAll('[data-booking-tab-cta]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          const targetTab = button.getAttribute('data-booking-tab-cta');
+          setActiveTab(targetTab);
+
+          const targetPanel = bookingTabs.querySelector('[data-booking-panel="' + targetTab + '"]');
+          if (targetPanel) {
+            targetPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      });
+
+      const initialButton = bookingTabs.querySelector('.booking-tab.is-active');
+      if (initialButton) {
+        setActiveTab(initialButton.getAttribute('data-booking-tab'));
+      } else if (tabButtons.length) {
+        setActiveTab(tabButtons[0].getAttribute('data-booking-tab'));
+      }
+    }
+
     const dateCheckInput = document.getElementById('booking_date_check');
     const dateFormInput = document.getElementById('booking_date');
     const summary = document.getElementById('availability_summary');
@@ -49,83 +94,81 @@
     const eveningCard = document.querySelector('[data-slot-card="evening"]');
     const morningStatus = document.querySelector('[data-slot-status="morning"]');
     const eveningStatus = document.querySelector('[data-slot-status="evening"]');
-    if (!dateCheckInput || !dateFormInput || !summary || !morningCard || !eveningCard || !morningStatus || !eveningStatus) {
-      return;
+    if (dateCheckInput && dateFormInput && summary && morningCard && eveningCard && morningStatus && eveningStatus) {
+      const sampleAvailability = {
+        '2026-06-12': { morning: 'full', evening: 'limited' },
+        '2026-06-13': { morning: 'limited', evening: 'available' },
+        '2026-06-14': { morning: 'full', evening: 'full' },
+        '2026-06-20': { morning: 'available', evening: 'limited' },
+        '2026-06-21': { morning: 'limited', evening: 'full' }
+      };
+
+      const statusLabel = {
+        available: 'Tersedia',
+        limited: 'Tersisa 1 slot',
+        full: 'Penuh',
+        unknown: 'Belum dipilih'
+      };
+
+      function renderSlot(card, statusEl, statusValue) {
+        card.classList.remove('status-available', 'status-limited', 'status-full', 'status-unknown');
+        card.classList.add('status-' + statusValue);
+        statusEl.textContent = statusLabel[statusValue] || statusLabel.unknown;
+      }
+
+      function resolveAvailability(dateValue) {
+        if (!dateValue) {
+          return { morning: 'unknown', evening: 'unknown' };
+        }
+
+        if (sampleAvailability[dateValue]) {
+          return sampleAvailability[dateValue];
+        }
+
+        const dayOfWeek = new Date(dateValue + 'T00:00:00').getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          return { morning: 'limited', evening: 'available' };
+        }
+
+        return { morning: 'available', evening: 'available' };
+      }
+
+      function renderAvailability(dateValue) {
+        const status = resolveAvailability(dateValue);
+
+        renderSlot(morningCard, morningStatus, status.morning);
+        renderSlot(eveningCard, eveningStatus, status.evening);
+
+        if (!dateValue) {
+          summary.textContent = 'Pilih tanggal untuk melihat status slot.';
+          return;
+        }
+
+        if (status.morning === 'full' && status.evening === 'full') {
+          summary.textContent = 'Tanggal dipilih sudah penuh. Silakan pilih tanggal lain.';
+          return;
+        }
+
+        if (status.morning === 'limited' || status.evening === 'limited') {
+          summary.textContent = 'Tanggal dipilih masih tersedia terbatas. Segera kirim request untuk diproses admin.';
+          return;
+        }
+
+        summary.textContent = 'Tanggal dipilih tersedia. Slot akan fix setelah DP berhasil diverifikasi.';
+      }
+
+      dateCheckInput.addEventListener('change', function () {
+        dateFormInput.value = dateCheckInput.value;
+        renderAvailability(dateCheckInput.value);
+      });
+
+      dateFormInput.addEventListener('change', function () {
+        dateCheckInput.value = dateFormInput.value;
+        renderAvailability(dateFormInput.value);
+      });
+
+      renderAvailability(dateCheckInput.value || dateFormInput.value);
     }
-
-    const sampleAvailability = {
-      '2026-06-12': { morning: 'full', evening: 'limited' },
-      '2026-06-13': { morning: 'limited', evening: 'available' },
-      '2026-06-14': { morning: 'full', evening: 'full' },
-      '2026-06-20': { morning: 'available', evening: 'limited' },
-      '2026-06-21': { morning: 'limited', evening: 'full' }
-    };
-
-    const statusLabel = {
-      available: 'Tersedia',
-      limited: 'Tersisa 1 slot',
-      full: 'Penuh',
-      unknown: 'Belum dipilih'
-    };
-
-    function renderSlot(card, statusEl, statusValue) {
-      card.classList.remove('status-available', 'status-limited', 'status-full', 'status-unknown');
-      card.classList.add('status-' + statusValue);
-      statusEl.textContent = statusLabel[statusValue] || statusLabel.unknown;
-    }
-
-    function resolveAvailability(dateValue) {
-      if (!dateValue) {
-        return { morning: 'unknown', evening: 'unknown' };
-      }
-
-      if (sampleAvailability[dateValue]) {
-        return sampleAvailability[dateValue];
-      }
-
-      const dayOfWeek = new Date(dateValue + 'T00:00:00').getDay();
-      if (dayOfWeek === 0 || dayOfWeek === 6) {
-        return { morning: 'limited', evening: 'available' };
-      }
-
-      return { morning: 'available', evening: 'available' };
-    }
-
-    function renderAvailability(dateValue) {
-      const status = resolveAvailability(dateValue);
-
-      renderSlot(morningCard, morningStatus, status.morning);
-      renderSlot(eveningCard, eveningStatus, status.evening);
-
-      if (!dateValue) {
-        summary.textContent = 'Pilih tanggal untuk melihat status slot.';
-        return;
-      }
-
-      if (status.morning === 'full' && status.evening === 'full') {
-        summary.textContent = 'Tanggal dipilih sudah penuh. Silakan pilih tanggal lain.';
-        return;
-      }
-
-      if (status.morning === 'limited' || status.evening === 'limited') {
-        summary.textContent = 'Tanggal dipilih masih tersedia terbatas. Segera kirim request untuk diproses admin.';
-        return;
-      }
-
-      summary.textContent = 'Tanggal dipilih tersedia. Slot akan fix setelah DP berhasil diverifikasi.';
-    }
-
-    dateCheckInput.addEventListener('change', function () {
-      dateFormInput.value = dateCheckInput.value;
-      renderAvailability(dateCheckInput.value);
-    });
-
-    dateFormInput.addEventListener('change', function () {
-      dateCheckInput.value = dateFormInput.value;
-      renderAvailability(dateFormInput.value);
-    });
-
-    renderAvailability(dateCheckInput.value || dateFormInput.value);
   });
 </script>
 </body>

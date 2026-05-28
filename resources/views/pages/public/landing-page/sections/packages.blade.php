@@ -1,45 +1,68 @@
+@php
+  $packageGroups = [
+      [
+          'title' => 'Paket Wedding',
+          'description' => 'Dirancang untuk momen sakral Anda: alur terarah, dokumentasi elegan, dan cerita pernikahan yang utuh.',
+          'packages' => $weddingPackages ?? collect(),
+          'empty_message' => 'Paket wedding akan segera hadir kembali. Hubungi kami untuk rekomendasi tercepat.',
+      ],
+      [
+          'title' => 'Paket Non Wedding',
+          'description' => 'Fleksibel untuk engagement, wisuda, corporate, hingga event private dengan kualitas visual premium.',
+          'packages' => $nonWeddingPackages ?? collect(),
+          'empty_message' => 'Paket non wedding sedang kami kurasi ulang. Tim kami siap bantu pilih opsi terbaik.',
+      ],
+  ];
+@endphp
+
 <section class="section-block container" id="packages">
   <div class="section-heading">
-    <p class="eyebrow">Paket Pemesanan</p>
-    <h2>Paket dokumentasi pernikahan yang dikurasi dengan hasil sinematik</h2>
-    <p class="section-lead">Tiga pilihan paket dirancang agar penawaran tetap jelas, premium, dan mudah dibandingkan tanpa membuat tampilan awal terasa penuh.</p>
+    <p class="eyebrow">Paket Favorit Customer</p>
+    <h2>Temukan paket yang paling pas untuk momen terbaik Anda</h2>
+    <p class="section-lead">Setiap paket disusun agar proses booking mudah, hasil visual berkelas, dan value jelas sejak awal. Slot terbaik biasanya cepat terisi.</p>
   </div>
 
-  <div class="package-grid">
-    <article class="package package-soft">
-      <p class="package-tag">Paling dipilih</p>
-      <h3>Intimate</h3>
-      <div class="price">IDR 6.000.000</div>
-      <p class="package-copy">Cocok untuk perayaan singkat dan elegan dengan cerita yang fokus.</p>
-      <ul class="package-list">
-        <li>Durasi 2 jam</li>
-        <li>100 foto hasil edit</li>
-        <li>Galeri online privat</li>
-      </ul>
-    </article>
+  @foreach ($packageGroups as $group)
+    <div class="package-group">
+      <div class="package-group-heading">
+        <h3 class="package-group-title">{{ $group['title'] }}</h3>
+        <p class="package-group-copy">{{ $group['description'] }}</p>
+      </div>
 
-    <article class="package package-featured">
-      <p class="package-tag">Pengalaman unggulan</p>
-      <h3>Andalan</h3>
-      <div class="price">IDR 12.000.000</div>
-      <p class="package-copy">Seimbang untuk dokumentasi pernikahan penuh dengan hasil akhir premium yang rapi.</p>
-      <ul class="package-list">
-        <li>Durasi 6 jam</li>
-        <li>Momen penting seharian penuh</li>
-        <li>Album + galeri online</li>
-      </ul>
-    </article>
+      <div class="package-grid">
+        @forelse (($group['packages'] ?? collect()) as $package)
+          @php
+            $benefits = $package->benefits->pluck('name')->filter()->take(4)->values();
+            $packageTag = match (true) {
+                $loop->first => 'Best Seller',
+                $loop->index === 1 => 'Paling Direkomendasikan',
+                default => 'Value Terbaik',
+            };
+          @endphp
+          <article class="package {{ $loop->index === 1 ? 'package-featured' : 'package-soft' }}">
+            {{-- <p class="package-tag">{{ $packageTag }}</p> --}}
+            <p class="package-tag">pilihan paket</p>
+            <h3>{{ $package->name }}</h3>
+            <div class="price">Rp {{ number_format((float) $package->price, 0, ',', '.') }}</div>
+            <p class="package-copy">{{ $package->description ?: 'Ideal untuk Anda yang ingin hasil dokumentasi rapi, emosional, dan siap dibagikan.' }}</p>
+            <ul class="package-list">
+              @forelse ($benefits as $benefit)
+                <li>{{ $benefit }}</li>
+              @empty
+                <li>Benefit detail sedang diperbarui, konsultasi cepat tersedia via WhatsApp.</li>
+              @endforelse
+            </ul>
+          </article>
+        @empty
+          <article class="package-empty">
+            <p>{{ $group['empty_message'] }}</p>
+          </article>
+        @endforelse
+      </div>
+    </div>
+  @endforeach
 
-    <article class="package package-soft">
-      <p class="package-tag">Arsip mewah</p>
-      <h3>Mewah</h3>
-      <div class="price">IDR 20.000.000</div>
-      <p class="package-copy">Untuk pasangan yang menginginkan produksi yang lebih mewah dan kenang-kenangan premium.</p>
-      <ul class="package-list">
-        <li>Durasi 2 hari</li>
-        <li>Album premium</li>
-        <li>Koleksi hasil penyuntingan ulang</li>
-      </ul>
-    </article>
+  <div class="packages-more">
+    <a class="cta cta-outline packages-more-button" href="{{ route('packages.page') }}">Lihat Semua Paket & Benefit</a>
   </div>
 </section>

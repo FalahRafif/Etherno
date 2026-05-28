@@ -47,9 +47,9 @@ return [
             ],
         ],
         'cta' => [
-            'label' => 'Pesan Sekarang',
+            'label' => 'Booking Sekarang',
             'route' => 'booking.page',
-            'aria_label' => 'Pesan Sekarang',
+            'aria_label' => 'Booking Sekarang',
         ],
     ],
 

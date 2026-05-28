@@ -5,6 +5,7 @@ use App\Http\Controllers\Web\Public\LandingPageController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingPageController::class, 'index'])->name('home');
+Route::get('/packages', [LandingPageController::class, 'packages'])->name('packages.page');
 Route::get('/booking', [LandingPageController::class, 'booking'])->name('booking.page');
 Route::get('/booking/success', [BookingSupportController::class, 'success'])->name('booking.success');
 Route::get('/booking/status', [BookingSupportController::class, 'status'])->name('booking.status');
