@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'uuid',
+    'case_id',
     'customer_id',
     'package_id',
     'status_id',

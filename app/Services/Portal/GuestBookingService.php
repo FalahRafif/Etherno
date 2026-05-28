@@ -62,6 +62,10 @@ class GuestBookingService
 
     private const BOOKING_CASE_ID_PREFIX = 'ETH';
 
+    private const BOOKING_CASE_ID_PATTERN = '/^ETH-(\d{8})-(\d{5})$/i';
+
+    private const BOOKING_REQUEST_CODE_PATTERN = '/^ETH-REQ-(\d{4})-(\d{6})$/i';
+
     /**
      * @var array<int, string>
      */
@@ -185,6 +189,14 @@ class GuestBookingService
                 'google_maps_pin' => (string) $payload['google_maps_pin'],
             ]);
 
+            $caseId = sprintf(
+                '%s-%s-%05d',
+                self::BOOKING_CASE_ID_PREFIX,
+                ($booking->created_at ?? now())->format('Ymd'),
+                (int) $booking->getKey()
+            );
+            $this->bookingRepository->update($booking, ['case_id' => $caseId]);
+
             $this->bookingHistoryRepository->create([
                 'uuid' => (string) Str::uuid(),
                 'booking_id' => (int) $booking->getKey(),
@@ -213,6 +225,11 @@ class GuestBookingService
 
     public function buildBookingCaseId(Booking $booking): string
     {
+        $storedCaseId = trim((string) ($booking->case_id ?? ''));
+        if ($storedCaseId !== '') {
+            return $storedCaseId;
+        }
+
         $createdAt = $booking->created_at instanceof Carbon ? $booking->created_at : now();
         $bookingId = (int) $booking->getKey();
 
@@ -270,6 +287,157 @@ class GuestBookingService
         }
 
         return $this->hydrateBookingForSubmissionProof($booking);
+    }
+
+    /**
+     * @return array{
+     *   booking_uuid:string,
+     *   booking_case_id:string,
+     *   request_code:string,
+     *   status:array{code:string,label:string,tone:string},
+     *   customer:array{name:string,phone_masked:string},
+     *   event:array{date_label:string,session:string,detail:string,submitted_at:string},
+     *   package:array{name:string,type:string,case_id:string,price:string,address:string},
+     *   location_label:string,
+     *   google_maps_pin:string,
+     *   billing:array{status:string,total:string,paid:string,remaining:string}|null,
+     *   history:array<int,array{status:string,time:string}>
+     * }
+     */
+    public function getBookingStatusPayload(string $bookingCode, string $phoneLast4): array
+    {
+        $normalizedCode = trim($bookingCode);
+        $normalizedPhoneLast4 = preg_replace('/\D+/', '', trim($phoneLast4)) ?? '';
+
+        if ($normalizedCode === '' || strlen($normalizedPhoneLast4) !== 4) {
+            throw new RuntimeException('Kode booking dan 4 digit verifikasi wajib diisi.');
+        }
+
+        $booking = $this->resolveBookingForStatusLookupOrFail($normalizedCode);
+        $this->assertPhoneLastFourMatchesBooking($booking, $normalizedPhoneLast4);
+
+        if ($booking->package instanceof Package) {
+            $resolvedPackage = $this->ensurePackageCaseId($booking->package);
+            $booking->setRelation('package', $resolvedPackage);
+        }
+
+        $eventDateLabel = '-';
+        if ($booking->event_date instanceof Carbon) {
+            $eventDateLabel = $booking->event_date->translatedFormat('d F Y');
+        } elseif (!empty($booking->event_date)) {
+            try {
+                $eventDateLabel = Carbon::parse((string) $booking->event_date)->translatedFormat('d F Y');
+            } catch (\Throwable) {
+                $eventDateLabel = (string) $booking->event_date;
+            }
+        }
+
+        $submittedAt = $booking->created_at instanceof Carbon
+            ? $booking->created_at->translatedFormat('d F Y H:i')
+            : now()->translatedFormat('d F Y H:i');
+
+        $eventDetail = trim((string) ($booking->event_detail ?? ''));
+        $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+        $statusDescription = trim((string) ($booking->status?->description ?? ''));
+        $statusLabel = $statusDescription !== '' ? preg_replace('/\s*\(.*\)$/', '', $statusDescription) : '';
+        $statusLabel = trim((string) $statusLabel);
+        if ($statusLabel === '') {
+            $statusLabel = $statusCode !== '' ? str_replace('_', ' ', strtolower(str_replace('BS_', '', $statusCode))) : '-';
+            $statusLabel = ucwords($statusLabel);
+        }
+
+        $latestBilling = $booking->billings
+            ->sortByDesc(function ($billing): int {
+                $createdAt = $billing->created_at instanceof Carbon ? $billing->created_at : null;
+
+                return $createdAt?->timestamp ?? 0;
+            })
+            ->first();
+
+        $billingPayload = null;
+        if ($latestBilling !== null) {
+            $totalAmount = (float) ($latestBilling->total_amount ?? 0);
+            $paidAmount = (float) ($latestBilling->total_paid ?? 0);
+            $remainingAmount = max($totalAmount - $paidAmount, 0);
+
+            $billingStatusDescription = trim((string) ($latestBilling->status?->description ?? ''));
+            $billingPayload = [
+                'status' => $billingStatusDescription !== '' ? $billingStatusDescription : '-',
+                'total' => $this->formatRupiah($totalAmount),
+                'paid' => $this->formatRupiah($paidAmount),
+                'remaining' => $this->formatRupiah($remainingAmount),
+            ];
+        }
+
+        $historyPayload = $booking->history
+            ->sortBy(function ($history): int {
+                $createdAt = $history->created_at instanceof Carbon ? $history->created_at : null;
+
+                return $createdAt?->timestamp ?? 0;
+            })
+            ->values()
+            ->map(function ($history): array {
+                $statusDescription = trim((string) ($history->status?->description ?? ''));
+                $statusCode = strtoupper(trim((string) ($history->status?->code ?? '')));
+                $statusLabel = $statusDescription !== '' ? preg_replace('/\s*\(.*\)$/', '', $statusDescription) : '';
+                $statusLabel = trim((string) $statusLabel);
+                if ($statusLabel === '') {
+                    $statusLabel = $statusCode !== '' ? str_replace('_', ' ', strtolower(str_replace('BS_', '', $statusCode))) : '-';
+                    $statusLabel = ucwords($statusLabel);
+                }
+
+                $timeLabel = '-';
+                if ($history->created_at instanceof Carbon) {
+                    $timeLabel = $history->created_at->translatedFormat('d M Y H:i');
+                } elseif (!empty($history->created_at)) {
+                    try {
+                        $timeLabel = Carbon::parse((string) $history->created_at)->translatedFormat('d M Y H:i');
+                    } catch (\Throwable) {
+                        $timeLabel = (string) $history->created_at;
+                    }
+                }
+
+                return [
+                    'status' => $statusLabel,
+                    'time' => $timeLabel,
+                ];
+            })
+            ->all();
+
+        return [
+            'booking_uuid' => trim((string) ($booking->uuid ?? '')),
+            'booking_case_id' => $this->buildBookingCaseId($booking),
+            'request_code' => $this->buildRequestCode($booking),
+            'status' => [
+                'code' => $statusCode,
+                'label' => $statusLabel,
+                'tone' => $this->resolveStatusTone($statusCode),
+            ],
+            'customer' => [
+                'name' => trim(implode(' ', array_filter([
+                    $booking->customer?->first_name,
+                    $booking->customer?->last_name,
+                ]))) ?: '-',
+                'phone_masked' => $this->maskPhoneNumber((string) ($booking->customer?->phone_number ?? '')),
+            ],
+            'event' => [
+                'date_label' => $eventDateLabel,
+                'session' => trim((string) ($booking->eventSession?->description ?? '')) ?: '-',
+                'detail' => $eventDetail !== '' ? $eventDetail : '-',
+                'submitted_at' => $submittedAt,
+            ],
+            'package' => [
+                'name' => trim((string) ($booking->package?->name ?? '')) ?: '-',
+                'type' => trim((string) ($booking->package?->packageType?->description ?? '')) ?: '-',
+                'case_id' => trim((string) ($booking->package?->case_id ?? '')) ?: '-',
+                'price' => $this->formatRupiah((float) ($booking->package?->price ?? 0)),
+                'address' => trim((string) ($booking->package?->address ?? '')) ?: '-',
+            ],
+            'location_label' => $this->resolveLocationHierarchyLabel($booking->location),
+            'google_maps_pin' => trim((string) ($booking->google_maps_pin ?? '')) ?: '-',
+            'billing' => $billingPayload,
+            'history' => $historyPayload,
+        ];
     }
 
     /**
@@ -902,6 +1070,133 @@ class GuestBookingService
     private function formatRupiah(float $amount): string
     {
         return 'Rp ' . number_format($amount, 0, ',', '.');
+    }
+
+    private function resolveBookingForStatusLookupOrFail(string $bookingCode): Booking
+    {
+        $query = $this->bookingRepository->query(true);
+        $matched = false;
+
+        if (preg_match(self::BOOKING_CASE_ID_PATTERN, $bookingCode, $matches) === 1) {
+            $dateRaw = trim((string) ($matches[1] ?? ''));
+            $idRaw = trim((string) ($matches[2] ?? ''));
+            $bookingId = (int) ltrim($idRaw, '0');
+            $bookingId = $bookingId > 0 ? $bookingId : 0;
+
+            try {
+                $date = Carbon::createFromFormat('Ymd', $dateRaw)->toDateString();
+                $query->where('id', $bookingId)->whereDate('created_at', $date);
+                $matched = true;
+            } catch (\Throwable) {
+                $matched = false;
+            }
+        }
+
+        if (!$matched && preg_match(self::BOOKING_REQUEST_CODE_PATTERN, $bookingCode, $matches) === 1) {
+            $year = (int) ($matches[1] ?? 0);
+            $bookingId = (int) ltrim((string) ($matches[2] ?? ''), '0');
+            $bookingId = $bookingId > 0 ? $bookingId : 0;
+
+            if ($year > 0 && $bookingId > 0) {
+                $query->where('id', $bookingId)->whereYear('created_at', $year);
+                $matched = true;
+            }
+        }
+
+        if (!$matched && ctype_digit($bookingCode)) {
+            $query->where('id', (int) $bookingCode);
+            $matched = true;
+        }
+
+        if (!$matched) {
+            $query->where('uuid', trim($bookingCode));
+            $matched = true;
+        }
+
+        $booking = $query->first([
+            'id',
+            'uuid',
+            'customer_id',
+            'package_id',
+            'status_id',
+            'location_id',
+            'event_date',
+            'event_session',
+            'event_detail',
+            'google_maps_pin',
+            'created_at',
+        ]);
+
+        if (!$booking instanceof Booking) {
+            throw new RuntimeException('Data booking tidak ditemukan atau verifikasi tidak sesuai.');
+        }
+
+        return $this->hydrateBookingForStatusLookup($booking);
+    }
+
+    private function hydrateBookingForStatusLookup(Booking $booking): Booking
+    {
+        return $booking->loadMissing([
+            'customer:id,first_name,last_name,phone_number',
+            'package:id,case_id,name,address,price,package_type,created_at',
+            'package.packageType:id,code,description',
+            'status:id,code,description',
+            'eventSession:id,code,description',
+            'location:id,name,parent_id,level_id',
+            'location.level:id,code,description',
+            'location.parent:id,name,parent_id,level_id',
+            'location.parent.parent:id,name,parent_id,level_id',
+            'location.parent.parent.parent:id,name,parent_id,level_id',
+            'history:id,booking_id,status_id,created_at',
+            'history.status:id,code,description',
+            'billings:id,booking_id,total_amount,total_paid,status_id,created_at',
+            'billings.status:id,code,description',
+        ]);
+    }
+
+    private function assertPhoneLastFourMatchesBooking(Booking $booking, string $phoneLast4): void
+    {
+        $customerPhone = trim((string) ($booking->customer?->phone_number ?? ''));
+        $customerDigits = preg_replace('/\D+/', '', $customerPhone) ?? '';
+
+        if ($customerDigits === '' || strlen($customerDigits) < 4) {
+            throw new RuntimeException('Data booking tidak ditemukan atau verifikasi tidak sesuai.');
+        }
+
+        $expectedLast4 = substr($customerDigits, -4);
+        if (!hash_equals($expectedLast4, $phoneLast4)) {
+            throw new RuntimeException('Data booking tidak ditemukan atau verifikasi tidak sesuai.');
+        }
+    }
+
+    private function maskPhoneNumber(string $phoneNumber): string
+    {
+        $digits = preg_replace('/\D+/', '', trim($phoneNumber)) ?? '';
+        if ($digits === '') {
+            return '-';
+        }
+
+        if (strlen($digits) <= 4) {
+            return str_repeat('*', strlen($digits));
+        }
+
+        $maskedPrefix = str_repeat('*', max(strlen($digits) - 4, 0));
+        $last4 = substr($digits, -4);
+
+        return $maskedPrefix . $last4;
+    }
+
+    private function resolveStatusTone(string $statusCode): string
+    {
+        $normalized = strtoupper(trim($statusCode));
+
+        return match ($normalized) {
+            'BS_WAITING_APPROVAL' => 'warning',
+            'BS_APPROVED_WAITING_DP', 'BS_APPROVED_WAITING_FINAL_PAYMENT' => 'info',
+            'BS_CONFIRMED', 'BS_COMPLETE' => 'success',
+            'BS_CANCEL', 'BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_REFUND' => 'danger',
+            default => 'neutral',
+        };
     }
 
     private function hydrateBookingForSubmissionProof(Booking $booking): Booking

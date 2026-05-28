@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\BookingDetailController;
 use App\Http\Controllers\Api\Admin\LocationPricingRuleController;
 use App\Http\Controllers\Api\Admin\PackageController;
 use App\Http\Controllers\Api\Admin\DpPercentageRuleController;
@@ -38,6 +39,19 @@ Route::prefix('admin')
         Route::post('/package-date-rules', [PackageDateRuleController::class, 'store'])->name('package-date-rules.store');
         Route::put('/package-date-rules/{setting}', [PackageDateRuleController::class, 'update'])->name('package-date-rules.update');
         Route::delete('/package-date-rules/{setting}', [PackageDateRuleController::class, 'destroy'])->name('package-date-rules.destroy');
+
+        Route::post('/bookings/{booking}/approve', [BookingDetailController::class, 'approve'])->name('bookings.approve');
+        Route::post('/bookings/{booking}/reject', [BookingDetailController::class, 'reject'])->name('bookings.reject');
+        Route::post('/bookings/{booking}/upload-payment', [BookingDetailController::class, 'uploadPayment'])->name('bookings.upload-payment');
+        Route::post('/bookings/{booking}/verify-dp', [BookingDetailController::class, 'verifyDp'])->name('bookings.verify-dp');
+        Route::post('/bookings/{booking}/reject-manual', [BookingDetailController::class, 'rejectManual'])->name('bookings.reject-manual');
+        Route::post('/bookings/{booking}/verify-final', [BookingDetailController::class, 'verifyFinalPayment'])->name('bookings.verify-final');
+        Route::post('/bookings/{booking}/cancel', [BookingDetailController::class, 'cancelBooking'])->name('bookings.cancel');
+        Route::post('/bookings/{booking}/complete', [BookingDetailController::class, 'completeBooking'])->name('bookings.complete');
+        Route::post('/bookings/{booking}/force-majeure', [BookingDetailController::class, 'forceMajeure'])->name('bookings.force-majeure');
+        Route::post('/bookings/{booking}/upload-refund-proof', [BookingDetailController::class, 'uploadRefundProof'])->name('bookings.upload-refund-proof');
+        Route::post('/bookings/{booking}/billing-details', [BookingDetailController::class, 'storeBillingDetail'])->name('bookings.billing-details.store');
+        Route::post('/bookings/{booking}/installments', [BookingDetailController::class, 'storeInstallment'])->name('bookings.installments.store');
     });
 
 Route::prefix('admin')
