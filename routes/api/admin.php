@@ -46,6 +46,8 @@ Route::prefix('admin')
         Route::post('/bookings/{booking}/verify-dp', [BookingDetailController::class, 'verifyDp'])->name('bookings.verify-dp');
         Route::post('/bookings/{booking}/reject-manual', [BookingDetailController::class, 'rejectManual'])->name('bookings.reject-manual');
         Route::post('/bookings/{booking}/verify-final', [BookingDetailController::class, 'verifyFinalPayment'])->name('bookings.verify-final');
+        Route::post('/bookings/{booking}/payments/{payment}/approve', [BookingDetailController::class, 'approvePayment'])->name('bookings.payments.approve');
+        Route::post('/bookings/{booking}/payments/{payment}/reject', [BookingDetailController::class, 'rejectPayment'])->name('bookings.payments.reject');
         Route::post('/bookings/{booking}/cancel', [BookingDetailController::class, 'cancelBooking'])->name('bookings.cancel');
         Route::post('/bookings/{booking}/complete', [BookingDetailController::class, 'completeBooking'])->name('bookings.complete');
         Route::post('/bookings/{booking}/force-majeure', [BookingDetailController::class, 'forceMajeure'])->name('bookings.force-majeure');

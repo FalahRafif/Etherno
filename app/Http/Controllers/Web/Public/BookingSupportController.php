@@ -29,16 +29,6 @@ class BookingSupportController extends Controller
         return $this->guestPageService->render('booking.status');
     }
 
-    public function dpPayment(): View
-    {
-        return $this->guestPageService->render('booking.payment.dp');
-    }
-
-    public function finalPayment(): View
-    {
-        return $this->guestPageService->render('booking.payment.final');
-    }
-
     public function reschedule(): View
     {
         return $this->guestPageService->render('booking.reschedule');

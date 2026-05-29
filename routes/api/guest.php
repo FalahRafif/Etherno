@@ -10,4 +10,5 @@ Route::middleware(['web'])->group(function (): void {
     Route::get('/booking/status', [BookingController::class, 'statusLookup'])->name('booking.status.lookup');
     Route::post('/booking', [BookingController::class, 'store'])->name('booking.store');
     Route::post('/booking/upload-payment-proof', [BookingController::class, 'uploadPaymentProof'])->name('booking.upload-payment-proof');
+    Route::post('/booking/reschedule-request', [BookingController::class, 'rescheduleRequest'])->name('booking.reschedule-request');
 });

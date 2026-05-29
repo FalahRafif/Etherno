@@ -2,10 +2,14 @@
 
 namespace App\Services\Admin;
 
+use App\Models\Billing;
 use App\Models\Booking;
+use App\Models\Customer;
 use App\Models\Location;
 use App\Repositories\Contracts\BookingRepositoryInterface;
+use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\Contracts\ReferenceRepositoryInterface;
+use App\Repositories\Contracts\SettingRepositoryInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 class BookingListService
@@ -15,7 +19,9 @@ class BookingListService
 
     public function __construct(
         private BookingRepositoryInterface $bookingRepository,
-        private ReferenceRepositoryInterface $referenceRepository
+        private ReferenceRepositoryInterface $referenceRepository,
+        private CustomerRepositoryInterface $customerRepository,
+        private SettingRepositoryInterface $settingRepository
     ) {
     }
 
@@ -100,6 +106,162 @@ class BookingListService
             'rows' => $rows,
             'totalCount' => $totalCount,
             'filteredCount' => $filteredCount,
+        ];
+    }
+
+    public function getDashboardPayload(): array
+    {
+        $baseQuery = $this->bookingRepository->query(true);
+
+        return [
+            'stats' => $this->buildDashboardStats($baseQuery),
+            'columns' => ['Kode', 'Customer', 'Tanggal Acara', 'Status Booking', 'Status Payment', 'Tindak Lanjut'],
+            'rows' => $this->buildDashboardQueue(),
+            'sideCards' => $this->buildDashboardSideCards($baseQuery),
+        ];
+    }
+
+    public function getCustomersPayload(array $filters = []): array
+    {
+        $resolvedFilters = [
+            'name' => trim((string) ($filters['name'] ?? '')),
+            'phone' => trim((string) ($filters['phone'] ?? '')),
+        ];
+
+        $query = $this->customerRepository
+            ->query(true)
+            ->withCount('bookings')
+            ->with(['bookings' => function (Builder $q): void {
+                $q->with('status:id,code,description')->orderBy('created_at', 'desc');
+            }]);
+
+        if ($resolvedFilters['name'] !== '') {
+            $query->where(function (Builder $q) use ($resolvedFilters): void {
+                $q->where('first_name', 'LIKE', "%{$resolvedFilters['name']}%")
+                    ->orWhere('last_name', 'LIKE', "%{$resolvedFilters['name']}%");
+            });
+        }
+
+        if ($resolvedFilters['phone'] !== '') {
+            $query->where('phone_number', 'LIKE', "%{$resolvedFilters['phone']}%");
+        }
+
+        $customers = $query->orderByDesc('created_at')->limit(50)->get();
+
+        $rows = $customers->map(function (Customer $customer): array {
+            $name = trim(implode(' ', array_filter([$customer->first_name, $customer->last_name])));
+            $latestBooking = $customer->bookings->first();
+            $statusCode = strtoupper(trim((string) ($latestBooking?->status?->code ?? '')));
+            $statusBadge = $statusCode !== '' ? $this->resolveStatusBadge($statusCode) : ['type' => 'badge', 'tone' => 'light', 'label' => '-'];
+            $latestCaseId = $latestBooking ? $this->buildCaseId($latestBooking) : '';
+
+            return [
+                $name !== '' ? $name : '-',
+                $customer->phone_number ?? '-',
+                $customer->email ?? '-',
+                (string) ($customer->bookings_count ?? 0),
+                $statusBadge,
+                $latestCaseId !== '' ? ['type' => 'link', 'label' => 'Lihat Booking', 'url' => panel_route('admin.bookings.detail', ['booking' => $latestCaseId])] : '-',
+            ];
+        })->all();
+
+        $sideCards = [
+            [
+                'title' => 'Customer Tracking',
+                'bullets' => [
+                    'Identitas utama customer menggunakan nama dan nomor WhatsApp.',
+                    'Riwayat booking dipakai untuk follow-up layanan berikutnya.',
+                    'Status terakhir membantu admin menentukan prioritas komunikasi.',
+                ],
+            ],
+        ];
+
+        return [
+            'filters' => $resolvedFilters,
+            'columns' => ['Nama', 'WhatsApp', 'Email', 'Total Booking', 'Status Terakhir', 'Aksi'],
+            'rows' => $rows,
+            'sideCards' => $sideCards,
+        ];
+    }
+
+    public function getSettingsPayload(): array
+    {
+        $settings = $this->settingRepository
+            ->query(true)
+            ->with('type:id,code,description')
+            ->whereIn('group_id', ['paymet_date_rule', 'payment_type_price_percentage', 'package_date_rule'])
+            ->orderByRaw("FIELD(group_id, 'paymet_date_rule', 'payment_type_price_percentage', 'package_date_rule')")
+            ->orderBy('code')
+            ->get();
+
+        $groupLabels = [
+            'paymet_date_rule' => 'Aturan Tanggal Pembayaran',
+            'payment_type_price_percentage' => 'Persentase DP',
+            'package_date_rule' => 'Aturan Paket & Kuota',
+        ];
+
+        $rows = $settings->map(function ($setting) use ($groupLabels): array {
+            $groupLabel = $groupLabels[$setting->group_id] ?? $setting->group_id;
+            $value = $setting->value ?? '-';
+            if ($setting->group_id === 'payment_type_price_percentage' && is_numeric($value)) {
+                $value .= '%';
+            }
+            $typeLabel = $setting->type?->description ?? '-';
+
+            return [
+                $groupLabel,
+                $setting->description ?? $setting->code,
+                $value,
+                $typeLabel,
+                '<code>' . $setting->code . '</code>',
+            ];
+        })->all();
+
+        $installmentTypes = $this->referenceRepository
+            ->query(true)
+            ->where('group_id', 'intallment_type')
+            ->orderBy('code')
+            ->get(['code', 'description']);
+
+        foreach ($installmentTypes as $ref) {
+            $rows[] = [
+                'Tipe Installment',
+                $ref->description ?? $ref->code,
+                $ref->code,
+                '-',
+                '<code>' . $ref->code . '</code>',
+            ];
+        }
+
+        $sideCards = [
+            [
+                'title' => 'Kelola Settings',
+                'bullets' => [
+                    'Aturan tanggal pembayaran mengatur deadline DP dan final payment.',
+                    'Persentase DP berbeda per tipe paket (wedding / non-wedding).',
+                    'Kuota sesi mengatur jumlah booking maksimal per slot per hari.',
+                ],
+                'actions' => [
+                    ['label' => 'Aturan Tanggal Bayar', 'url' => route('admin.payment-date-rules'), 'class' => 'btn btn-outline-primary btn-sm'],
+                    ['label' => 'Persentase DP', 'url' => route('admin.dp-percentage-rules'), 'class' => 'btn btn-outline-primary btn-sm'],
+                    ['label' => 'Aturan Paket & Kuota', 'url' => route('admin.package-date-rules'), 'class' => 'btn btn-outline-primary btn-sm'],
+                ],
+            ],
+            [
+                'title' => 'Checklist Operasional',
+                'items' => [
+                    ['label' => 'Template pesan WA approval', 'value' => 'Siap pakai', 'class' => 'text-success'],
+                    ['label' => 'Template reminder H-1', 'value' => 'Siap pakai', 'class' => 'text-success'],
+                    ['label' => 'Nomor rekening cadangan', 'value' => 'Opsional', 'class' => 'text-muted'],
+                    ['label' => 'SLA verifikasi pembayaran', 'value' => 'Maksimal hari yang sama', 'class' => 'text-primary'],
+                ],
+            ],
+        ];
+
+        return [
+            'columns' => ['Kategori', 'Item', 'Nilai', 'Tipe Paket', 'Kode'],
+            'rows' => $rows,
+            'sideCards' => $sideCards,
         ];
     }
 
@@ -323,6 +485,133 @@ class BookingListService
                     ->whereIn('code', $codes);
             })
             ->count();
+    }
+
+    private function buildDashboardStats(Builder $baseQuery): array
+    {
+        $waitingApproval = $this->countByStatusCodes($baseQuery, ['BS_WAITING_APPROVAL']);
+        $waitingDp = $this->countByStatusCodes($baseQuery, ['BS_APPROVED_WAITING_DP']);
+        $active = $this->countByStatusCodes($baseQuery, ['BS_APPROVED_WAITING_FINAL_PAYMENT', 'BS_CONFIRMED']);
+        $dueSoon = (clone $baseQuery)
+            ->whereHas('status', function (Builder $q): void {
+                $q->where('group_id', self::STATUS_GROUP)->where('code', 'BS_APPROVED_WAITING_FINAL_PAYMENT');
+            })
+            ->whereNotNull('event_date')
+            ->where('event_date', '<=', Carbon::now()->addDay()->endOfDay())
+            ->count();
+        $completedThisMonth = (clone $baseQuery)
+            ->whereHas('status', function (Builder $q): void {
+                $q->where('group_id', self::STATUS_GROUP)->where('code', 'BS_COMPLETE');
+            })
+            ->whereBetween('updated_at', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()])
+            ->count();
+        $revenue = Billing::query()
+            ->where('delete_status', false)
+            ->whereHas('booking', function (Builder $q): void {
+                $q->where('delete_status', false);
+            })
+            ->whereBetween('updated_at', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()])
+            ->sum('total_paid');
+
+        return [
+            ['label' => 'Request Baru', 'value' => (string) $waitingApproval, 'hint' => 'Menunggu review', 'tone' => 'warning'],
+            ['label' => 'Approved Menunggu DP', 'value' => (string) $waitingDp, 'hint' => 'Belum mengunci slot', 'tone' => 'info'],
+            ['label' => 'Booking Aktif', 'value' => (string) $active, 'hint' => 'DP verified / confirmed', 'tone' => 'success'],
+            ['label' => 'Pelunasan Jatuh Tempo', 'value' => (string) $dueSoon, 'hint' => 'H-1 atau lewat, perlu follow-up', 'tone' => 'danger'],
+            ['label' => 'Selesai Bulan Ini', 'value' => (string) $completedThisMonth, 'hint' => 'Event completed', 'tone' => 'primary'],
+            ['label' => 'Revenue Bulan Ini', 'value' => 'Rp ' . number_format((float) $revenue, 0, ',', '.'), 'hint' => 'Total lunas terbayar', 'tone' => 'secondary'],
+        ];
+    }
+
+    private function buildDashboardQueue(): array
+    {
+        $actionStatuses = ['BS_WAITING_APPROVAL', 'BS_APPROVED_WAITING_DP', 'BS_APPROVED_WAITING_FINAL_PAYMENT'];
+
+        $bookings = $this->bookingRepository
+            ->query(true)
+            ->with(['customer:id,first_name,last_name', 'status:id,code,description'])
+            ->whereHas('status', function (Builder $q) use ($actionStatuses): void {
+                $q->where('group_id', self::STATUS_GROUP)->whereIn('code', $actionStatuses);
+            })
+            ->orderBy('created_at')
+            ->limit(10)
+            ->get();
+
+        return $bookings->map(function (Booking $booking): array {
+            $caseId = $this->buildCaseId($booking);
+            $customerName = trim(implode(' ', array_filter([
+                $booking->customer?->first_name,
+                $booking->customer?->last_name,
+            ])));
+            $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+            $actionLabel = match ($statusCode) {
+                'BS_WAITING_APPROVAL' => 'Review',
+                'BS_APPROVED_WAITING_DP' => 'Verifikasi DP',
+                'BS_APPROVED_WAITING_FINAL_PAYMENT' => 'Verifikasi Final',
+                default => 'Detail',
+            };
+
+            return [
+                [
+                    'type' => 'link',
+                    'label' => $caseId,
+                    'url' => panel_route('admin.bookings.detail', ['booking' => $caseId]),
+                    'class' => 'btn btn-sm btn-outline-primary',
+                ],
+                $customerName !== '' ? $customerName : '-',
+                $booking->event_date?->format('Y-m-d') ?? '-',
+                $this->resolveStatusBadge($statusCode),
+                $this->resolvePaymentBadge($statusCode),
+                ['type' => 'link', 'label' => $actionLabel, 'url' => panel_route('admin.bookings.detail', ['booking' => $caseId])],
+            ];
+        })->all();
+    }
+
+    private function buildDashboardSideCards(Builder $baseQuery): array
+    {
+        $upcomingBookings = $this->bookingRepository
+            ->query(true)
+            ->with(['customer:id,first_name,last_name', 'status:id,code,description'])
+            ->whereHas('status', function (Builder $q): void {
+                $q->where('group_id', self::STATUS_GROUP)->where('code', 'BS_CONFIRMED');
+            })
+            ->whereNotNull('event_date')
+            ->whereBetween('event_date', [Carbon::now()->startOfDay(), Carbon::now()->addDays(7)->endOfDay()])
+            ->orderBy('event_date')
+            ->limit(5)
+            ->get();
+
+        $upcomingItems = $upcomingBookings->map(function (Booking $booking): array {
+            $customerName = trim(implode(' ', array_filter([
+                $booking->customer?->first_name,
+                $booking->customer?->last_name,
+            ])));
+
+            return [
+                'label' => $this->buildCaseId($booking) . ' — ' . ($customerName !== '' ? $customerName : '-'),
+                'value' => $booking->event_date?->format('d M Y') ?? '-',
+            ];
+        })->values()->all();
+
+        $cancelled = $this->countByStatusCodes($baseQuery, ['BS_CANCEL', 'BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_REFUND', 'BS_REJECTED']);
+
+        return [
+            [
+                'title' => 'Acara 7 Hari ke Depan',
+                'items' => !empty($upcomingItems) ? $upcomingItems : [['label' => 'Tidak ada acara terjadwal', 'value' => '']],
+            ],
+            [
+                'title' => 'Prioritas Operasional',
+                'bullets' => [
+                    'Verifikasi DP maksimal di hari yang sama untuk mempercepat locking slot.',
+                    'Final payment harus selesai maksimal H-1 acara.',
+                    'Semua koordinasi lanjutan tetap dipusatkan melalui WhatsApp.',
+                ],
+                'items' => [
+                    ['label' => 'Cancelled / Expired / Refund', 'value' => (string) $cancelled],
+                ],
+            ],
+        ];
     }
 
     private function buildCaseId(Booking $booking): string

@@ -18,6 +18,8 @@ Sebelum membuat fitur baru, mengubah flow booking, menambah migration, atau memi
 - Error page production sudah custom dan auto-switch layout: context public pakai layout public, context internal (`admin`/`petugas`) pakai shell admin.
 - Session internal auth menyimpan `auth.role` dan snapshot user di `auth.user` untuk kebutuhan panel/layout.
 - TTL signed URL untuk preview attachment internal diatur lewat `ATTACHMENT_TEMP_URL_TTL_MINUTES` (default `30`).
+- Booking module menggunakan `barryvdh/laravel-dompdf` untuk generate PDF bukti pengajuan booking.
+<!-- Updated: Tambah catatan dependency DomPDF untuk booking module -->
 
 ## Product Principles
 
@@ -49,15 +51,18 @@ Customer tidak boleh dianggap memiliki slot sebelum DP verified.
 
 ### 3. Slot And Schedule
 
+<!-- Updated: Kuota per sesi sekarang configurable lewat settings, bukan hardcoded 2 per hari -->
+
 Aturan jadwal:
 
-- Maksimal 2 booking per hari.
-- Sesi tersedia: `PAGI - SIANG` dan `SORE - MALAM`.
+- Kuota booking per sesi dikonfigurasi melalui settings `PKDR_MAX_QUOTA_PAGI_SIANG` dan `PKDR_MAX_QUOTA_SORE_MALAM` (group `package_date_rule`), default 1 per sesi.
+- Sesi tersedia: `PAGI - SIANG` (`ES_PAGI_SIANG`) dan `SORE - MALAM` (`ES_SORE_MALAM`).
 - Sistem menerapkan First Come First Serve berdasarkan DP.
 - Slot hanya terblokir setelah DP berhasil diverifikasi.
 - Booking pending approval, approved but unpaid, expired, atau cancelled tidak memblokir slot.
+- Pengecekan ketersediaan slot (availability) dilakukan via `GET /api/booking/availability`.
 
-Implikasi teknis: availability harus dihitung dari booking aktif yang DP-nya sudah verified atau status bisnis yang setara.
+Implikasi teknis: availability harus dihitung dari booking aktif yang DP-nya sudah verified atau status bisnis yang setara. Status yang tidak menghitung kuota: `BS_EXPIRED`, `BS_EXPIRED_DP`, `BS_CANCEL`, `BS_RESCHEDULE`, `BS_FORCE_MAJEURE`, `BS_REFUND`.
 
 ### 4. Pricing And Location
 
@@ -86,6 +91,9 @@ Rules ini disimpan di tabel `settings`:
 - `paymet_date_rule` dengan code `PDR_DP` dan `PDR_MAX_FINAL`.
 - `payment_type_price_percentage` dengan code `PTPP_WED` dan `PTPP_NON_WED`.
 - `package_date_rule` dengan code `PKDR_MAX_RECHEDULE_DATE`.
+- `package_date_rule` dengan code `PKDR_MAX_QUOTA_PAGI_SIANG` dan `PKDR_MAX_QUOTA_SORE_MALAM` (kuota per sesi).
+
+<!-- Updated: Tambah settings code untuk kuota per sesi -->
 
 Catatan kompatibilitas: `paymet_date_rule` memakai typo existing. Jangan rename tanpa migration perbaikan yang eksplisit.
 
@@ -116,7 +124,9 @@ Entry point route web ada di `routes/web.php` dan me-require file route lain:
 Entry point route API ada di `routes/api.php` dan saat ini me-require:
 
 - `routes/api/auth.php`: endpoint auth yang menerima request.
-- `routes/api/admin.php`: endpoint internal admin (CRUD akun internal, dll).
+- `routes/api/guest.php`: endpoint public booking (store, availability, estimate, status lookup, upload payment proof).
+<!-- Updated: Tambah routes/api/guest.php sebagai file route baru -->
+- `routes/api/admin.php`: endpoint internal admin (CRUD akun internal, booking management, dll).
 - `routes/api/attachment.php`: endpoint secure preview attachment (signed URL).
 
 Endpoint auth saat ini:
@@ -126,8 +136,20 @@ Endpoint auth saat ini:
 
 Endpoint public booking request:
 
-- `GET /api/booking/location-options` (name `booking.location.options`), middleware `web`.
-- `POST /api/booking` (name `booking.store`), middleware `web`.
+<!-- Updated: Endpoint public booking diperluas — tambah availability, estimate, status lookup, upload payment proof -->
+
+- `GET /api/booking/availability` (name `booking.availability`), middleware `web` — cek ketersediaan slot per sesi pada tanggal tertentu.
+- `GET /api/booking/location-options` (name `booking.location.options`), middleware `web` — opsi lokasi berdasarkan level dan parent.
+- `GET /api/booking/estimate` (name `booking.estimate`), middleware `web` — estimasi harga paket berdasarkan lokasi (location pricing rule) dan DP.
+- `GET /api/booking/status` (name `booking.status.lookup`), middleware `web` — cek status booking via booking code + 4 digit terakhir nomor telepon customer.
+- `POST /api/booking` (name `booking.store`), middleware `web` — submit booking request baru.
+- `POST /api/booking/upload-payment-proof` (name `booking.upload-payment-proof`), middleware `web` — upload bukti pembayaran oleh customer (DP atau pelunasan).
+
+Booking code format yang didukung untuk status lookup dan referensi:
+- Case ID: `ETH-{YYYYMMDD}-{NNNNN}` (format utama, disimpan di `bookings.case_id`).
+- Request Code: `ETH-REQ-{YYYY}-{NNNNNN}` (generated, tidak disimpan di DB).
+- Raw ID (angka).
+- UUID.
 
 Controller dan route dibagi jelas antara Web dan API:
 
@@ -147,14 +169,39 @@ Endpoint admin API (mutasi data internal):
 - Package date rules: `POST/PUT/DELETE /api/admin/package-date-rules` (name `api.admin.package-date-rules.*`), middleware `web` + `auth` + `role:Admin`.
 - Profile internal: `PUT /api/admin/profile` (name `api.admin.profile.update`), middleware `web` + `auth`.
 
+<!-- Updated: Tambah seluruh section booking management admin API endpoint -->
+
+Endpoint admin booking management API (seluruhnya middleware `web` + `auth` + `role:Admin`):
+
+- Approve booking: `POST /api/admin/bookings/{booking}/approve` (name `api.admin.bookings.approve`).
+- Reject booking: `POST /api/admin/bookings/{booking}/reject` (name `api.admin.bookings.reject`).
+- Upload payment manual: `POST /api/admin/bookings/{booking}/upload-payment` (name `api.admin.bookings.upload-payment`).
+- Verify DP: `POST /api/admin/bookings/{booking}/verify-dp` (name `api.admin.bookings.verify-dp`).
+- Reject manual (setelah approval): `POST /api/admin/bookings/{booking}/reject-manual` (name `api.admin.bookings.reject-manual`).
+- Verify final payment: `POST /api/admin/bookings/{booking}/verify-final` (name `api.admin.bookings.verify-final`).
+- Approve pending payment: `POST /api/admin/bookings/{booking}/payments/{payment}/approve` (name `api.admin.bookings.payments.approve`).
+- Reject pending payment: `POST /api/admin/bookings/{booking}/payments/{payment}/reject` (name `api.admin.bookings.payments.reject`).
+- Cancel booking: `POST /api/admin/bookings/{booking}/cancel` (name `api.admin.bookings.cancel`).
+- Complete booking: `POST /api/admin/bookings/{booking}/complete` (name `api.admin.bookings.complete`).
+- Force majeure: `POST /api/admin/bookings/{booking}/force-majeure` (name `api.admin.bookings.force-majeure`).
+- Upload refund proof: `POST /api/admin/bookings/{booking}/upload-refund-proof` (name `api.admin.bookings.upload-refund-proof`).
+- Store billing detail: `POST /api/admin/bookings/{booking}/billing-details` (name `api.admin.bookings.billing-details.store`).
+- Generate installment: `POST /api/admin/bookings/{booking}/installments` (name `api.admin.bookings.installments.store`).
+
+Alur status booking internal: `BS_WAITING_APPROVAL` → `BS_APPROVED_WAITING_DP` (billing DP dibuat otomatis saat approve) → `BS_APPROVED_WAITING_FINAL_PAYMENT` (setelah DP verified) → `BS_CONFIRMED` (setelah pelunasan verified) → `BS_COMPLETE`. Status lain: `BS_REJECTED`, `BS_CANCEL`, `BS_EXPIRED`, `BS_EXPIRED_DP`, `BS_FORCE_MAJEURE`, `BS_REFUND`.
+
 Endpoint secure preview attachment internal:
 
 - `GET /api/internal/attachments/{attachmentUuid}/preview` (name `api.internal.attachments.preview`), middleware `web` + `auth` + `signed` + validasi role internal (`Admin`/`Petugas`) di controller.
 - URL selalu temporary signed URL (default TTL 30 menit) dan wajib digenerate ulang setelah expired.
 
-Public route memakai nama seperti `home`, `packages.page`, `booking.page`, `booking.success`, `booking.status`, `booking.payment.dp`, `booking.payment.final`, `booking.reschedule`, dan `booking.cancellation.policy`.
+<!-- Updated: Tambah route about.etherno, booking.flow redirect, booking.proof.download -->
+
+Public route memakai nama seperti `home`, `packages.page`, `about.etherno`, `booking.page`, `booking.flow` (redirect ke `/booking`), `booking.success`, `booking.status`, `booking.payment.dp`, `booking.payment.final`, `booking.reschedule`, `booking.cancellation.policy`, `booking.proof.download` (signed URL untuk download PDF bukti pengajuan booking).
 
 Admin route memakai prefix URL `/admin`, name prefix `admin.`, middleware `auth` dan `role:Admin`.
+
+<!-- Updated: Tambah bookings list (GET /admin/bookings) dan calendar events (GET /admin/calendar/events) -->
 
 Route admin web (GET only) untuk render UI:
 
@@ -164,9 +211,11 @@ Route admin web (GET only) untuk render UI:
 - Payment date rules: `GET /admin/payment-date-rules`, `GET /admin/payment-date-rules/create`, `GET /admin/payment-date-rules/{setting}/edit`.
 - DP percentage rules: `GET /admin/dp-percentage-rules`, `GET /admin/dp-percentage-rules/create`, `GET /admin/dp-percentage-rules/{setting}/edit`.
 - Package date rules: `GET /admin/package-date-rules`, `GET /admin/package-date-rules/create`, `GET /admin/package-date-rules/{setting}/edit`.
-- Preview pages: `GET /admin/dashboard`, `GET /admin/bookings/requests`, `GET /admin/bookings/active`, `GET /admin/bookings/{booking}`, `GET /admin/calendar`, `GET /admin/payments/dp`, `GET /admin/payments/final`, `GET /admin/pricing/reviews`, `GET /admin/reschedules`, `GET /admin/cancellations`, `GET /admin/force-majeure`, `GET /admin/customers`, `GET /admin/settings`, `GET /admin/blank`.
+- Preview pages: `GET /admin/dashboard`, `GET /admin/bookings` (list dengan filter/pagination), `GET /admin/bookings/requests`, `GET /admin/bookings/active`, `GET /admin/bookings/{booking}` (detail — parameter menggunakan case ID, misalnya `ETH-20260529-00001`), `GET /admin/calendar`, `GET /admin/calendar/events` (JSON endpoint untuk FullCalendar), `GET /admin/payments/dp`, `GET /admin/payments/final`, `GET /admin/pricing/reviews`, `GET /admin/reschedules`, `GET /admin/cancellations`, `GET /admin/force-majeure`, `GET /admin/customers`, `GET /admin/settings`, `GET /admin/blank`.
 
-Petugas route memakai prefix URL `/petugas`, name prefix `petugas.`, middleware `auth` dan `role:Petugas` untuk route operasional. Di file `routes/web/petugas.php` juga ada route admin-only dengan prefix `/petugas` dan middleware `role:Admin` untuk page master seperti `packages`, `location-rules`, dan `settings`. Jika behavior ini berubah, update route dan dokumentasi bersamaan.
+Petugas route memakai prefix URL `/petugas`, name prefix `petugas.`, middleware `auth` dan `role:Petugas` untuk route operasional. Petugas memiliki akses ke halaman booking (list, requests, active, detail), calendar (termasuk calendar events API), payments, dan customers — sama seperti admin namun tanpa akses CRUD master. Di file `routes/web/petugas.php` juga ada route admin-only dengan prefix `/petugas` dan middleware `role:Admin` untuk page master seperti `packages`, `location-rules`, dan `settings`. Jika behavior ini berubah, update route dan dokumentasi bersamaan.
+
+<!-- Updated: Perjelas bahwa petugas punya akses booking dan calendar -->
 
 ### Layout Structure
 
@@ -319,8 +368,12 @@ User helper:
 
 Standard project saat ini:
 
-- Controller Web tipis: fokus render page, return view/redirect, dan tidak menerima `Request`/`FormRequest` di method signature.
+<!-- Updated: Perjelas pola controller public booking vs admin booking -->
+
+- Controller Web tipis: fokus render page, return view/redirect, dan tidak menerima `Request`/`FormRequest` di method signature. Kecuali `AdminPreviewController::bookingsList` dan `calendar` yang menerima `Request` untuk filter query.
 - Controller API tipis: menerima `Request`/`FormRequest`, delegasi ke service, dan tidak mengembalikan view.
+- Controller API Public (`app/Http/Controllers/Api/Public/`): endpoint untuk guest/customer tanpa auth.
+- Controller API Admin (`app/Http/Controllers/Api/Admin/`): endpoint internal memakai middleware `auth` + `role:Admin`.
 - Service: orchestration business flow, pemilihan view/page, keputusan domain, transaksi jika dibutuhkan.
 - Repository contract: interface di `app/Repositories/Contracts`.
 - Repository implementation: Eloquent di `app/Repositories/Eloquent`.
@@ -342,10 +395,91 @@ Repository binding:
 
 Portal services:
 
+<!-- Updated: Tambah GuestBookingService, GuestPackageService, BookingDetailService, BookingListService, BookingCalendarService -->
+
 - `app/Services/Portal/GuestPageService.php`: mapping page public ke view dan title.
+- `app/Services/Portal/GuestPackageService.php`: payload paket untuk landing page dan halaman paket (wedding/non-wedding, aktif saja).
+- `app/Services/Portal/GuestBookingService.php`: orchestration booking request guest — create booking, form payload, availability, price estimate, status lookup, submission proof PDF, upload payment proof oleh customer, WhatsApp template generation.
 - `app/Services/Portal/InternalPageService.php`: mapping page internal ke view dan title.
+- `app/Services/Admin/BookingDetailService.php`: lifecycle booking management internal — approve, reject, verify DP, verify final payment, cancel, complete, force majeure (reschedule/refund), upload refund proof, billing details & installments management.
+- `app/Services/Admin/BookingListService.php`: payload halaman list booking admin dengan filter status, date range, case ID, dan stats.
+- `app/Services/Admin/BookingCalendarService.php`: payload halaman calendar admin dan JSON calendar events.
+
+Catatan: `GuestBookingService` memakai `barryvdh/laravel-dompdf` untuk generate PDF bukti pengajuan booking. Jika package belum diinstall, jalankan `composer require barryvdh/laravel-dompdf`.
 
 Jika menambah page baru, update route, controller method tipis, service page map, view, dan menu config jika perlu.
+
+### Booking Module Detail
+
+<!-- Updated: Section baru — dokumentasi fitur booking module yang sudah terimplementasi -->
+
+#### Booking Identifiers
+
+Setiap booking memiliki beberapa identifier:
+
+- **Case ID** (`bookings.case_id`): format `ETH-{YYYYMMDD}-{NNNNN}`, misalnya `ETH-20260529-00001`. Di-generate saat booking dibuat dan bersifat unique. Digunakan sebagai primary identifier di admin panel dan URL detail page.
+- **Request Code** (tidak disimpan di DB): format `ETH-REQ-{YYYY}-{NNNNNN}`, misalnya `ETH-REQ-2026-000001`. Di-generate on-the-fly untuk keperluan display ke customer.
+- **UUID** (`bookings.uuid`): UUID standar, digunakan untuk signed URL (submission proof download).
+- **Auto-increment ID**: primary key internal.
+
+#### Submission Proof PDF
+
+Saat booking request berhasil dibuat, sistem otomatis generate PDF bukti pengajuan:
+
+- Menggunakan `barryvdh/laravel-dompdf` package.
+- Template view: `resources/views/pages/public/booking-page/support/submission-proof-pdf.blade.php`.
+- File disimpan terenkripsi di disk `local` pada path `booking-submission-proofs/{booking-uuid}.pdf`.
+- Customer mendapat temporary signed URL (TTL 7 hari) untuk download via route `booking.proof.download`.
+- PDF berisi: case ID, request code, data customer, data paket, tanggal acara, sesi, lokasi, dan Google Maps pin.
+
+#### Booking Status Lifecycle
+
+Alur status booking dan aksi yang tersedia:
+
+```
+BS_WAITING_APPROVAL
+  ├→ approve  → BS_APPROVED_WAITING_DP (billing DP dibuat otomatis)
+  └→ reject   → BS_REJECTED
+
+BS_APPROVED_WAITING_DP
+  ├→ verify-dp      → BS_APPROVED_WAITING_FINAL_PAYMENT
+  ├→ upload-payment → auto-transition jika DP lunas
+  ├→ reject-manual  → BS_REJECTED (billing cancelled)
+  └→ approve/reject per-payment (PYS_PEDING → PYS_SUCCESS/PYS_FAILED)
+
+BS_APPROVED_WAITING_FINAL_PAYMENT
+  ├→ verify-final   → BS_CONFIRMED
+  ├→ upload-payment → record payment
+  ├→ cancel         → BS_CANCEL (billing cancelled)
+  └→ approve/reject per-payment (PYS_PEDING → PYS_SUCCESS/PYS_FAILED)
+
+BS_CONFIRMED
+  ├→ complete       → BS_COMPLETE
+  └→ force-majeure  → BS_FORCE_MAJEURE (reschedule atau refund)
+
+BS_FORCE_MAJEURE
+  └→ upload-refund-proof → BS_REFUND
+```
+
+Billing lifecycle di-automate saat status berubah:
+
+- **Approve**: billing + billing detail (base) + billing installment (DP) dibuat otomatis.
+- **Upload payment manual**: payment dicatat, installment status di-sync, billing status di-sync, auto-transition booking status jika DP lunas.
+- **Verify DP**: semua pending payments di-approve, booking transisi ke waiting final payment.
+- **Verify final payment**: semua pending payments di-approve, booking transisi ke confirmed.
+- **Cancel/reject-manual**: billing status di-set ke cancelled.
+- **Force majeure (refund)**: billing status ke refund, installment refund dibuat otomatis.
+
+#### Admin Booking Controllers
+
+- `app/Http/Controllers/Api/Admin/BookingDetailController.php`: API endpoint untuk seluruh mutasi booking (approve, reject, verify, cancel, dll). Menggunakan `BookingDetailService`.
+- `app/Http/Controllers/Web/Admin/AdminPreviewController.php`: Web controller untuk render halaman booking (list, detail, calendar). Menggunakan `BookingListService`, `BookingDetailService`, `BookingCalendarService`.
+
+#### Public Booking Controllers
+
+- `app/Http/Controllers/Api/Public/BookingController.php`: API endpoint untuk guest (store booking, availability, estimate, status lookup, upload payment proof). Menggunakan `GuestBookingService`.
+- `app/Http/Controllers/Web/Public/BookingSupportController.php`: Web controller untuk render halaman support booking (success, status, payment info, reschedule, cancellation policy, download submission proof). Menggunakan `GuestPageService` dan `GuestBookingService`.
+- `app/Http/Controllers/Web/Public/LandingPageController.php`: Web controller untuk landing page, packages page, booking form, dan about page. Menggunakan `GuestPageService`, `GuestPackageService`, dan `GuestBookingService`.
 
 ## Data Model Overview
 
@@ -378,7 +512,8 @@ Reference group yang sudah ada:
 - `type_file`: Dokumen, Gambar.
 - `package_status`: ACTIVE, INACTIVE, DRAFT.
 - `package_type`: WEDDING, NON WEDDING.
-- `booking_status`: WAITING APPROVAL sampai REFUND.
+- `booking_status`: WAITING APPROVAL, APPROVED WAITING DP, APPROVED WAITING FINAL PAYMENT, CONFIRMED, COMPLETE, EXPIRED, EXPIRED DP, CANCEL, RESCHEDULE, FORCE MAJEURE, REFUND, REJECTED.
+<!-- Updated: Tambah BS_REJECTED pada daftar booking_status -->
 - `event_session`: PAGI - SIANG, SORE - MALAM.
 - `billing_status`: UNPAID, PARTIAL, PAID, CANCELLED, REFUND.
 - `billing_type`: BASE, ADDON.
@@ -409,17 +544,22 @@ Migration transform wilayah ke locations dibuat khusus PostgreSQL.
 
 ### Packages
 
-- `packages`: paket layanan, punya `status_id`, `thumbnail_attachment_id`, dan `package_type`.
+<!-- Updated: Tambah field case_id dan address pada packages, tambah relasi packageType dan bookings -->
+
+- `packages`: paket layanan, punya `status_id`, `thumbnail_attachment_id`, `package_type`, `case_id` (format `PKG-{YYYYMMDD}-{NNNNN}`), dan `address`.
 - `package_benefits`: benefit per package.
 - `packages.status_id` join ke reference `package_status`.
 - `packages.package_type` join ke reference `package_type`.
 - `packages.thumbnail_attachment_id` join ke `attachments`.
+- `packages.case_id` unique identifier paket, di-generate on-demand saat booking dibuat jika belum ada.
 
 ### Customers And Bookings
 
-- `customers`: data customer booking.
-- `bookings`: booking utama.
-- `booking_history`: riwayat status booking.
+<!-- Updated: Tambah case_id pada bookings, description pada booking_history, perjelas field customer (first_name/last_name), tambah relasi billings pada booking -->
+
+- `customers`: data customer booking. Field utama: `first_name`, `last_name`, `phone_number`, `email`.
+- `bookings`: booking utama. Field utama: `uuid`, `case_id`, `customer_id`, `package_id`, `status_id`, `location_id`, `event_date`, `event_session`, `event_detail`, `google_maps_pin`, `reschedule_date`, `reschedule_reason`, `force_majeure_date`, `force_majeure_reason`, `operator_id`.
+- `booking_history`: riwayat status booking. Field utama: `booking_id`, `status_id`, `operator_id`, `description`.
 
 Relasi booking:
 
@@ -429,14 +569,19 @@ Relasi booking:
 - `location_id` ke `locations`.
 - `event_session` ke `references` group `event_session`.
 - `operator_id` ke `users`.
+- `billings` (hasMany) ke `billings`.
 
-`booking_history` menyimpan `booking_id`, `status_id`, dan `operator_id`.
+`booking_history` menyimpan `booking_id`, `status_id`, `operator_id`, dan `description` (alasan/catat perubahan status).
+
+Case ID booking: format `ETH-{YYYYMMDD}-{NNNNN}` (misal `ETH-20260529-00001`). Di-generate saat booking dibuat dan di-backfill untuk booking lama via migration 1.1.12. Case ID juga dipakai sebagai URL parameter di admin detail page.
 
 ### Billing And Payments
 
-- `billings`: tagihan per booking.
-- `billing_details`: breakdown tagihan, `billing_type` ke reference `billing_type`.
-- `billing_installments`: cicilan/tagihan DP/final/refund, `installment_type` ke reference `intallment_type`, `status_id` ke reference `billing_status`.
+<!-- Updated: Perjelas bahwa billing dibuat otomatis saat approve, tambah context automated flow -->
+
+- `billings`: tagihan per booking. Dibuat otomatis saat booking di-approve dengan base price dari paket.
+- `billing_details`: breakdown tagihan, `billing_type` ke reference `billing_type`. Saat approve, satu billing detail `BLT_BASE` dibuat otomatis. Admin dapat menambah komponen `BLT_ADDON` kemudian.
+- `billing_installments`: cicilan/tagihan DP/final/refund, `installment_type` ke reference `intallment_type`, `status_id` ke reference `billing_status`. Saat approve, satu installment DP (`INS_DP`) dibuat otomatis. Admin dapat generate installment tambahan (`INS_PARTIAL`, `INS_FINAL`). Force majeure refund membuat installment `INS_REFUND` otomatis.
 - `payments`: pembayaran aktual, join ke `billing_installments`, reference `payment_type`, `payment_status`, `payment_method`, dan optional attachment bukti transfer.
 
 Relasi penting:
@@ -471,6 +616,11 @@ Migrations diload dari `app/Providers/AppServiceProvider.php`:
 - `1.1.8`: PostgreSQL performance indexes.
 - `1.1.9`: perbaikan typo kolom bookings (`gogle_maps_pin`, `rechedule_*` -> `google_maps_pin`, `reschedule_*`).
 - `1.1.10`: perbaikan kompatibilitas partial index `idx_bookings_reschedule_date_act` pasca rename kolom bookings.
+- `1.1.11`: insert settings quota per sesi (`PKDR_MAX_QUOTA_PAGI_SIANG`, `PKDR_MAX_QUOTA_SORE_MALAM`), alter packages tambah `address`, alter packages tambah `case_id` (unique), insert reference `BS_REJECTED` pada group `booking_status`.
+- `1.1.12`: alter `booking_history` tambah `description` (text nullable), alter `bookings` tambah `case_id` (unique) dengan backfill data existing.
+- `1.1.13`: alter `payments` tambah `rejection_reason` (text nullable) untuk anti-fraud payment proof flow.
+
+<!-- Updated: Tambah versi migration 1.1.11 dan 1.1.12 -->
 
 Migration per versi:
 
@@ -568,8 +718,10 @@ Langkah umum:
 
 Langkah umum:
 
+<!-- Updated: Tambah catatan FormRequest untuk booking module -->
+
 - Tambahkan method handler di `app/Http/Controllers/Api/*Controller.php`.
-- Gunakan `FormRequest` untuk validasi input request.
+- Gunakan `FormRequest` untuk validasi input request. FormRequest booking admin ada di `app/Http/Requests/Api/Admin/Booking*Request.php`. FormRequest booking public ada di `app/Http/Requests/Public/Booking/StoreBookingRequest.php`.
 - Tambahkan route endpoint di `routes/api/*.php` lalu require file-nya dari `routes/api.php`.
 - Jika endpoint dipakai browser dengan session Laravel, pastikan middleware `web` ikut dipasang.
 - Jika endpoint benar-benar stateless untuk consumer eksternal, gunakan middleware `api` sesuai kebutuhan.

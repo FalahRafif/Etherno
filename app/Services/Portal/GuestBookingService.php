@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
-use Symfony\Component\HttpFoundation\UploadedFile;
+use Illuminate\Http\UploadedFile;
 
 class GuestBookingService
 {
@@ -402,13 +402,15 @@ class GuestBookingService
                     'status' => trim((string) ($inst->status?->description ?? '-')),
                     'has_pending_payment' => $hasPendingPayment,
                     'payments' => $inst->payments->map(function ($p) {
+                        $pStatusCode = strtoupper(trim((string) ($p->status?->code ?? '')));
                         return [
                             'amount' => (float) $p->amount,
                             'amount_label' => $this->formatRupiah((float) $p->amount),
                             'method' => trim((string) ($p->paymentMethod?->description ?? '-')),
                             'status' => trim((string) ($p->status?->description ?? '-')),
-                            'status_code' => strtoupper(trim((string) ($p->status?->code ?? ''))),
+                            'status_code' => $pStatusCode,
                             'paid_at' => $p->paid_at instanceof Carbon ? $p->paid_at->translatedFormat('d M Y H:i') : '-',
+                            'rejection_reason' => $pStatusCode === 'PYS_FAILED' ? trim((string) ($p->rejection_reason ?? '')) : null,
                         ];
                     })->values()->all(),
                 ];
@@ -1197,25 +1199,52 @@ class GuestBookingService
             'created_by' => null,
         ];
 
-        if ($transferReceipt instanceof UploadedFile) {
-            $storagePayload = $this->attachmentSecurityService->storeEncryptedUploadedFile($transferReceipt, 'transfer-receipts');
-            $encryptedPath = trim((string) ($storagePayload['encrypted_path'] ?? ''));
-            if ($encryptedPath !== '') {
-                $mimeType = strtolower(trim((string) ($transferReceipt->getMimeType() ?? '')));
-                $typeCode = str_contains($mimeType, 'pdf') ? 'TF_DOC' : 'TF_IMG';
-                $typeRef = $this->referenceRepository->query(true)
-                    ->where('group_id', 'type_file')
-                    ->where('code', $typeCode)
-                    ->firstOrFail();
+        if (!($transferReceipt instanceof UploadedFile)) {
+            throw new RuntimeException('Bukti transfer wajib diunggah. Pilih file bukti transfer Anda.');
+        }
 
-                $attachment = $this->attachmentRepository->create([
-                    'uuid' => Str::uuid()->toString(),
-                    'name' => $transferReceipt->getClientOriginalName() ?: 'transfer-receipt',
-                    'path' => $encryptedPath,
-                    'type_file' => $typeRef->id,
-                ]);
-                $paymentData['transfer_receipt_attachment_id'] = (int) $attachment->getKey();
+        $fileSize = $transferReceipt->getSize();
+        $maxSize = 10 * 1024 * 1024;
+        if ($fileSize > $maxSize) {
+            throw new RuntimeException('Ukuran file melebihi batas 10MB.');
+        }
+
+        $originalName = trim((string) ($transferReceipt->getClientOriginalName() ?? ''));
+        if ($originalName !== '') {
+            $duplicateFile = $this->attachmentRepository
+                ->query(true)
+                ->where('name', $originalName)
+                ->whereHas('paymentsAsTransferReceipt', function ($q) use ($booking): void {
+                    $q->whereHas('billingInstallment', function ($qi) use ($booking): void {
+                        $qi->whereHas('billing', function ($qb) use ($booking): void {
+                            $qb->where('booking_id', $booking->id);
+                        });
+                    });
+                })
+                ->exists();
+
+            if ($duplicateFile) {
+                throw new RuntimeException('File bukti transfer ini sudah pernah diunggah untuk booking yang sama. Harap unggah file yang berbeda.');
             }
+        }
+
+        $storagePayload = $this->attachmentSecurityService->storeEncryptedUploadedFile($transferReceipt, 'transfer-receipts');
+        $encryptedPath = trim((string) ($storagePayload['encrypted_path'] ?? ''));
+        if ($encryptedPath !== '') {
+            $mimeType = strtolower(trim((string) ($transferReceipt->getMimeType() ?? '')));
+            $typeCode = str_contains($mimeType, 'pdf') ? 'TF_DOC' : 'TF_IMG';
+            $typeRef = $this->referenceRepository->query(true)
+                ->where('group_id', 'type_file')
+                ->where('code', $typeCode)
+                ->firstOrFail();
+
+            $attachment = $this->attachmentRepository->create([
+                'uuid' => Str::uuid()->toString(),
+                'name' => $originalName ?: 'transfer-receipt',
+                'path' => $encryptedPath,
+                'type_file' => $typeRef->id,
+            ]);
+            $paymentData['transfer_receipt_attachment_id'] = (int) $attachment->getKey();
         }
 
         $payment = $this->paymentRepository->create($paymentData);
@@ -1332,23 +1361,48 @@ class GuestBookingService
         if ($billingPayload !== null) {
             foreach ($billingPayload['installments'] ?? [] as $inst) {
                 $typeCode = strtoupper(trim((string) ($inst['type_code'] ?? '')));
+                $hasPending = !empty($inst['has_pending_payment']);
+                $hasFailed = false;
+                if (is_array($inst['payments'] ?? null)) {
+                    foreach ($inst['payments'] as $p) {
+                        if (strtoupper(trim((string) ($p['status_code'] ?? ''))) === 'PYS_FAILED') {
+                            $hasFailed = true;
+                            break;
+                        }
+                    }
+                }
+                $remaining = (float) ($inst['remaining_amount'] ?? 0);
+                $canUpload = ($remaining > 0 || $hasFailed) && !$hasPending && $typeCode !== 'INS_REFUND';
                 if ($typeCode === 'INS_DP') {
                     $dpInstallment = $inst;
                 }
-                if ((float) ($inst['remaining_amount'] ?? 0) > 0 && $typeCode !== 'INS_REFUND') {
+                if ($canUpload && $typeCode !== 'INS_REFUND') {
                     $payableInstallments[] = $inst;
                 }
             }
         }
 
-        if ($statusCode === 'BS_APPROVED_WAITING_DP' && $dpInstallment !== null && (float) ($dpInstallment['remaining_amount'] ?? 0) > 0) {
+        if ($statusCode === 'BS_APPROVED_WAITING_DP' && $dpInstallment !== null && !empty($dpInstallment['has_pending_payment'])) {
+            $actions[] = 'upload_dp_pending';
+        } elseif ($statusCode === 'BS_APPROVED_WAITING_DP' && $dpInstallment !== null && in_array($dpInstallment, $payableInstallments, true)) {
             $actions[] = 'upload_dp';
         }
 
         if ($statusCode === 'BS_APPROVED_WAITING_FINAL_PAYMENT') {
+            $hasPendingFinal = false;
             foreach ($payableInstallments as $inst) {
                 $typeCode = strtoupper(trim((string) ($inst['type_code'] ?? '')));
-                if ($typeCode !== 'INS_DP') {
+                if ($typeCode === 'INS_DP') continue;
+                if (!empty($inst['has_pending_payment'])) {
+                    $hasPendingFinal = true;
+                }
+            }
+            if ($hasPendingFinal) {
+                $actions[] = 'upload_final_pending';
+            }
+            foreach ($payableInstallments as $inst) {
+                $typeCode = strtoupper(trim((string) ($inst['type_code'] ?? '')));
+                if ($typeCode !== 'INS_DP' && empty($inst['has_pending_payment'])) {
                     $actions[] = 'upload_final';
                     break;
                 }
@@ -1405,6 +1459,92 @@ class GuestBookingService
         if (!hash_equals($expectedLast4, $phoneLast4)) {
             throw new RuntimeException('Data booking tidak ditemukan atau verifikasi tidak sesuai.');
         }
+    }
+
+    public function submitRescheduleRequest(string $bookingCode, string $phoneLast4, string $proposedDate, string $reason): array
+    {
+        $normalizedCode = trim($bookingCode);
+        $normalizedPhoneLast4 = preg_replace('/\D+/', '', trim($phoneLast4)) ?? '';
+
+        if ($normalizedCode === '' || strlen($normalizedPhoneLast4) !== 4) {
+            throw new RuntimeException('Kode booking dan 4 digit verifikasi wajib diisi.');
+        }
+
+        $reason = trim($reason);
+        if ($reason === '') {
+            throw new RuntimeException('Alasan reschedule wajib diisi.');
+        }
+
+        $parsedDate = null;
+        try {
+            $parsedDate = Carbon::parse($proposedDate);
+        } catch (\Throwable) {
+            throw new RuntimeException('Tanggal usulan tidak valid.');
+        }
+
+        $booking = $this->resolveBookingForStatusLookupOrFail($normalizedCode);
+        $this->assertPhoneLastFourMatchesBooking($booking, $normalizedPhoneLast4);
+
+        $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+        $allowedStatuses = ['BS_CONFIRMED', 'BS_APPROVED_WAITING_FINAL_PAYMENT'];
+        if (!in_array($statusCode, $allowedStatuses, true)) {
+            throw new RuntimeException('Reschedule hanya bisa diajukan untuk booking dengan status Confirmed atau Menunggu Pelunasan.');
+        }
+
+        $eventDate = $booking->event_date;
+        if (!$eventDate instanceof Carbon) {
+            throw new RuntimeException('Tanggal acara tidak ditemukan pada booking ini.');
+        }
+
+        $maxRescheduleSetting = $this->settingRepository
+            ->query(true)
+            ->where('group_id', 'package_date_rule')
+            ->where('code', 'PKDR_MAX_RECHEDULE_DATE')
+            ->first(['value']);
+
+        $maxDaysBefore = 14;
+        if ($maxRescheduleSetting && is_numeric(ltrim((string) ($maxRescheduleSetting->value ?? ''), 'Hh+-'))) {
+            $maxDaysBefore = (int) ltrim((string) $maxRescheduleSetting->value, 'Hh+-');
+        }
+
+        $deadline = $eventDate->copy()->subDays($maxDaysBefore);
+        if (Carbon::now()->startOfDay()->gt($deadline->startOfDay())) {
+            throw new RuntimeException("Reschedule hanya dapat diajukan minimal {$maxDaysBefore} hari sebelum tanggal acara ({$deadline->translatedFormat('d F Y')}).");
+        }
+
+        if ($parsedDate->startOfDay()->lt(Carbon::now()->startOfDay())) {
+            throw new RuntimeException('Tanggal usulan tidak boleh tanggal yang sudah lewat.');
+        }
+
+        return DB::transaction(function () use ($booking, $proposedDate, $reason): array {
+            $rescheduleStatus = $this->resolveReferenceByGroupAndCode(
+                'booking_status',
+                'BS_RESCHEDULE',
+                'Status reschedule tidak ditemukan.'
+            );
+
+            $caseId = $this->buildBookingCaseId($booking);
+            $description = "Customer mengajukan reschedule ke {$proposedDate}. Alasan: {$reason}";
+
+            $this->bookingHistoryRepository->create([
+                'uuid' => (string) Str::uuid(),
+                'booking_id' => $booking->id,
+                'status_id' => $rescheduleStatus->id,
+                'description' => $description,
+            ]);
+
+            $this->bookingRepository->update($booking, [
+                'reschedule_date' => $proposedDate,
+                'reschedule_reason' => $reason,
+                'status_id' => $rescheduleStatus->id,
+            ]);
+
+            return [
+                'case_id' => $caseId,
+                'proposed_date' => $proposedDate,
+                'message' => 'Request reschedule berhasil dikirim. Tim kami akan menghubungi Anda melalui WhatsApp.',
+            ];
+        });
     }
 
     private function maskPhoneNumber(string $phoneNumber): string

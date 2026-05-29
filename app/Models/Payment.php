@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'amount',
     'paid_at',
     'transfer_receipt_attachment_id',
+    'rejection_reason',
     'created_at',
     'created_by',
     'updated_at',
