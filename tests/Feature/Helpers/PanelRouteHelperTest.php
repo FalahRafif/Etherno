@@ -37,6 +37,6 @@ class PanelRouteHelperTest extends TestCase
         session(['auth.role' => 'petugas']);
 
         $this->assertSame(route('petugas.dashboard'), panel_route('admin.dashboard'));
-        $this->assertSame(route('petugas.payments.dp'), panel_route('admin.payments.dp'));
+        $this->assertSame(route('petugas.bookings.list'), panel_route('admin.bookings.list'));
     }
 }

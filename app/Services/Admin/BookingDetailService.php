@@ -527,6 +527,110 @@ class BookingDetailService
         return $booking->fresh($this->detailRelations());
     }
 
+    public function approvePendingPayment(int $bookingId, int $paymentId, int $operatorId): Booking
+    {
+        $booking = $this->bookingRepository->findOrFail($bookingId, ['*'], $this->detailRelations());
+        $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+
+        if (!in_array($statusCode, ['BS_APPROVED_WAITING_DP', 'BS_APPROVED_WAITING_FINAL_PAYMENT'], true)) {
+            throw new RuntimeException('Approval pembayaran hanya untuk booking yang menunggu pembayaran.');
+        }
+
+        $payment = $this->paymentRepository->findOrFail($paymentId);
+        $paymentStatusCode = strtoupper(trim((string) ($payment->status?->code ?? '')));
+
+        if ($paymentStatusCode !== 'PYS_PEDING') {
+            throw new RuntimeException('Pembayaran ini tidak dalam status pending.');
+        }
+
+        $successRef = $this->findReference('payment_status', 'PYS_SUCCESS');
+        $this->paymentRepository->update($payment, [
+            'status_id' => $successRef->id,
+            'created_by' => $operatorId,
+        ]);
+
+        $installment = $this->billingInstallmentRepository->findOrFail($payment->billing_installment_id);
+        $this->syncInstallmentAndBillingAfterPaymentChange($installment);
+
+        $this->bookingHistoryRepository->create([
+            'uuid' => Str::uuid()->toString(),
+            'booking_id' => $booking->id,
+            'status_id' => $booking->status_id,
+            'operator_id' => $operatorId,
+            'description' => 'Bukti pembayaran di-approve (Payment #' . $paymentId . ')',
+        ]);
+
+        return $booking->fresh($this->detailRelations());
+    }
+
+    public function rejectPendingPayment(int $bookingId, int $paymentId, int $operatorId, string $reason = ''): Booking
+    {
+        $booking = $this->bookingRepository->findOrFail($bookingId, ['*'], $this->detailRelations());
+        $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+
+        if (!in_array($statusCode, ['BS_APPROVED_WAITING_DP', 'BS_APPROVED_WAITING_FINAL_PAYMENT'], true)) {
+            throw new RuntimeException('Reject pembayaran hanya untuk booking yang menunggu pembayaran.');
+        }
+
+        $payment = $this->paymentRepository->findOrFail($paymentId);
+        $paymentStatusCode = strtoupper(trim((string) ($payment->status?->code ?? '')));
+
+        if ($paymentStatusCode !== 'PYS_PEDING') {
+            throw new RuntimeException('Pembayaran ini tidak dalam status pending.');
+        }
+
+        $failedRef = $this->findReference('payment_status', 'PYS_FAILED');
+        $this->paymentRepository->update($payment, [
+            'status_id' => $failedRef->id,
+            'created_by' => $operatorId,
+            'rejection_reason' => $reason !== '' ? $reason : null,
+        ]);
+
+        $description = 'Bukti pembayaran ditolak (Payment #' . $paymentId . ')';
+        if ($reason !== '') {
+            $description .= '. Alasan: ' . $reason;
+        }
+
+        $this->bookingHistoryRepository->create([
+            'uuid' => Str::uuid()->toString(),
+            'booking_id' => $booking->id,
+            'status_id' => $booking->status_id,
+            'operator_id' => $operatorId,
+            'description' => $description,
+        ]);
+
+        return $booking->fresh($this->detailRelations());
+    }
+
+    private function syncInstallmentAndBillingAfterPaymentChange($installment): void
+    {
+        $successRef = $this->findReference('payment_status', 'PYS_SUCCESS');
+
+        $totalSuccessful = (float) $this->paymentRepository
+            ->query(true)
+            ->where('billing_installment_id', $installment->id)
+            ->where('status_id', $successRef->id)
+            ->sum('amount');
+
+        $effectivePaid = min($totalSuccessful, (float) $installment->amount);
+        $this->billingInstallmentRepository->update($installment, [
+            'paid_amount' => $effectivePaid,
+        ]);
+        $this->syncInstallmentStatus($installment, $effectivePaid);
+
+        $billing = $this->billingRepository->query(true)
+            ->whereHas('installments', function (Builder $q) use ($installment): void {
+                $q->where('id', $installment->id);
+            })->first();
+
+        if ($billing) {
+            $totalPaid = $this->recalculateBillingTotalPaid($billing);
+            $this->billingRepository->update($billing, ['total_paid' => $totalPaid]);
+            $billing->total_paid = $totalPaid;
+            $this->syncBillingStatus($billing);
+        }
+    }
+
     public function forceMajeureReschedule(int $bookingId, int $operatorId, string $reason, string $newDate): Booking
     {
         $booking = $this->bookingRepository->findOrFail($bookingId, ['*'], $this->detailRelations());
@@ -1190,10 +1294,15 @@ class BookingDetailService
                 'status' => trim((string) ($i->status?->description ?? '-')),
                 'payments' => $i->payments->map(function ($p) {
                     $hasReceipt = !empty($p->transfer_receipt_attachment_id) && $p->transferReceiptAttachment !== null;
+                    $paymentStatusCode = strtoupper(trim((string) ($p->status?->code ?? '')));
                     return [
+                        'id' => (int) $p->id,
                         'amount' => (float) $p->amount,
                         'method' => trim((string) ($p->paymentMethod?->description ?? '-')),
                         'status' => trim((string) ($p->status?->description ?? '-')),
+                        'status_code' => $paymentStatusCode,
+                        'is_pending' => $paymentStatusCode === 'PYS_PEDING',
+                        'is_customer_upload' => empty($p->created_by),
                         'paid_at' => $p->paid_at?->format('Y-m-d H:i') ?? '-',
                         'has_receipt' => $hasReceipt,
                         'receipt_name' => $hasReceipt ? trim((string) ($p->transferReceiptAttachment->name ?? '')) : null,

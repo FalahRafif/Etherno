@@ -6,8 +6,8 @@
 @php
     $actions = [
         ['label' => 'Daftar Booking', 'url' => panel_route('admin.bookings.list'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Booking Requests', 'url' => panel_route('admin.bookings.requests'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Bookings Active', 'url' => panel_route('admin.bookings.active'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Booking Requests', 'url' => panel_route('admin.bookings.list', ['status' => 'BS_WAITING_APPROVAL']), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Booking Aktif', 'url' => panel_route('admin.bookings.list', ['status' => 'BS_CONFIRMED']), 'class' => 'btn btn-primary btn-sm'],
     ];
 
     $filters = $filters ?? ['status' => '', 'date_start' => '', 'date_end' => ''];

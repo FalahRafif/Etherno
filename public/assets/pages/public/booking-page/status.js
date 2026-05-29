@@ -220,9 +220,26 @@
                         k.textContent = String(p.paid_at || "-") + " \u2022 " + String(p.method || "-");
                         var v = document.createElement("p");
                         v.className = "booking-status-value";
-                        v.textContent = String(p.amount_label || "-") + " (" + String(p.status || "-") + ")";
+                        var statusLabel = String(p.status || "-");
+                        var pCode = String(p.status_code || "");
+                        if (pCode === "PYS_PEDING") {
+                            statusLabel = "\u23F3 Menunggu Verifikasi";
+                        } else if (pCode === "PYS_FAILED") {
+                            statusLabel = "\u274C Ditolak";
+                        } else if (pCode === "PYS_SUCCESS") {
+                            statusLabel = "\u2705 Terverifikasi";
+                        }
+                        v.textContent = String(p.amount_label || "-") + " (" + statusLabel + ")";
                         payRow.appendChild(k);
                         payRow.appendChild(v);
+
+                        if (pCode === "PYS_FAILED" && p.rejection_reason) {
+                            var reasonEl = document.createElement("p");
+                            reasonEl.className = "booking-disclaimer text-danger mt-1 mb-0";
+                            reasonEl.textContent = "Alasan: " + p.rejection_reason;
+                            payRow.appendChild(reasonEl);
+                        }
+
                         card.appendChild(payRow);
                     });
                 }
@@ -244,9 +261,9 @@
             }
 
             actions.forEach(function (action) {
-                if (action === "upload_dp") {
+                if (action === "upload_dp" || action === "upload_dp_pending") {
                     var dpInst = findPayableDpInstallment(billing);
-                    if (dpInst && dpInst.has_pending_payment) {
+                    if (action === "upload_dp_pending" || (dpInst && dpInst.has_pending_payment)) {
                         renderPendingInfo(wrap, "DP", waPhone, waTemplates.dp_paid);
                     } else if (dpInst) {
                         var btn = document.createElement("button");
@@ -260,10 +277,10 @@
                         wrap.appendChild(btn);
                     }
                 }
-                if (action === "upload_final") {
+                if (action === "upload_final" || action === "upload_final_pending") {
                     var finalInsts = findPayableNonDpInstallments(billing);
                     finalInsts.forEach(function (fi) {
-                        if (fi.has_pending_payment) {
+                        if (action === "upload_final_pending" || fi.has_pending_payment) {
                             renderPendingInfo(wrap, fi.type, waPhone, waTemplates.final_paid);
                         } else {
                             var btn = document.createElement("button");
@@ -288,7 +305,7 @@
         function renderPendingInfo(wrap, type, phone, template) {
             var box = document.createElement("div");
             box.className = "estimate-box mb-2";
-            box.innerHTML = '<p class="estimate-note mb-1">Bukti pembayaran ' + String(type || '') + ' sudah dikirim dan sedang menunggu verifikasi tim kami.</p>';
+            box.innerHTML = '<p class="estimate-note mb-1">\u23F3 Bukti pembayaran ' + String(type || '') + ' sudah dikirim dan sedang menunggu verifikasi tim kami.</p><p class="estimate-note mb-0" style="font-size:0.85em;">Jika bukti ditolak, Anda bisa mengirim ulang dari halaman ini.</p>';
             wrap.appendChild(box);
             if (phone && template) {
                 var waLink = document.createElement("a");
@@ -304,14 +321,26 @@
         function findPayableDpInstallment(billing) {
             if (!billing || !Array.isArray(billing.installments)) return null;
             return billing.installments.find(function (i) {
-                return i.type_code === "INS_DP" && (i.remaining_amount || 0) > 0;
+                if (i.type_code !== "INS_DP") return false;
+                if ((i.remaining_amount || 0) > 0) return true;
+                if (Array.isArray(i.payments)) {
+                    var hasFailed = i.payments.some(function (p) { return String(p.status_code || "") === "PYS_FAILED"; });
+                    if (hasFailed) return true;
+                }
+                return false;
             }) || null;
         }
 
         function findPayableNonDpInstallments(billing) {
             if (!billing || !Array.isArray(billing.installments)) return [];
             return billing.installments.filter(function (i) {
-                return i.type_code !== "INS_DP" && i.type_code !== "INS_REFUND" && (i.remaining_amount || 0) > 0;
+                if (i.type_code === "INS_DP" || i.type_code === "INS_REFUND") return false;
+                if ((i.remaining_amount || 0) > 0) return true;
+                if (Array.isArray(i.payments)) {
+                    var hasFailed = i.payments.some(function (p) { return String(p.status_code || "") === "PYS_FAILED"; });
+                    if (hasFailed) return true;
+                }
+                return false;
             });
         }
 
@@ -338,9 +367,20 @@
             if (isSubmitting || !uploadPaymentForm || !currentPayload) return;
             uploadPaymentError.hidden = true;
 
-            var formData = new FormData(uploadPaymentForm);
-            formData.set("booking_code", String(bookingCodeInput.value || "").trim());
-            formData.set("phone_last4", sanitizeLastFour(verifyInput ? verifyInput.value : ""));
+            var fileInput = document.getElementById("upload_payment_receipt");
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                uploadPaymentError.textContent = "Pilih file bukti transfer terlebih dahulu.";
+                uploadPaymentError.hidden = false;
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append("booking_code", String(bookingCodeInput.value || "").trim());
+            formData.append("phone_last4", sanitizeLastFour(verifyInput ? verifyInput.value : ""));
+            formData.append("billing_installment_id", String(uploadPaymentInstallmentId.value || ""));
+            if (fileInput.files && fileInput.files.length > 0) {
+                formData.append("transfer_receipt", fileInput.files[0]);
+            }
 
             isSubmitting = true;
             uploadPaymentSubmitBtn.disabled = true;
@@ -357,7 +397,19 @@
             })
             .then(function (response) {
                 return response.json().catch(function () { return {}; }).then(function (data) {
-                    if (!response.ok) throw new Error(String(data.message || "Gagal mengirim bukti pembayaran."));
+                    if (!response.ok) {
+                        var msg = data.message || "Gagal mengirim bukti pembayaran.";
+                        if (data.errors) {
+                            var fieldErrors = [];
+                            for (var field in data.errors) {
+                                if (data.errors.hasOwnProperty(field)) {
+                                    fieldErrors = fieldErrors.concat(data.errors[field]);
+                                }
+                            }
+                            if (fieldErrors.length > 0) msg = fieldErrors.join(" ");
+                        }
+                        throw new Error(msg);
+                    }
                     return data;
                 });
             })
@@ -595,6 +647,23 @@
             });
 
             setActiveStatusTab("info");
+        }
+
+        var refreshBtn = document.getElementById("btn_refresh_status");
+        if (refreshBtn) {
+            refreshBtn.addEventListener("click", function () {
+                if (currentPayload) {
+                    refreshBtn.disabled = true;
+                    refreshBtn.textContent = "Memuat ulang...";
+                    submitLookup();
+                    setTimeout(function () {
+                        refreshBtn.disabled = false;
+                        refreshBtn.textContent = "Refresh Data Booking";
+                    }, 1500);
+                } else {
+                    alert("Data booking belum dimuat. Cari booking terlebih dahulu.");
+                }
+            });
         }
     });
 })();

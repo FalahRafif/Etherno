@@ -13,17 +13,9 @@ class InternalPageService
     private array $pages = [
         'dashboard' => ['view' => 'pages.admin.dashboard', 'title' => 'Dashboard'],
         'bookings.list' => ['view' => 'pages.admin.bookings.list', 'title' => 'Daftar Booking'],
-        'bookings.requests' => ['view' => 'pages.admin.bookings.requests', 'title' => 'Booking Requests'],
-        'bookings.active' => ['view' => 'pages.admin.bookings.active', 'title' => 'Bookings Active'],
         'bookings.detail' => ['view' => 'pages.admin.bookings.detail', 'title' => 'Booking Detail'],
         'calendar' => ['view' => 'pages.admin.calendar', 'title' => 'Calender Booking'],
-        'payments.dp' => ['view' => 'pages.admin.payments.dp', 'title' => 'DP Verification'],
-        'payments.final' => ['view' => 'pages.admin.payments.final', 'title' => 'Final Payment'],
-        'pricing.reviews' => ['view' => 'pages.admin.pricing.reviews', 'title' => 'Pricing Review'],
         'packages' => ['view' => 'pages.admin.master.packages', 'title' => 'Packages'],
-        'reschedules' => ['view' => 'pages.admin.reschedules', 'title' => 'Reschedule Requests'],
-        'cancellations' => ['view' => 'pages.admin.cancellations', 'title' => 'Cancellations'],
-        'force.majeure' => ['view' => 'pages.admin.force-majeure', 'title' => 'Force Majeure'],
         'customers' => ['view' => 'pages.admin.customers', 'title' => 'Customers'],
         'settings' => ['view' => 'pages.admin.settings', 'title' => 'Settings'],
     ];

@@ -23,12 +23,9 @@ class AdminPreviewController extends Controller
 
     public function dashboard(): View
     {
-        return $this->internalPageService->render($this->resolvePanelPrefix(), 'dashboard');
-    }
+        $payload = $this->bookingListService->getDashboardPayload();
 
-    public function bookingRequests(): View
-    {
-        return $this->internalPageService->render($this->resolvePanelPrefix(), 'bookings.requests');
+        return $this->internalPageService->render($this->resolvePanelPrefix(), 'dashboard', $payload);
     }
 
     public function bookingsList(Request $request): View
@@ -36,11 +33,6 @@ class AdminPreviewController extends Controller
         $payload = $this->bookingListService->getPagePayload($request->all());
 
         return $this->internalPageService->render($this->resolvePanelPrefix(), 'bookings.list', $payload);
-    }
-
-    public function bookingsActive(): View
-    {
-        return $this->internalPageService->render($this->resolvePanelPrefix(), 'bookings.active');
     }
 
     public function bookingDetail(string $booking): View
@@ -83,49 +75,23 @@ class AdminPreviewController extends Controller
         ]);
     }
 
-    public function dpVerification(): View
-    {
-        return $this->internalPageService->render($this->resolvePanelPrefix(), 'payments.dp');
-    }
-
-    public function finalPayment(): View
-    {
-        return $this->internalPageService->render($this->resolvePanelPrefix(), 'payments.final');
-    }
-
-    public function pricingReviews(): View
-    {
-        return $this->internalPageService->render($this->resolvePanelPrefix(), 'pricing.reviews');
-    }
-
     public function packages(): View
     {
         return $this->internalPageService->render($this->resolvePanelPrefix(), 'packages');
     }
 
-    public function reschedules(): View
+    public function customers(Request $request): View
     {
-        return $this->internalPageService->render($this->resolvePanelPrefix(), 'reschedules');
-    }
+        $payload = $this->bookingListService->getCustomersPayload($request->all());
 
-    public function cancellations(): View
-    {
-        return $this->internalPageService->render($this->resolvePanelPrefix(), 'cancellations');
-    }
-
-    public function forceMajeure(): View
-    {
-        return $this->internalPageService->render($this->resolvePanelPrefix(), 'force.majeure');
-    }
-
-    public function customers(): View
-    {
-        return $this->internalPageService->render($this->resolvePanelPrefix(), 'customers');
+        return $this->internalPageService->render($this->resolvePanelPrefix(), 'customers', $payload);
     }
 
     public function settings(): View
     {
-        return $this->internalPageService->render($this->resolvePanelPrefix(), 'settings');
+        $payload = $this->bookingListService->getSettingsPayload();
+
+        return $this->internalPageService->render($this->resolvePanelPrefix(), 'settings', $payload);
     }
 
     private function resolvePanelPrefix(): string
