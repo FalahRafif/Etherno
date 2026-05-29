@@ -10,7 +10,7 @@
 @php
     $actions = [
         ['label' => 'Tambah Aturan', 'url' => route('admin.location.rules.create'), 'class' => 'btn btn-primary btn-sm'],
-        ['label' => 'Pricing Review', 'url' => panel_route('admin.pricing.reviews'), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Daftar Booking', 'url' => panel_route('admin.bookings.list'), 'class' => 'btn btn-outline-primary btn-sm'],
     ];
 @endphp
 

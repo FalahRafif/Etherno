@@ -5,7 +5,7 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Pricing Review', 'url' => panel_route('admin.pricing.reviews'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Daftar Booking', 'url' => panel_route('admin.bookings.list'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
     $alerts = [

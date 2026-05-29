@@ -17,8 +17,6 @@ class GuestPageService
         'booking.form' => ['view' => 'pages.public.booking-page.bookingpage', 'title' => 'Form Booking - Etherno'],
         'booking.success' => ['view' => 'pages.public.booking-page.support.success', 'title' => 'Request Booking Terkirim - Etherno'],
         'booking.status' => ['view' => 'pages.public.booking-page.support.status', 'title' => 'Cek Status Booking - Etherno'],
-        'booking.payment.dp' => ['view' => 'pages.public.booking-page.support.payment-dp', 'title' => 'Konfirmasi DP - Etherno'],
-        'booking.payment.final' => ['view' => 'pages.public.booking-page.support.payment-final', 'title' => 'Konfirmasi Pelunasan - Etherno'],
         'booking.reschedule' => ['view' => 'pages.public.booking-page.support.reschedule', 'title' => 'Request Reschedule - Etherno'],
         'booking.cancellation.policy' => ['view' => 'pages.public.booking-page.support.cancellation-policy', 'title' => 'Kebijakan Booking - Etherno'],
     ];

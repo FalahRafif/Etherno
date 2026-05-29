@@ -132,6 +132,12 @@
         </div>
 
         <div class="booking-tab-panel" data-status-panel="actions" hidden>
+          <div class="mt-3 mb-3">
+            <button type="button" class="cta" id="btn_refresh_status" style="width:100%;">
+              Refresh Data Booking
+            </button>
+          </div>
+
           <div class="mt-3" id="customer_actions_wrap">
             <p class="booking-estimate-label mb-2">Aksi yang Tersedia</p>
             <div id="customer_actions_list"></div>
@@ -188,9 +194,9 @@
           </div>
         </div>
         <div class="form-field mb-2">
-          <label class="form-label" for="upload_payment_receipt">Bukti Transfer (Opsional)</label>
-          <input class="form-input" type="file" id="upload_payment_receipt" name="transfer_receipt" accept=".jpg,.jpeg,.png,.webp,.pdf">
-          <p class="booking-disclaimer mt-1 mb-0">Format: JPG, PNG, WebP, PDF. Maks 10MB.</p>
+          <label class="form-label" for="upload_payment_receipt">Bukti Transfer <span class="text-danger">*</span></label>
+          <input class="form-input" type="file" id="upload_payment_receipt" name="transfer_receipt" accept=".jpg,.jpeg,.png,.webp,.pdf" required>
+          <p class="booking-disclaimer mt-1 mb-0">Wajib sertakan bukti transfer. Format: JPG, PNG, WebP, PDF. Maks 10MB.</p>
         </div>
         <p class="booking-disclaimer text-danger mb-0" id="upload_payment_error" hidden></p>
         <div class="booking-confirm-actions">

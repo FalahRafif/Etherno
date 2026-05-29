@@ -15,14 +15,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->grou
     Route::redirect('/', '/admin/dashboard')->name('home');
     Route::get('/dashboard', [AdminPreviewController::class, 'dashboard'])->name('dashboard');
     Route::get('/bookings', [AdminPreviewController::class, 'bookingsList'])->name('bookings.list');
-    Route::get('/bookings/requests', [AdminPreviewController::class, 'bookingRequests'])->name('bookings.requests');
-    Route::get('/bookings/active', [AdminPreviewController::class, 'bookingsActive'])->name('bookings.active');
     Route::get('/bookings/{booking}', [AdminPreviewController::class, 'bookingDetail'])->name('bookings.detail');
     Route::get('/calendar', [AdminPreviewController::class, 'calendar'])->name('calendar');
     Route::get('/calendar/events', [AdminPreviewController::class, 'calendarEvents'])->name('calendar.events');
-    Route::get('/payments/dp', [AdminPreviewController::class, 'dpVerification'])->name('payments.dp');
-    Route::get('/payments/final', [AdminPreviewController::class, 'finalPayment'])->name('payments.final');
-    Route::get('/pricing/reviews', [AdminPreviewController::class, 'pricingReviews'])->name('pricing.reviews');
     Route::get('/packages', [PackageController::class, 'index'])->name('packages');
     Route::get('/packages/create', [PackageController::class, 'create'])->name('packages.create');
     Route::get('/packages/{package}/edit', [PackageController::class, 'edit'])->name('packages.edit');
@@ -38,9 +33,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->grou
     Route::get('/package-date-rules', [PackageDateRuleController::class, 'index'])->name('package-date-rules');
     Route::get('/package-date-rules/create', [PackageDateRuleController::class, 'create'])->name('package-date-rules.create');
     Route::get('/package-date-rules/{setting}/edit', [PackageDateRuleController::class, 'edit'])->name('package-date-rules.edit');
-    Route::get('/reschedules', [AdminPreviewController::class, 'reschedules'])->name('reschedules');
-    Route::get('/cancellations', [AdminPreviewController::class, 'cancellations'])->name('cancellations');
-    Route::get('/force-majeure', [AdminPreviewController::class, 'forceMajeure'])->name('force.majeure');
     Route::get('/customers', [AdminPreviewController::class, 'customers'])->name('customers');
     Route::get('/users', [UserManagementController::class, 'index'])->name('users');
     Route::get('/users/create', [UserManagementController::class, 'create'])->name('users.create');

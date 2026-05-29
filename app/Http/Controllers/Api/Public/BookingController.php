@@ -147,7 +147,7 @@ class BookingController extends Controller
             'booking_code' => ['required', 'string', 'max:120'],
             'phone_last4' => ['required', 'digits:4'],
             'billing_installment_id' => ['required', 'integer'],
-            'transfer_receipt' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:10240'],
+            'transfer_receipt' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:10240'],
         ]);
 
         try {
@@ -155,12 +155,40 @@ class BookingController extends Controller
                 (string) $payload['booking_code'],
                 (string) $payload['phone_last4'],
                 (int) $payload['billing_installment_id'],
-                $payload['transfer_receipt'] ?? null
+                $payload['transfer_receipt']
             );
 
             return response()->json([
                 'message' => 'Bukti pembayaran berhasil dikirim. Tim kami akan memverifikasi pembayaran Anda.',
                 'payment' => $result,
+            ]);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function rescheduleRequest(Request $request): JsonResponse
+    {
+        $payload = $request->validate([
+            'booking_code' => ['required', 'string', 'max:120'],
+            'phone_last4' => ['required', 'digits:4'],
+            'proposed_date' => ['required', 'date'],
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
+
+        try {
+            $result = $this->guestBookingService->submitRescheduleRequest(
+                (string) $payload['booking_code'],
+                (string) $payload['phone_last4'],
+                (string) $payload['proposed_date'],
+                (string) $payload['reason']
+            );
+
+            return response()->json([
+                'message' => $result['message'],
+                'data' => $result,
             ]);
         } catch (RuntimeException $exception) {
             return response()->json([

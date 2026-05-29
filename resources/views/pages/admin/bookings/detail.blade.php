@@ -26,9 +26,11 @@
     $customerName = $customerName ?? '-';
     $actions = match($statusCode) {
         'BS_WAITING_APPROVAL' => [
+            ['label' => 'Refresh Data', 'url' => request()->fullUrl(), 'class' => 'btn btn-outline-primary btn-sm'],
             ['label' => 'Kembali ke List', 'url' => panel_route('admin.bookings.list'), 'class' => 'btn btn-outline-secondary btn-sm'],
         ],
         default => [
+            ['label' => 'Refresh Data', 'url' => request()->fullUrl(), 'class' => 'btn btn-outline-primary btn-sm'],
             ['label' => 'Kembali ke List', 'url' => panel_route('admin.bookings.list'), 'class' => 'btn btn-outline-secondary btn-sm'],
         ],
     };
@@ -84,7 +86,6 @@
             <div class="card-header pb-0">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h5 class="card-title mb-0">Informasi Booking</h5>
-                    <span class="badge bg-primary-transparent text-primary">{{ $statusLabel ?? '-' }}</span>
                 </div>
 
                 <div class="booking-detail-main-tabs-wrap mt-3">
@@ -493,20 +494,71 @@
                                                                                         <th class="text-muted">Status</th>
                                                                                         <th class="text-muted text-end">Nominal</th>
                                                                                         <th class="text-muted">Bukti</th>
+                                                                                        <th class="text-muted">Aksi</th>
                                                                                     </tr>
                                                                                 </thead>
                                                                                 <tbody>
                                                                                     @foreach($installment['payments'] as $payment)
-                                                                                        <tr>
+                                                                                        @php
+                                                                                            $isPending = !empty($payment['is_pending']);
+                                                                                            $isCustomer = !empty($payment['is_customer_upload']);
+                                                                                            $rowClass = $isPending ? 'table-warning' : '';
+                                                                                            $hasReceipt = !empty($payment['has_receipt']) && !empty($payment['receipt_preview_url']);
+                                                                                        @endphp
+                                                                                        <tr class="{{ $rowClass }}">
                                                                                             <td>{{ $payment['paid_at'] }}</td>
                                                                                             <td>{{ $payment['method'] }}</td>
-                                                                                            <td>{{ $payment['status'] }}</td>
+                                                                                            <td>
+                                                                                                @if($isPending)
+                                                                                                    <span class="badge bg-warning text-dark">
+                                                                                                        <i class="ri-time-line"></i> Pending
+                                                                                                        @if($isCustomer)
+                                                                                                            <small>(Customer)</small>
+                                                                                                        @endif
+                                                                                                    </span>
+                                                                                                @elseif(($payment['status_code'] ?? '') === 'PYS_SUCCESS')
+                                                                                                    <span class="badge bg-success-transparent text-success">
+                                                                                                        <i class="ri-check-line"></i> {{ $payment['status'] }}
+                                                                                                    </span>
+                                                                                                @elseif(($payment['status_code'] ?? '') === 'PYS_FAILED')
+                                                                                                    <span class="badge bg-danger-transparent text-danger">
+                                                                                                        <i class="ri-close-line"></i> {{ $payment['status'] }}
+                                                                                                    </span>
+                                                                                                @else
+                                                                                                    <span class="badge bg-light text-muted">{{ $payment['status'] }}</span>
+                                                                                                @endif
+                                                                                            </td>
                                                                                             <td class="text-end">Rp {{ number_format((float) ($payment['amount'] ?? 0), 0, ',', '.') }}</td>
                                                                                             <td>
-                                                                                                @if(!empty($payment['has_receipt']) && !empty($payment['receipt_preview_url']))
-                                                                                                    <a href="{{ $payment['receipt_preview_url'] }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary py-0 px-2">
-                                                                                                        <i class="ri-attachment-line"></i> Lihat
-                                                                                                    </a>
+                                                                                                @if($hasReceipt)
+                                                                                                    @if($isPending)
+                                                                                                        <a href="{{ $payment['receipt_preview_url'] }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-info py-0 px-2">
+                                                                                                            <i class="ri-eye-line"></i> Lihat Bukti
+                                                                                                        </a>
+                                                                                                        <br><small class="text-muted">{{ $payment['receipt_name'] ?? '' }}</small>
+                                                                                                    @else
+                                                                                                        <a href="{{ $payment['receipt_preview_url'] }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary py-0 px-2">
+                                                                                                            <i class="ri-attachment-line"></i> Lihat
+                                                                                                        </a>
+                                                                                                    @endif
+                                                                                                @else
+                                                                                                    @if($isPending && $isCustomer)
+                                                                                                        <span class="badge bg-secondary text-white"><i class="ri-image-off-line"></i> Tanpa Bukti</span>
+                                                                                                    @else
+                                                                                                        <span class="text-muted small">-</span>
+                                                                                                    @endif
+                                                                                                @endif
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                @if($isPending)
+                                                                                                    <div class="d-flex gap-1">
+                                                                                                        <button type="button" class="btn btn-sm btn-success py-0 px-2 btn-approve-payment" data-payment-id="{{ $payment['id'] }}" data-booking-id="{{ $booking->id }}" data-url="{{ route('api.admin.bookings.payments.approve', [$booking->id, $payment['id']]) }}" title="Approve bukti pembayaran">
+                                                                                                            <i class="ri-check-line"></i>
+                                                                                                        </button>
+                                                                                                        <button type="button" class="btn btn-sm btn-danger py-0 px-2 btn-reject-payment" data-payment-id="{{ $payment['id'] }}" data-booking-id="{{ $booking->id }}" data-url="{{ route('api.admin.bookings.payments.reject', [$booking->id, $payment['id']]) }}" title="Tolak bukti pembayaran">
+                                                                                                            <i class="ri-close-line"></i>
+                                                                                                        </button>
+                                                                                                    </div>
                                                                                                 @else
                                                                                                     <span class="text-muted small">-</span>
                                                                                                 @endif
@@ -1179,6 +1231,59 @@ document.addEventListener('DOMContentLoaded', function() {
     handleAction(verifyDpBtn, 'Verifikasi DP? Pastikan pembayaran DP sudah diterima. Status akan berubah ke Waiting Final Payment.');
     handleAction(verifyFinalBtn, 'Verifikasi pelunasan? Pastikan semua pembayaran sudah diterima. Status akan berubah ke Confirmed.');
     handleAction(completeBtn, 'Selesaikan booking? Ini menandakan acara sudah dilaksanakan.');
+
+    document.querySelectorAll('.btn-approve-payment').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (!confirm('Approve bukti pembayaran ini? Nominal akan dicatat sebagai pembayaran valid.')) return;
+            var url = btn.dataset.url;
+            btn.disabled = true;
+            fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(function(res) {
+                return res.json().then(function(data) {
+                    if (!res.ok) throw new Error(data.message || 'Gagal approve.');
+                    return data;
+                });
+            })
+            .then(function() { window.location.reload(); })
+            .catch(function(err) { alert(err.message); btn.disabled = false; });
+        });
+    });
+
+    document.querySelectorAll('.btn-reject-payment').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var reason = prompt('Alasan penolakan (opsional):');
+            var url = btn.dataset.url;
+            btn.disabled = true;
+            fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ reason: reason || '' })
+            })
+            .then(function(res) {
+                return res.json().then(function(data) {
+                    if (!res.ok) throw new Error(data.message || 'Gagal reject.');
+                    return data;
+                });
+            })
+            .then(function() { window.location.reload(); })
+            .catch(function(err) { alert(err.message); btn.disabled = false; });
+        });
+    });
 
     var fmActionSelect = document.getElementById('fm_action_select');
     var fmNewDateWrap = document.getElementById('fm_new_date_wrap');

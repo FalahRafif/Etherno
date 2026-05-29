@@ -10,6 +10,7 @@ use App\Http\Requests\Api\Admin\BookingInstallmentStoreRequest;
 use App\Http\Requests\Api\Admin\BookingApproveRequest;
 use App\Http\Requests\Api\Admin\BookingRejectManualRequest;
 use App\Http\Requests\Api\Admin\BookingRejectRequest;
+use App\Http\Requests\Api\Admin\BookingRejectPaymentRequest;
 use App\Http\Requests\Api\Admin\BookingRefundProofRequest;
 use App\Http\Requests\Api\Admin\BookingUploadPaymentRequest;
 use App\Services\Admin\BookingDetailService;
@@ -118,6 +119,42 @@ class BookingDetailController extends Controller
 
         return response()->json([
             'message' => 'Pelunasan terverifikasi. Booking confirmed.',
+            'status_code' => $updatedBooking->status?->code,
+        ]);
+    }
+
+    public function approvePayment(int $booking, int $payment): JsonResponse
+    {
+        $operatorId = auth()->id();
+
+        try {
+            $updatedBooking = $this->bookingDetailService->approvePendingPayment($booking, $payment, $operatorId);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Bukti pembayaran berhasil di-approve.',
+            'status_code' => $updatedBooking->status?->code,
+        ]);
+    }
+
+    public function rejectPayment(int $booking, int $payment, BookingRejectPaymentRequest $request): JsonResponse
+    {
+        $operatorId = auth()->id();
+
+        try {
+            $updatedBooking = $this->bookingDetailService->rejectPendingPayment($booking, $payment, $operatorId, $request->reason());
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Bukti pembayaran ditolak. Customer dapat mengirim ulang.',
             'status_code' => $updatedBooking->status?->code,
         ]);
     }
