@@ -356,26 +356,62 @@ body{
 .testimonial-meta{display:flex;flex-direction:column;gap:3px;color:rgba(15,15,15,.62);font-size:13px}
 .testimonial-meta strong{color:#111;font-size:14px}
 
-.faq-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:8px 0 6px}
-.faq-card{
-  border:1px solid rgba(15,15,15,.06);
-  border-radius:16px;
-  background:#fff;
-  box-shadow:0 14px 36px rgba(11,10,9,.04);
-  overflow:hidden;
+.faq-list{
+  max-width:880px;
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  padding:8px 0 6px;
 }
-.faq-card summary{
+.faq-item{
+  border:1px solid rgba(15,15,15,.08);
+  border-radius:22px;
+  background:linear-gradient(180deg,#fff,#fffaf1);
+  box-shadow:0 18px 46px rgba(11,10,9,.06);
+  overflow:hidden;
+  transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease;
+}
+.faq-item summary{
   cursor:pointer;
   list-style:none;
-  padding:18px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:22px 24px;
   font-family:'Playfair Display',var(--serif);
-  font-size:20px;
+  font-size:22px;
   line-height:1.25;
   color:#121212;
 }
-.faq-card summary::-webkit-details-marker{display:none}
-.faq-card p{padding:0 20px 20px;margin:0;color:rgba(15,15,15,.72);line-height:1.7}
-.faq-card[open]{border-color:rgba(181,143,66,.2)}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-icon{
+  width:34px;
+  height:34px;
+  flex:0 0 34px;
+  border-radius:50%;
+  background:rgba(181,143,66,.12);
+  position:relative;
+  transition:background .2s ease,transform .2s ease;
+}
+.faq-icon::before,.faq-icon::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:14px;
+  height:2px;
+  border-radius:999px;
+  background:#b58f42;
+  transform:translate(-50%,-50%);
+}
+.faq-icon::after{transform:translate(-50%,-50%) rotate(90deg)}
+.faq-item p{padding:0 24px 24px;margin:-4px 0 0;color:rgba(15,15,15,.72);line-height:1.75;max-width:720px}
+.faq-item[open]{border-color:rgba(181,143,66,.32);box-shadow:0 24px 56px rgba(181,143,66,.12);transform:translateY(-2px)}
+.faq-item[open] .faq-icon{background:#b58f42;transform:rotate(180deg)}
+.faq-item[open] .faq-icon::before,.faq-item[open] .faq-icon::after{background:#fff}
+.faq-item[open] .faq-icon::after{opacity:0}
 
 .final-cta{
   padding:48px 0 18px;
@@ -1433,7 +1469,7 @@ body.booking-confirm-open{
   .package-group{margin-top:24px}
   .package-group+.package-group{margin-top:34px}
   .package-group-heading{align-items:flex-start;flex-direction:column}
-  .package-grid,.faq-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+  .package-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
   .testimonial-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
   .testimonial-card-large{grid-column:1/-1}
   .portfolio{grid-template-columns:1fr;gap:14px}
@@ -1472,13 +1508,15 @@ body.booking-confirm-open{
 
   .packages-page-section{padding-top:56px}
   .packages-more-button{width:100%}
-  .package-grid,.testimonial-grid,.faq-grid,.footer-grid{grid-template-columns:1fr}
+  .package-grid,.testimonial-grid,.footer-grid{grid-template-columns:1fr}
   .package{padding:24px}
   .package h3{font-size:22px}
   .package-featured{transform:none}
   .packages-page-actions a{width:100%}
   .testimonial-card{padding:24px}
-  .faq-card summary{font-size:18px}
+  .faq-item summary{font-size:18px;padding:18px 20px}
+  .faq-item p{padding:0 20px 20px}
+  .faq-icon{width:30px;height:30px;flex-basis:30px}
   .final-cta{padding:36px 0 12px}
   .final-cta-title{font-size:clamp(34px,11.5vw,42px)}
   .final-cta-copy{font-size:14px}
@@ -1545,5 +1583,5 @@ body.booking-confirm-open{
   .hero .title{font-size:40px}
   .cta{padding:9px 16px;font-size:14px}
   .package h3{font-size:20px}
-  .faq-card summary{font-size:17px}
+  .faq-item summary{font-size:17px}
 }
