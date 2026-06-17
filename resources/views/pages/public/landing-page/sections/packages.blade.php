@@ -2,13 +2,13 @@
   $packageGroups = [
       [
           'title' => 'Paket Wedding',
-          'description' => 'Dirancang untuk momen sakral Anda: alur terarah, dokumentasi elegan, dan cerita pernikahan yang utuh.',
+          'description' => '',
           'packages' => $weddingPackages ?? collect(),
           'empty_message' => 'Paket wedding akan segera hadir kembali. Hubungi kami untuk rekomendasi tercepat.',
       ],
       [
           'title' => 'Paket Non Wedding',
-          'description' => 'Fleksibel untuk engagement, wisuda, corporate, hingga event private dengan kualitas visual premium.',
+          'description' => '',
           'packages' => $nonWeddingPackages ?? collect(),
           'empty_message' => 'Paket non wedding sedang kami kurasi ulang. Tim kami siap bantu pilih opsi terbaik.',
       ],
