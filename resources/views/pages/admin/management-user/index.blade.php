@@ -28,11 +28,7 @@
     <div class="alert alert-danger mb-3" role="alert">{{ $errors->first('general') }}</div>
 @endif
 
-@include('pages.admin.partials.alerts', [
-    'alerts' => [
-        ['class' => 'alert-info', 'text' => 'Hanya Admin yang dapat mengelola akun internal. Role input dibatasi pada Admin dan Petugas.'],
-    ],
-])
+@include('pages.admin.partials.alerts', ['alerts' => []])
 
 <div class="row g-3 mb-3">
     <div class="col-12 col-md-6 col-xl-4">

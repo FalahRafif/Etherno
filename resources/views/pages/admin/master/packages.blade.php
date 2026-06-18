@@ -8,9 +8,7 @@
         ['label' => 'Daftar Booking', 'url' => panel_route('admin.bookings.list'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
-    $alerts = [
-        ['class' => 'alert-info', 'text' => 'Base price boleh ditampilkan di awal. Harga final baru muncul setelah DP verified dan pengecekan lokasi selesai.'],
-    ];
+    $alerts = [];
 
     $columns = ['Paket', 'Harga Dasar', 'Durasi', 'DP Wedding', 'DP Non-wedding', 'Keterangan', 'Status'];
     $rows = [

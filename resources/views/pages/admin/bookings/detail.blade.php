@@ -35,9 +35,7 @@
         ],
     };
 
-    $alerts = [
-        ['class' => 'alert-info', 'text' => 'Booking code: <strong>' . $caseId . '</strong>. Status: <strong>' . ($statusLabel ?? '-') . '</strong>.'],
-    ];
+    $alerts = [];
 
     $stats = $stats ?? [];
     $availableActions = $availableActions ?? [];
