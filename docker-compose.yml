@@ -1,0 +1,55 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: etherno-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8088}:80"
+    volumes:
+      - .:/var/www/html
+      - storage_data:/var/www/html/storage
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: "${DB_DATABASE:-etherno}"
+      DB_USERNAME: "${DB_USERNAME:-etherno}"
+      DB_PASSWORD: "${DB_PASSWORD:-secret}"
+      APP_URL: "${APP_URL:-http://localhost:8088}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - etherno
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: etherno-postgres
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT_EXPOSE:-5433}:5432"
+    environment:
+      POSTGRES_DB: "${DB_DATABASE:-etherno}"
+      POSTGRES_USER: "${DB_USERNAME:-etherno}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-secret}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-etherno} -d ${DB_DATABASE:-etherno}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - etherno
+
+volumes:
+  postgres_data:
+    driver: local
+  storage_data:
+    driver: local
+
+networks:
+  etherno:
+    driver: bridge
