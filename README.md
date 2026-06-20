@@ -770,6 +770,68 @@ Start local server:
 & "C:\laragon\bin\php\php-8.3.29-Win32-vs16-x64\php.exe" artisan serve
 ```
 
+## Docker Setup
+
+<!-- Updated: Tambah section dockerize untuk Laravel + PostgreSQL -->
+
+Project sudah didockerrize mengikuti pola yang sama dengan Todak-Attendance (single image PHP-FPM + Nginx + Supervisor), tetapi menggunakan PostgreSQL sebagai database.
+
+### Struktur File Docker
+
+- `Dockerfile`: image PHP 8.3 FPM Alpine + Nginx + Supervisor + ekstensi PostgreSQL (`pdo_pgsql`, `pgsql`) serta ekstensi yang dibutuhkan `barryvdh/laravel-dompdf` (`dom`, `xml`, `gd`, `mbstring`).
+- `docker-compose.yml`: dua service — `app` (Laravel) dan `postgres` (PostgreSQL 16 Alpine) dengan healthcheck.
+- `docker/entrypoint.sh`: bootstrap container — install composer deps jika belum ada, injeksi env DB dari environment Compose, generate APP_KEY, tunggu PostgreSQL via `pg_isready`, jalankan `artisan migrate`, dan symlink storage.
+- `docker/supervisord.conf`: menjalankan `php-fpm` dan `nginx` dalam satu container.
+- `docker/nginx/laravel.conf`: konfigurasi Nginx untuk Laravel (document root `public`, `client_max_body_size 30M` untuk upload bukti pembayaran).
+- `docker/php/php.ini`: default PHP ini (timezone `Asia/Jakarta`, upload 25M).
+- `docker/php/opcache.ini`: OPcache untuk performance.
+- `.dockerignore`: mengecualikan `vendor`, `node_modules`, `.env`, logs, dan file editor/IDE dari konteks build.
+- `.env.docker`: template variabel Compose (port expose, kredensial DB). Bisa di-rename atau di-override lewat shell env.
+
+### Port Allocation (Hindari Konflik)
+
+Karena host WSL juga menjalankan Todak-Attendance, port Etherno sengaja dijauhkan:
+
+- App: host `8088` -> container `80` (Todak memakai `80`).
+- PostgreSQL: host `5433` -> container `5432` (hindari konflik dengan postgres lokal lain).
+
+Jika ingin mengubah, set `APP_PORT` dan `DB_PORT_EXPOSE` di `.env.docker` atau shell sebelum `docker compose up`.
+
+### Menjalankan
+
+```bash
+# Build & start (pertama kali)
+docker compose up -d --build
+
+# Lihat log
+docker compose logs -f app
+
+# Jalankan artisan di container
+docker compose exec app php artisan migrate --force
+docker compose exec app php artisan optimize:clear
+
+# Stop
+docker compose down
+
+# Reset total (termasuk data DB)
+docker compose down -v
+```
+
+Akses aplikasi di `http://localhost:8088`.
+
+### Catatan Database
+
+- Default: database `etherno`, user `etherno`, password `secret`. Ubah lewat env `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` (lihat `.env.docker`).
+- Entrypoint menjalankan `php artisan migrate --force` otomatis (migrations di-load per versi via `AppServiceProvider`).
+- Migration versi `1.1.8` (PostgreSQL performance indexes) hanya berjalan pada driver `pgsql`.
+- Untuk production, set `APP_ENV=production`, ganti kredensial DB, dan gunakan `APP_URL` domain final.
+
+### Catatan Kompatibilitas Dengan Todak-Attendance
+
+- Container dan network terpisah: Etherno memakai network `etherno`, Todak memakai `klikabsen`. Keduanya bisa berjalan bersamaan.
+- Container name: `etherno-app` dan `etherno-postgres` (Todak: `klikabsen-app` dan `klikabsen-mysql`).
+- Volume terpisah: `etherno_postgres_data` dan `etherno_storage_data`.
+
 ## Agent Collaboration Rules
 
 Untuk agent AI berikutnya:
@@ -782,4 +844,4 @@ Untuk agent AI berikutnya:
 - Jangan rename reference `group_id`/`code` existing tanpa migration dan koordinasi, terutama key typo yang sudah masuk data.
 - Jangan hardcode link internal di Blade. Gunakan `panel_route()` untuk panel route.
 - Jalankan minimal `php -l` untuk file PHP yang diedit dan `artisan optimize:clear` setelah mengubah config/routes/provider.
-- Jika mengubah arsitektur, update README ini agar session berikutnya tidak kehilangan konteks.
+- Jika mengubah arsitektur, update README ini agar session berikutnya tidak kehilangan konteks. 
