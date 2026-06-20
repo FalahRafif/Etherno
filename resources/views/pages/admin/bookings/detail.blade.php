@@ -249,7 +249,7 @@
 
                  @if($showBillingTab)
                  <div class="tab-pane fade" id="pane_billing_payment" role="tabpanel" aria-labelledby="tab_billing_payment">
-                     @if($billing)o
+                     @if($billing)
 
                          @php
                              $totalAmount = (float) ($billing['total_amount'] ?? 0);
@@ -260,7 +260,7 @@
                              $unallocatedAmount = (float) ($billing['unallocated_amount'] ?? 0);
                          @endphp
 
-                         <div class="alert alert-light border border-primary-subtle mb-3">
+                         {{-- <div class="alert alert-light border border-primary-subtle mb-3">
                              <p class="fw-semibold mb-2">Panduan Singkat Billing</p>
                              <div class="small text-muted mb-1">
                                  <strong>Billing Summary</strong> menampilkan total keseluruhan biaya customer.
@@ -276,7 +276,7 @@
                                      <i class="ri-information-line me-1"></i>Terdapat <strong>Rp {{ number_format($unallocatedAmount, 0, ',', '.') }}</strong> yang belum dialokasikan ke installment.
                                  </div>
                              @endif
-                         </div>
+                         </div> --}}
 
                          <div class="row g-2 mb-3">
                              <div class="col-12 col-md-4">
