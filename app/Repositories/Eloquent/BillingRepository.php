@@ -11,4 +11,11 @@ class BillingRepository extends BaseRepository implements BillingRepositoryInter
     {
         parent::__construct($model);
     }
+
+    public function findByBooking(int $bookingId): ?Billing
+    {
+        return $this->query(true)
+            ->where('booking_id', $bookingId)
+            ->first();
+    }
 }

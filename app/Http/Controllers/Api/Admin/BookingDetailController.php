@@ -30,7 +30,7 @@ class BookingDetailController extends Controller
         $booking = $this->bookingDetailService->approveBooking($booking, $operatorId);
 
         return response()->json([
-            'message' => 'Booking berhasil di-approve. Billing DP telah dibuat.',
+            'message' => 'Booking berhasil di-approve. Silakan inisialisasi billing dan tambahkan add-on jika diperlukan, lalu generate DP.',
             'status_code' => $booking->status?->code,
         ]);
     }
@@ -279,11 +279,26 @@ class BookingDetailController extends Controller
         $operatorId = auth()->id();
 
         try {
-            $updatedBooking = $this->bookingDetailService->generateInstallment(
-                $booking,
-                (int) $operatorId,
-                $request->payload()
-            );
+            $payload = $request->payload();
+            $installmentTypeCode = strtoupper(trim((string) ($payload['installment_type_code'] ?? '')));
+
+            if ($installmentTypeCode === 'INS_DP') {
+                $updatedBooking = $this->bookingDetailService->generateDpInstallment(
+                    $booking,
+                    (int) $operatorId
+                );
+            } elseif ($installmentTypeCode === 'INS_FINAL') {
+                $updatedBooking = $this->bookingDetailService->generateFinalInstallment(
+                    $booking,
+                    (int) $operatorId
+                );
+            } else {
+                $updatedBooking = $this->bookingDetailService->generateInstallment(
+                    $booking,
+                    (int) $operatorId,
+                    $payload
+                );
+            }
         } catch (RuntimeException $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),

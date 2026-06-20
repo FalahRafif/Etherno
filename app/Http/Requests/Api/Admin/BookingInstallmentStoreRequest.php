@@ -14,10 +14,13 @@ class BookingInstallmentStoreRequest extends FormRequest
 
     public function rules(): array
     {
+        $typeCode = strtoupper(trim((string) ($this->input('installment_type_code') ?? '')));
+        $isManual = !in_array($typeCode, ['INS_DP', 'INS_FINAL'], true);
+
         return [
             'installment_type_code' => ['required', 'string', Rule::in(['INS_DP', 'INS_PARTIAL', 'INS_FINAL'])],
-            'amount' => ['required', 'numeric', 'gt:0'],
-            'due_date' => ['required', 'date'],
+            'amount' => [$isManual ? 'required' : 'sometimes', 'numeric', 'gt:0'],
+            'due_date' => [$isManual ? 'required' : 'sometimes', 'date'],
         ];
     }
 

@@ -247,33 +247,39 @@
                     @endif
                 </div>
 
-                @if($showBillingTab)
-                <div class="tab-pane fade" id="pane_billing_payment" role="tabpanel" aria-labelledby="tab_billing_payment">
-                    @if($billing)
-                        @php
-                            $totalAmount = (float) ($billing['total_amount'] ?? 0);
-                            $totalPaid = (float) ($billing['total_paid'] ?? 0);
-                            $remainingAmount = (float) ($billing['remaining_amount'] ?? 0);
-                            $totalDetailAmount = (float) ($billing['total_detail_amount'] ?? 0);
-                            $totalInstallmentAmount = (float) ($billing['total_installment_amount'] ?? 0);
-                            $unallocatedAmount = (float) ($billing['unallocated_amount'] ?? 0);
-                        @endphp
+                 @if($showBillingTab)
+                 <div class="tab-pane fade" id="pane_billing_payment" role="tabpanel" aria-labelledby="tab_billing_payment">
+                     @if($billing)o
 
-                        <div class="alert alert-light border border-primary-subtle mb-3">
-                            <p class="fw-semibold mb-2">Panduan Singkat Billing</p>
-                            <div class="small text-muted mb-1">
-                                <strong>Billing Summary</strong> menampilkan total keseluruhan biaya customer.
-                            </div>
-                            <div class="small text-muted mb-1">
-                                <strong>Billing Details</strong> berisi rincian komponen biaya seperti paket dasar dan add-on.
-                            </div>
-                            <div class="small text-muted mb-0">
-                                <strong>Billing Installments</strong> adalah tagihan per termin yang dikirim ke customer dan bisa ditambah saat ada komponen biaya baru.
-                            </div>
-                        </div>
+                         @php
+                             $totalAmount = (float) ($billing['total_amount'] ?? 0);
+                             $totalPaid = (float) ($billing['total_paid'] ?? 0);
+                             $remainingAmount = (float) ($billing['remaining_amount'] ?? 0);
+                             $totalDetailAmount = (float) ($billing['total_detail_amount'] ?? 0);
+                             $totalInstallmentAmount = (float) ($billing['total_installment_amount'] ?? 0);
+                             $unallocatedAmount = (float) ($billing['unallocated_amount'] ?? 0);
+                         @endphp
 
-                        <div class="row g-2 mb-3">
-                            <div class="col-12 col-md-4">
+                         <div class="alert alert-light border border-primary-subtle mb-3">
+                             <p class="fw-semibold mb-2">Panduan Singkat Billing</p>
+                             <div class="small text-muted mb-1">
+                                 <strong>Billing Summary</strong> menampilkan total keseluruhan biaya customer.
+                             </div>
+                             <div class="small text-muted mb-1">
+                                 <strong>Billing Details</strong> berisi rincian komponen biaya seperti paket dasar dan add-on.
+                             </div>
+                             <div class="small text-muted mb-0">
+                                 <strong>Billing Installments</strong> adalah tagihan per termin yang dikirim ke customer (DP, Partial, Pelunasan).
+                             </div>
+                             @if($unallocatedAmount > 0)
+                                 <div class="small text-warning mt-2">
+                                     <i class="ri-information-line me-1"></i>Terdapat <strong>Rp {{ number_format($unallocatedAmount, 0, ',', '.') }}</strong> yang belum dialokasikan ke installment.
+                                 </div>
+                             @endif
+                         </div>
+
+                         <div class="row g-2 mb-3">
+                             <div class="col-12 col-md-4">
                                 <div class="border rounded p-2 h-100">
                                     <p class="text-muted mb-1 small">Total Billing</p>
                                     <p class="fw-semibold mb-0">Rp {{ number_format($totalAmount, 0, ',', '.') }}</p>
@@ -322,18 +328,17 @@
                                             <i class="ri-add-circle-line me-1"></i> Tambah Billing Detail
                                         </button>
                                     @endif
-                                    @if(!$dpVerified)
-                                        <span class="badge bg-warning-transparent text-warning py-2 px-3">
-                                            <i class="ri-lock-line me-1"></i> Generate tagihan tersedia setelah DP verified
-                                        </span>
-                                    @else
-                                        <button type="button"
-                                            class="btn btn-outline-success btn-sm"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#modal_generate_installment"
-                                            @if(!$canGenerateInstallment) disabled @endif>
-                                            <i class="ri-file-list-3-line me-1"></i> Generate Tagihan
-                                        </button>
+                                    @if($canGenerateInstallment)
+                                        @if(in_array('generate_dp', $availableActions))
+                                            <button type="button" class="btn btn-success btn-sm" id="btn_generate_dp" data-booking-id="{{ $booking->id }}" data-url="{{ route('api.admin.bookings.installments.store', $booking->id) }}">
+                                                <i class="ri-money-dollar-circle-line me-1"></i> Generate DP
+                                            </button>
+                                        @endif
+                                        @if(in_array('generate_final', $availableActions))
+                                            <button type="button" class="btn btn-success btn-sm" id="btn_generate_final" data-booking-id="{{ $booking->id }}" data-url="{{ route('api.admin.bookings.installments.store', $booking->id) }}">
+                                                <i class="ri-money-dollar-circle-line me-1"></i> Generate Pelunasan
+                                            </button>
+                                        @endif
                                     @endif
                                 </div>
                             @endif
@@ -378,7 +383,7 @@
                                             </tr>
                                             <tr>
                                                 <td class="text-muted ps-0">Total Tagihan Terjadwal</td>
-                                                <td>Rp {{ number_format($totalInstallmentAmount, 0, ',', '.') }}</td>
+                                                <td class="{{ $totalInstallmentAmount > 0 ? 'text-warning' : '' }}">Rp {{ number_format($totalInstallmentAmount, 0, ',', '.') }}</td>
                                             </tr>
                                             <tr>
                                                 <td class="text-muted ps-0">Sisa Belum Dijadwalkan</td>
@@ -578,7 +583,17 @@
                             </div>
                         </div>
                     @else
-                        <p class="text-muted mb-0">Billing akan otomatis tersedia setelah booking masuk status <strong>Approved - Waiting DP</strong>.</p>
+                        <div class="alert alert-info alert-dismissible fade show mb-3" role="alert">
+                            <div class="d-flex align-items-start gap-3">
+                                <div>
+                                    <i class="ri-information-line fs-4"></i>
+                                </div>
+                                <div>
+                                    <p class="fw-bold mb-1">Belum Ada Billing</p>
+                                    <p class="mb-0 small text-muted">Billing belum tersedia untuk booking ini. Silakan inisialisasi billing terlebih dahulu.</p>
+                                </div>
+                            </div>
+                        </div>
                     @endif
                 </div>
                 @endif
@@ -606,6 +621,11 @@
                                 <i class="ri-close-circle-line me-1"></i> Reject Request Booking
                             </button>
                         @endif
+                        @if(in_array('generate_dp', $availableActions))
+                            <button type="button" class="btn btn-success" id="btn_generate_dp" data-booking-id="{{ $booking->id }}" data-url="{{ route('api.admin.bookings.installments.store', $booking->id) }}">
+                                <i class="ri-money-dollar-circle-line me-1"></i> Generate DP Installment
+                            </button>
+                        @endif
                         @if(in_array('upload_dp', $availableActions))
                             <button type="button" class="btn btn-primary" id="btn_upload_dp" data-bs-toggle="modal" data-bs-target="#modal_upload_dp">
                                 <i class="ri-upload-line me-1"></i> Upload Manual DP
@@ -619,6 +639,11 @@
                         @if(in_array('reject_manual', $availableActions))
                             <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modal_reject_manual">
                                 <i class="ri-close-circle-line me-1"></i> Reject Booking
+                            </button>
+                        @endif
+                        @if(in_array('generate_final', $availableActions))
+                            <button type="button" class="btn btn-success" id="btn_generate_final" data-booking-id="{{ $booking->id }}" data-url="{{ route('api.admin.bookings.installments.store', $booking->id) }}">
+                                <i class="ri-money-dollar-circle-line me-1"></i> Generate Pelunasan
                             </button>
                         @endif
                         @if(in_array('upload_final', $availableActions))
@@ -1229,6 +1254,42 @@ document.addEventListener('DOMContentLoaded', function() {
     handleAction(verifyDpBtn, 'Verifikasi DP? Pastikan pembayaran DP sudah diterima. Status akan berubah ke Waiting Final Payment.');
     handleAction(verifyFinalBtn, 'Verifikasi pelunasan? Pastikan semua pembayaran sudah diterima. Status akan berubah ke Confirmed.');
     handleAction(completeBtn, 'Selesaikan booking? Ini menandakan acara sudah dilaksanakan.');
+
+    function bindGenerateButton(selector, typeCode, confirmMsg) {
+        var btns = document.querySelectorAll(selector);
+        if (!btns.length) return;
+        btns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                if (!confirm(confirmMsg)) return;
+                var url = btn.dataset.url;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memproses...';
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ installment_type_code: typeCode })
+                })
+                .then(function(res) { return safeParseJson(res); })
+                .then(function(data) {
+                    alert(data.message || 'Berhasil');
+                    window.location.reload();
+                })
+                .catch(function(err) {
+                    alert('Terjadi kesalahan. Silakan coba lagi.');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ri-money-dollar-circle-line me-1"></i> ' + (typeCode === 'INS_DP' ? 'Generate DP' : 'Generate Pelunasan');
+                });
+            });
+        });
+    }
+    bindGenerateButton('#btn_generate_dp', 'INS_DP', 'Generate tagihan DP sekarang? Nominal DP akan dihitung otomatis dari total billing.');
+    bindGenerateButton('#btn_generate_final', 'INS_FINAL', 'Generate tagihan pelunasan sekarang? Nominal pelunasan akan dihitung otomatis dari sisa billing.');
 
     document.querySelectorAll('.btn-approve-payment').forEach(function(btn) {
         btn.addEventListener('click', function() {
