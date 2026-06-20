@@ -10,12 +10,7 @@
         ['label' => 'Calendar & Slots', 'url' => panel_route('admin.calendar'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
-    $alerts = [
-        [
-            'class' => 'alert-warning',
-            'text' => 'Reminder: slot hanya dianggap terblokir jika status booking sudah active/paid setelah DP terverifikasi.',
-        ],
-    ];
+    $alerts = [];
 
     $stats = $stats ?? [];
     $columns = $columns ?? ['Kode', 'Customer', 'Tanggal Acara', 'Status Booking', 'Status Payment', 'Tindak Lanjut'];

@@ -28,11 +28,7 @@
     <div class="alert alert-danger mb-3" role="alert">{{ $errors->first('general') }}</div>
 @endif
 
-@include('pages.admin.partials.alerts', [
-    'alerts' => [
-        ['class' => 'alert-info', 'text' => 'Contoh penggunaan: Provinsi Jawa Barat = Tambahan Sedang, kota Depok = Tambahan Ringan, dan kelurahan spesifik untuk aturan yang lebih detail.'],
-    ],
-])
+@include('pages.admin.partials.alerts', ['alerts' => []])
 
 <div class="row g-3 mb-3">
     <div class="col-12 col-md-6 col-xl-3">

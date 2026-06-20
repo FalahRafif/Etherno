@@ -3,7 +3,6 @@
 @section('content')
 <section class="section-block container booking-section">
   @php
-    $requestCode = trim((string) session('booking_request_code', '-'));
     $bookingCaseId = trim((string) session('booking_case_id', '-'));
     $customerName = trim((string) session('booking_customer_name', 'Customer'));
     $proofDownloadUrl = trim((string) session('booking_proof_download_url', ''));
@@ -22,8 +21,7 @@
       </div>
 
       <div class="availability-summary mt-3">
-        <strong>Case ID:</strong> {{ $bookingCaseId }}<br>
-        <strong>Kode Request:</strong> {{ $requestCode }}
+        <strong>Case ID:</strong> {{ $bookingCaseId }}
       </div>
 
       <div class="booking-form-grid booking-support-actions">

@@ -23,11 +23,7 @@
     <div class="alert alert-danger mb-3" role="alert">{{ $errors->first('general') }}</div>
 @endif
 
-@include('pages.admin.partials.alerts', [
-    'alerts' => [
-        ['class' => 'alert-info', 'text' => 'Persentase DP digunakan untuk menghitung nominal down payment. Wedding = 15%, Non-Wedding = 10%.'],
-    ],
-])
+@include('pages.admin.partials.alerts', ['alerts' => []])
 
 <div class="card custom-card mb-0">
     <div class="card-header">

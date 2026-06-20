@@ -252,11 +252,34 @@
             var wrap = document.getElementById("customer_actions_list");
             if (!wrap) return;
             wrap.innerHTML = "";
+
+            var statusCode = currentPayload && currentPayload.status ? String(currentPayload.status.code || "") : "";
+            var isApprovedWaitingFinal = statusCode === "BS_APPROVED_WAITING_FINAL_PAYMENT";
+
+            if (isApprovedWaitingFinal) {
+                var statusInfoDiv = document.createElement("div");
+                statusInfoDiv.className = "estimate-box mb-3";
+                statusInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-information-line me-1"></i><strong>Status: APPROVED WAITING FINAL PAYMENT</strong></p><p class="estimate-note mb-0">DP Anda telah diverifikasi. Silakan hubungi admin untuk informasi pelunasan dan konfirmasi tanggal acara.</p>';
+                wrap.appendChild(statusInfoDiv);
+
+                if (waPhone && waTemplates && waTemplates.support) {
+                    var waBtn = document.createElement("a");
+                    waBtn.className = "cta mb-2";
+                    waBtn.href = buildWhatsappUrl(waPhone, waTemplates.support);
+                    waBtn.target = "_blank";
+                    waBtn.rel = "noopener";
+                    waBtn.innerHTML = '<i class="ri-whatsapp-line me-1"></i> Hubungi via WhatsApp';
+                    wrap.appendChild(waBtn);
+                }
+            }
+
             if (!Array.isArray(actions) || actions.length === 0) {
-                var empty = document.createElement("p");
-                empty.className = "booking-disclaimer";
-                empty.textContent = "Tidak ada aksi yang tersedia saat ini.";
-                wrap.appendChild(empty);
+                if (!isApprovedWaitingFinal) {
+                    var empty = document.createElement("p");
+                    empty.className = "booking-disclaimer";
+                    empty.textContent = "Tidak ada aksi yang tersedia saat ini.";
+                    wrap.appendChild(empty);
+                }
                 return;
             }
 
@@ -443,7 +466,11 @@
                 statusState.classList.add(tone);
             }
             if (statusStateLabel) statusStateLabel.textContent = "Status: " + String(status.label || "-");
-            if (statusStateSubtitle) statusStateSubtitle.textContent = "Diajukan pada " + String(eventData.submitted_at || "-");
+            var subtitleText = "Diajukan pada " + String(eventData.submitted_at || "-");
+            if (String(status.code || "") === "BS_APPROVED_WAITING_FINAL_PAYMENT") {
+                subtitleText += ". DP Anda telah diverifikasi. Silakan hubungi admin untuk informasi pelunasan.";
+            }
+            if (statusStateSubtitle) statusStateSubtitle.textContent = subtitleText;
 
             setText("status_case_id", payload.booking_case_id);
             setText("status_request_code", payload.request_code);

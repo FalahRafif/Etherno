@@ -68,7 +68,7 @@ class BookingDetailService
             'billing' => $billingPayload,
             'billingTools' => $this->buildBillingTools($booking, $statusCode, $billingPayload),
             'stats' => $this->buildStats($booking, $statusCode),
-            'availableActions' => $this->resolveAvailableActions($statusCode, $booking),
+            'availableActions' => $this->resolveAvailableActions($statusCode, $booking, $billingPayload),
         ];
     }
 
@@ -87,9 +87,10 @@ class BookingDetailService
             'booking_id' => $booking->id,
             'status_id' => $approvedRef->id,
             'operator_id' => $operatorId,
+            'description' => 'Booking disetujui. Billing diinisialisasi. Silakan tambahkan add-on jika diperlukan, lalu generate DP.',
         ]);
 
-        $this->createBillingOnApproval($booking);
+        $this->initializeBilling($booking->id, $operatorId);
 
         return $booking->fresh([
             'customer', 'package.packageType', 'package.benefits', 'status',
@@ -816,17 +817,19 @@ class BookingDetailService
         return $booking->fresh($this->detailRelations());
     }
 
-    private function createBillingOnApproval(Booking $booking): void
+    public function initializeBilling(int $bookingId, int $operatorId): Billing
     {
+        $booking = $this->bookingRepository->findOrFail($bookingId);
         $package = $booking->package;
         $basePrice = (float) ($package->price ?? 0);
-        $packageTypeCode = strtoupper(trim((string) ($package->packageType?->code ?? '')));
-        $dpPercentage = $this->getDpPercentage($packageTypeCode);
-        $dpDueDays = $this->getDpDueDays();
+
+        $existingBilling = $this->billingRepository->findByBooking($booking->id);
+        if ($existingBilling) {
+            throw new RuntimeException('Billing untuk booking ini sudah ada.');
+        }
 
         $unpaidRef = $this->findReference('billing_status', 'BLS_UNPAID');
         $baseTypeRef = $this->findReference('billing_type', 'BLT_BASE');
-        $dpTypeRef = $this->findReference('intallment_type', 'INS_DP');
 
         $billing = $this->billingRepository->create([
             'uuid' => Str::uuid()->toString(),
@@ -846,10 +849,54 @@ class BookingDetailService
             'amount' => $basePrice,
         ]);
 
-        $dpAmount = round($basePrice * ($dpPercentage / 100), 2);
+        $this->bookingHistoryRepository->create([
+            'uuid' => Str::uuid()->toString(),
+            'booking_id' => $booking->id,
+            'status_id' => $booking->status_id,
+            'operator_id' => $operatorId,
+            'description' => 'Billing diinisialisasi. Silakan tambahkan add-on jika diperlukan, lalu generate DP.',
+        ]);
+
+        return $billing->fresh(['details.billingType', 'status']);
+    }
+
+    public function generateDpInstallment(int $bookingId, int $operatorId): Billing
+    {
+        $booking = $this->bookingRepository->findOrFail($bookingId);
+        $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+
+        if ($statusCode !== 'BS_APPROVED_WAITING_DP') {
+            throw new RuntimeException('Generate DP hanya untuk status APPROVED WAITING DP.');
+        }
+
+        $billing = $this->billingRepository->findByBooking($booking->id);
+        if (!$billing) {
+            throw new RuntimeException('Billing belum ada. Silakan inisialisasi billing terlebih dahulu.');
+        }
+
+        $dpInstallments = collect($billing->installments ?? [])->filter(function ($i) {
+            return strtoupper(trim((string) ($i->installmentType?->code ?? ''))) === 'INS_DP';
+        });
+
+        if ($dpInstallments->count() > 0) {
+            throw new RuntimeException('DP installment sudah ada.');
+        }
+
+        $packageTypeCode = strtoupper(trim((string) ($booking->package?->packageType?->code ?? '')));
+        $dpPercentage = $this->getDpPercentage($packageTypeCode);
+        $dpDueDays = $this->getDpDueDays();
+
+        $unpaidRef = $this->findReference('billing_status', 'BLS_UNPAID');
+        $dpTypeRef = $this->findReference('intallment_type', 'INS_DP');
+
+        $totalBillingDetails = (float) $this->billingDetailRepository->query(true)
+            ->where('billing_id', $billing->id)
+            ->sum('amount');
+
+        $dpAmount = round($totalBillingDetails * ($dpPercentage / 100), 2);
         $dueDate = Carbon::now()->addDays($dpDueDays)->toDateString();
 
-        $this->billingInstallmentRepository->create([
+        $installment = $this->billingInstallmentRepository->create([
             'uuid' => Str::uuid()->toString(),
             'billing_id' => $billing->id,
             'installment_type' => $dpTypeRef->id,
@@ -858,6 +905,104 @@ class BookingDetailService
             'due_date' => $dueDate,
             'paid_amount' => 0,
         ]);
+
+        $this->bookingHistoryRepository->create([
+            'uuid' => Str::uuid()->toString(),
+            'booking_id' => $booking->id,
+            'status_id' => $booking->status_id,
+            'operator_id' => $operatorId,
+            'description' => 'DP installment dibuat. Nominal: ' . $this->formatRupiah($dpAmount) . '. Due date: ' . $dueDate . '.',
+        ]);
+
+        return $billing->fresh(['details.billingType', 'installments.installmentType', 'installments.status', 'status']);
+    }
+
+    public function generateFinalInstallment(int $bookingId, int $operatorId): Billing
+    {
+        $booking = $this->bookingRepository->findOrFail($bookingId);
+        $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+
+        if ($statusCode !== 'BS_APPROVED_WAITING_FINAL_PAYMENT') {
+            throw new RuntimeException('Generate pelunasan hanya untuk status APPROVED WAITING FINAL PAYMENT.');
+        }
+
+        $billing = $this->billingRepository->findByBooking($booking->id);
+        if (!$billing) {
+            throw new RuntimeException('Billing tidak ditemukan.');
+        }
+
+        $dpInstallments = collect($billing->installments ?? [])->filter(function ($i) {
+            return strtoupper(trim((string) ($i->installmentType?->code ?? ''))) === 'INS_DP';
+        });
+
+        if ($dpInstallments->isEmpty()) {
+            throw new RuntimeException('DP installment belum ada.');
+        }
+
+        $dpVerified = $dpInstallments->first(function ($i) {
+            return (float) $i->paid_amount >= (float) $i->amount;
+        });
+
+        if (!$dpVerified) {
+            throw new RuntimeException('DP belum terverifikasi lunas.');
+        }
+
+        $finalInstallments = collect($billing->installments ?? [])->filter(function ($i) {
+            $code = strtoupper(trim((string) ($i->installmentType?->code ?? '')));
+            return $code === 'INS_FINAL' || $code === 'INS_PARTIAL';
+        });
+
+        if ($finalInstallments->count() > 0) {
+            throw new RuntimeException('Installment pelunasan sudah ada.');
+        }
+
+        $unpaidRef = $this->findReference('billing_status', 'BLS_UNPAID');
+        $finalTypeRef = $this->findReference('intallment_type', 'INS_FINAL');
+
+        $totalBillingDetails = (float) $this->billingDetailRepository->query(true)
+            ->where('billing_id', $billing->id)
+            ->sum('amount');
+
+        $dpPaid = (float) $dpInstallments->sum('paid_amount');
+        $remainingAmount = $totalBillingDetails - $dpPaid;
+
+        if ($remainingAmount <= 0) {
+            throw new RuntimeException('Tidak ada sisa tagihan untuk pelunasan.');
+        }
+
+        $finalDueDays = $this->getFinalDueDays();
+        $dueDate = Carbon::parse($booking->event_date)->subDays($finalDueDays)->toDateString();
+
+        $installment = $this->billingInstallmentRepository->create([
+            'uuid' => Str::uuid()->toString(),
+            'billing_id' => $billing->id,
+            'installment_type' => $finalTypeRef->id,
+            'status_id' => $unpaidRef->id,
+            'amount' => $remainingAmount,
+            'due_date' => $dueDate,
+            'paid_amount' => 0,
+        ]);
+
+        $this->bookingHistoryRepository->create([
+            'uuid' => Str::uuid()->toString(),
+            'booking_id' => $booking->id,
+            'status_id' => $booking->status_id,
+            'operator_id' => $operatorId,
+            'description' => 'Installment pelunasan dibuat. Nominal: ' . $this->formatRupiah($remainingAmount) . '. Due date: H-' . $finalDueDays . ' (' . $dueDate . ').',
+        ]);
+
+        return $billing->fresh(['details.billingType', 'installments.installmentType', 'installments.status', 'status']);
+    }
+
+    private function getFinalDueDays(): int
+    {
+        $setting = $this->settingRepository->findByGroupAndCode('package_date_rule', 'PKDR_MAX_RECHEDULE_DATE');
+        return (int) ($setting?->value ?? 14);
+    }
+
+    private function createBillingOnApproval(Booking $booking): void
+    {
+        $this->initializeBilling($booking->id, $booking->operator_id ?? 0);
     }
 
     private function autoTransitionBookingStatus(Booking $booking, string $currentStatusCode, $billing): void
@@ -1344,12 +1489,20 @@ class BookingDetailService
         }
 
         $installmentTypes = [
+            ['code' => 'INS_DP', 'label' => 'DP'],
             ['code' => 'INS_PARTIAL', 'label' => 'Partial'],
-            ['code' => 'INS_FINAL', 'label' => 'Final'],
+            ['code' => 'INS_FINAL', 'label' => 'Pelunasan'],
         ];
 
         if ($statusCode === 'BS_APPROVED_WAITING_DP') {
-            $installmentTypes = [];
+            $installmentTypes = [['code' => 'INS_DP', 'label' => 'DP']];
+        }
+
+        if ($statusCode === 'BS_APPROVED_WAITING_FINAL_PAYMENT') {
+            $installmentTypes = [
+                ['code' => 'INS_PARTIAL', 'label' => 'Partial'],
+                ['code' => 'INS_FINAL', 'label' => 'Pelunasan'],
+            ];
         }
 
         $dpInstallments = collect($billing['installments'] ?? [])->filter(function ($i) {
@@ -1367,6 +1520,7 @@ class BookingDetailService
             })->values()->all(),
             'default_due_date' => $defaultDueDate,
             'billing_types' => [
+                ['code' => 'BLT_BASE', 'label' => 'Base Package'],
                 ['code' => 'BLT_ADDON', 'label' => 'Add-on'],
             ],
             'installment_types' => $installmentTypes,
@@ -1375,21 +1529,35 @@ class BookingDetailService
         ];
     }
 
-    private function resolveAvailableActions(string $statusCode, Booking $booking): array
+    private function resolveAvailableActions(string $statusCode, Booking $booking, ?array $billingPayload = null): array
     {
         if ($statusCode === 'BS_FORCE_MAJEURE') {
             $isReschedule = !empty($booking->force_majeure_date);
             return $isReschedule ? [] : ['upload_refund_proof'];
         }
 
-        return match ($statusCode) {
+        $actions = match ($statusCode) {
             'BS_WAITING_APPROVAL' => ['approve', 'reject'],
-            'BS_APPROVED_WAITING_DP' => ['upload_dp', 'verify_dp', 'reject_manual'],
-            'BS_APPROVED_WAITING_FINAL_PAYMENT' => ['upload_final', 'verify_final', 'cancel_booking'],
+            'BS_APPROVED_WAITING_DP' => ['generate_dp', 'upload_dp', 'verify_dp', 'reject_manual'],
+            'BS_APPROVED_WAITING_FINAL_PAYMENT' => ['generate_final', 'upload_final', 'verify_final', 'cancel_booking'],
             'BS_CONFIRMED' => ['complete_booking', 'force_majeure'],
             'BS_REFUND' => [],
             default => [],
         };
+
+        $installments = collect($billingPayload['installments'] ?? []);
+        $hasDpInstallment = $installments->contains(fn($i) => strtoupper(trim((string) ($i['type_code'] ?? ''))) === 'INS_DP');
+        $hasFinalInstallment = $installments->contains(fn($i) => strtoupper(trim((string) ($i['type_code'] ?? ''))) === 'INS_FINAL');
+
+        if ($hasDpInstallment) {
+            $actions = array_values(array_filter($actions, fn($a) => $a !== 'generate_dp'));
+        }
+
+        if ($hasFinalInstallment) {
+            $actions = array_values(array_filter($actions, fn($a) => $a !== 'generate_final'));
+        }
+
+        return $actions;
     }
 
     private function getDpPercentage(string $packageTypeCode): int

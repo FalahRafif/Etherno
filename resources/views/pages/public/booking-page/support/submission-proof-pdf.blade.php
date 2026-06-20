@@ -298,10 +298,6 @@
                 <div class="pdf-meta-item-value">{{ $booking_case_id }}</div>
             </div>
             <div class="pdf-meta-item">
-                <div class="pdf-meta-item-label">Kode Request</div>
-                <div class="pdf-meta-item-value">{{ $request_code }}</div>
-            </div>
-            <div class="pdf-meta-item">
                 <div class="pdf-meta-item-label">Waktu Pengajuan</div>
                 <div class="pdf-meta-item-value">{{ $submitted_at_label }}</div>
             </div>
