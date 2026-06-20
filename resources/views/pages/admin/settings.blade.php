@@ -9,9 +9,7 @@
         ['label' => 'Verifikasi Final', 'url' => panel_route('admin.bookings.list', ['status' => 'BS_APPROVED_WAITING_FINAL_PAYMENT']), 'class' => 'btn btn-primary btn-sm'],
     ];
 
-    $alerts = [
-        ['class' => 'alert-info', 'text' => 'Halaman ini menampilkan konfigurasi operasional aktif. Untuk mengubah nilai, gunakan halaman kelola masing-masing group.'],
-    ];
+    $alerts = [];
 
     $columns = $columns ?? ['Kategori', 'Item', 'Nilai', 'Tipe Paket', 'Kode'];
     $rows = $rows ?? [];

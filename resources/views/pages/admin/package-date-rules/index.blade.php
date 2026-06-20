@@ -23,11 +23,7 @@
     <div class="alert alert-danger mb-3" role="alert">{{ $errors->first('general') }}</div>
 @endif
 
-@include('pages.admin.partials.alerts', [
-    'alerts' => [
-        ['class' => 'alert-info', 'text' => 'H+X = X hari setelah approval/paket dipilih. H-X = X hari sebelum tanggal acara booking.'],
-    ],
-])
+@include('pages.admin.partials.alerts', ['alerts' => []])
 
 <div class="card custom-card mb-0">
     <div class="card-header">

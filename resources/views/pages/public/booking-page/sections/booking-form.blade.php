@@ -69,7 +69,7 @@
         <p class="booking-estimate-value" id="estimate_package_name">Pilih tipe paket dan paket untuk melihat perkiraan biaya.</p>
         <p class="booking-disclaimer mt-1 mb-0" id="estimate_package_type">-</p>
         <p class="booking-disclaimer mt-1 mb-0" id="estimate_package_price">Harga paket: -</p>
-        <p class="booking-disclaimer mt-1 mb-0" id="estimate_package_address">Alamat paket: -</p>
+        {{-- <p class="booking-disclaimer mt-1 mb-0" id="estimate_package_address">Alamat paket: -</p> --}}
         <ul class="booking-estimate-benefits" id="estimate_package_benefits"></ul>
       </div>
 

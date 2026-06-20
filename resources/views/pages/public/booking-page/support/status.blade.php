@@ -13,9 +13,9 @@
       <h3>Cari Data Booking</h3>
       <div class="booking-form-grid">
         <div class="form-field form-field-full">
-          <label class="form-label" for="booking_code">Kode Booking / Case ID / Kode Request</label>
-          <input class="form-input" type="text" id="booking_code" name="booking_code" placeholder="Contoh: ETH-20260528-00001 atau ETH-REQ-2026-000001" required>
-          <p class="booking-disclaimer mt-2 mb-0">Jika Anda booking lewat form, gunakan <strong>Case ID</strong> atau <strong>Kode Request</strong> dari halaman sukses booking.</p>
+          <label class="form-label" for="booking_code">Kode Booking / Case ID</label>
+          <input class="form-input" type="text" id="booking_code" name="booking_code" placeholder="Contoh: ETH-20260528-00001" required>
+          <p class="booking-disclaimer mt-2 mb-0">Gunakan <strong>Case ID</strong> dari halaman sukses booking.</p>
         </div>
       </div>
       <p class="booking-disclaimer text-danger mb-0" id="booking_status_lookup_error" hidden></p>
@@ -41,10 +41,6 @@
             <div class="booking-status-item">
               <p class="booking-status-key">Case ID</p>
               <p class="booking-status-value" id="status_case_id">-</p>
-            </div>
-            <div class="booking-status-item">
-              <p class="booking-status-key">Kode Request</p>
-              <p class="booking-status-value" id="status_request_code">-</p>
             </div>
             <div class="booking-status-item">
               <p class="booking-status-key">Nama Customer</p>
