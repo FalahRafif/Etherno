@@ -1413,7 +1413,7 @@ class GuestBookingService
             }
         }
 
-        if ($statusCode === 'BS_CONFIRMED') {
+        if (in_array($statusCode, ['BS_CONFIRMED', 'BS_APPROVED_WAITING_FINAL_PAYMENT'], true)) {
             $actions[] = 'reschedule_request';
         }
 
@@ -1519,6 +1519,8 @@ class GuestBookingService
         if ($parsedDate->startOfDay()->lt(Carbon::now()->startOfDay())) {
             throw new RuntimeException('Tanggal usulan tidak boleh tanggal yang sudah lewat.');
         }
+
+        $this->assertSessionQuotaAvailable($parsedDate->toDateString(), (int) $booking->event_session);
 
         return DB::transaction(function () use ($booking, $proposedDate, $reason): array {
             $rescheduleStatus = $this->resolveReferenceByGroupAndCode(

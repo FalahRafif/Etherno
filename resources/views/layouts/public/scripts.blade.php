@@ -17,6 +17,8 @@
 <script src="{{ asset('assets/pages/public/booking-page/status.js') }}?v={{ $bookingStatusScriptVersion }}"></script>
 @endif
 
+@stack('scripts')
+
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const header = document.querySelector('.public-header');
@@ -304,6 +306,55 @@
       });
 
       renderAvailability(dateCheckInput.value);
+    }
+
+    const scrollTopButton = document.querySelector('[data-scroll-top]');
+    if (scrollTopButton) {
+      const getScrollTop = function () {
+        return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      };
+
+      const setScrollTop = function (position) {
+        window.scrollTo(0, position);
+        document.documentElement.scrollTop = position;
+        document.body.scrollTop = position;
+      };
+
+      const toggleScrollTopButton = function () {
+        scrollTopButton.classList.toggle('is-visible', getScrollTop() > 160);
+      };
+
+      const animateScrollToTop = function () {
+        const startPosition = getScrollTop();
+        const duration = 700;
+        const startTime = performance.now();
+
+        const easeOutCubic = function (progress) {
+          return 1 - Math.pow(1 - progress, 3);
+        };
+
+        const step = function (currentTime) {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const nextPosition = startPosition * (1 - easeOutCubic(progress));
+
+          setScrollTop(nextPosition);
+
+          if (progress < 1) {
+            requestAnimationFrame(step);
+          }
+        };
+
+        requestAnimationFrame(step);
+      };
+
+      scrollTopButton.addEventListener('click', function (event) {
+        event.preventDefault();
+        animateScrollToTop();
+      });
+
+      window.addEventListener('scroll', toggleScrollTopButton, { passive: true });
+      toggleScrollTopButton();
     }
   });
 </script>

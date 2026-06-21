@@ -729,6 +729,79 @@ class BookingDetailService
         return $booking->fresh($this->detailRelations());
     }
 
+    public function approveReschedule(int $bookingId, int $operatorId): Booking
+    {
+        $booking = $this->bookingRepository->findOrFail($bookingId, ['*'], $this->detailRelations());
+        $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+
+        if ($statusCode !== 'BS_RESCHEDULE') {
+            throw new RuntimeException('Approval reschedule hanya untuk booking dengan status Reschedule.');
+        }
+
+        $newDate = $booking->reschedule_date;
+        if (!$newDate instanceof Carbon) {
+            throw new RuntimeException('Tanggal reschedule tidak ditemukan.');
+        }
+
+        $this->assertRescheduleSlotAvailable($booking, $newDate->toDateString());
+
+        $nextStatusRef = $this->findReference('booking_status', $this->resolvePostRescheduleStatusCode($booking));
+        $reason = trim((string) ($booking->reschedule_reason ?? ''));
+
+        $this->bookingRepository->update($booking, [
+            'event_date' => $newDate->toDateString(),
+            'status_id' => $nextStatusRef->id,
+            'operator_id' => $operatorId,
+            'reschedule_date' => null,
+            'reschedule_reason' => null,
+        ]);
+
+        $this->bookingHistoryRepository->create([
+            'uuid' => Str::uuid()->toString(),
+            'booking_id' => $booking->id,
+            'status_id' => $nextStatusRef->id,
+            'operator_id' => $operatorId,
+            'description' => 'Reschedule disetujui ke ' . $newDate->toDateString() . ($reason !== '' ? ': ' . $reason : ''),
+        ]);
+
+        return $booking->fresh($this->detailRelations());
+    }
+
+    public function rejectReschedule(int $bookingId, int $operatorId, string $reason): Booking
+    {
+        $booking = $this->bookingRepository->findOrFail($bookingId, ['*'], $this->detailRelations());
+        $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+
+        if ($statusCode !== 'BS_RESCHEDULE') {
+            throw new RuntimeException('Penolakan reschedule hanya untuk booking dengan status Reschedule.');
+        }
+
+        $reason = trim($reason);
+        if ($reason === '') {
+            throw new RuntimeException('Alasan penolakan reschedule wajib diisi.');
+        }
+
+        $nextStatusRef = $this->findReference('booking_status', $this->resolvePostRescheduleStatusCode($booking));
+        $requestedDate = $booking->reschedule_date instanceof Carbon ? $booking->reschedule_date->toDateString() : '-';
+
+        $this->bookingRepository->update($booking, [
+            'status_id' => $nextStatusRef->id,
+            'operator_id' => $operatorId,
+            'reschedule_date' => null,
+            'reschedule_reason' => null,
+        ]);
+
+        $this->bookingHistoryRepository->create([
+            'uuid' => Str::uuid()->toString(),
+            'booking_id' => $booking->id,
+            'status_id' => $nextStatusRef->id,
+            'operator_id' => $operatorId,
+            'description' => 'Reschedule ke ' . $requestedDate . ' ditolak: ' . $reason,
+        ]);
+
+        return $booking->fresh($this->detailRelations());
+    }
+
     public function uploadRefundProof(int $bookingId, int $operatorId, array $payload): Booking
     {
         $booking = $this->bookingRepository->findOrFail($bookingId, ['*'], $this->detailRelations());
@@ -1551,6 +1624,7 @@ class BookingDetailService
             'BS_APPROVED_WAITING_DP' => ['generate_dp', 'upload_dp', 'verify_dp', 'reject_manual'],
             'BS_APPROVED_WAITING_FINAL_PAYMENT' => ['generate_final', 'upload_final', 'verify_final', 'cancel_booking'],
             'BS_CONFIRMED' => ['complete_booking', 'force_majeure'],
+            'BS_RESCHEDULE' => ['approve_reschedule', 'reject_reschedule'],
             'BS_REFUND' => [],
             default => [],
         };
@@ -1568,6 +1642,58 @@ class BookingDetailService
         }
 
         return $actions;
+    }
+
+    private function resolvePostRescheduleStatusCode(Booking $booking): string
+    {
+        $previousStatusCode = $booking->history
+            ->sortByDesc('created_at')
+            ->pluck('status.code')
+            ->map(fn($code) => strtoupper(trim((string) $code)))
+            ->first(fn($code) => in_array($code, ['BS_CONFIRMED', 'BS_APPROVED_WAITING_FINAL_PAYMENT'], true));
+
+        if (is_string($previousStatusCode) && $previousStatusCode !== '') {
+            return $previousStatusCode;
+        }
+
+        return 'BS_CONFIRMED';
+    }
+
+    private function assertRescheduleSlotAvailable(Booking $booking, string $newDate): void
+    {
+        $booking->loadMissing(['eventSession:id,code,description']);
+        $sessionCode = strtoupper(trim((string) ($booking->eventSession?->code ?? '')));
+        $sessionId = (int) ($booking->event_session ?? 0);
+
+        if ($sessionId <= 0 || $sessionCode === '') {
+            throw new RuntimeException('Sesi acara tidak ditemukan.');
+        }
+
+        $quotaSettingCode = $sessionCode === 'ES_SORE_MALAM'
+            ? 'PKDR_MAX_QUOTA_SORE_MALAM'
+            : 'PKDR_MAX_QUOTA_PAGI_SIANG';
+
+        $setting = $this->settingRepository->query(true)
+            ->where('group_id', 'package_date_rule')
+            ->where('code', $quotaSettingCode)
+            ->first(['value']);
+
+        $maxQuota = max((int) ($setting?->value ?? 1), 1);
+        $nonQuotaStatusCodes = ['BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_CANCEL', 'BS_RESCHEDULE', 'BS_FORCE_MAJEURE', 'BS_REFUND', 'BS_REJECTED'];
+
+        $bookedCount = $this->bookingRepository->query(true)
+            ->whereDate('event_date', $newDate)
+            ->where('event_session', $sessionId)
+            ->where('id', '!=', $booking->id)
+            ->whereHas('status', function (Builder $q) use ($nonQuotaStatusCodes): void {
+                $q->where('group_id', 'booking_status')
+                    ->whereNotIn('code', $nonQuotaStatusCodes);
+            })
+            ->count();
+
+        if ($bookedCount >= $maxQuota) {
+            throw new RuntimeException('Slot tanggal reschedule yang diajukan sudah penuh.');
+        }
     }
 
     private function getDpPercentage(string $packageTypeCode): int

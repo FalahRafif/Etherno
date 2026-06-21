@@ -33,6 +33,14 @@
         @forelse (($group['packages'] ?? collect()) as $package)
           @php
             $benefits = $package->benefits->pluck('name')->filter()->take(4)->values();
+            $thumbnailUrl = null;
+            if ($package->thumbnailAttachment) {
+                $thumbnailUrl = \Illuminate\Support\Facades\URL::signedRoute(
+                    'api.public.attachments.package-thumbnail',
+                    ['attachmentUuid' => $package->thumbnailAttachment->uuid],
+                    now()->addMinutes((int) config('app.attachments.temp_url_ttl_minutes', 30))
+                );
+            }
             $packageTag = match (true) {
                 $loop->first => 'Best Seller',
                 $loop->index === 1 => 'Paling Direkomendasikan',
@@ -40,6 +48,11 @@
             };
           @endphp
           <article class="package {{ $loop->index === 1 ? 'package-featured' : 'package-soft' }}">
+            @if ($thumbnailUrl)
+              <figure class="package-image">
+                <img src="{{ $thumbnailUrl }}" alt="{{ $package->name }}" loading="lazy">
+              </figure>
+            @endif
             {{-- <p class="package-tag">{{ $packageTag }}</p> --}}
             <p class="package-tag">pilihan paket</p>
             <h3>{{ $package->name }}</h3>
