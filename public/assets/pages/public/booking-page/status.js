@@ -560,10 +560,12 @@
             }
 
             if (code === "BS_APPROVED_WAITING_DP") {
-                var hasDp = billing && Array.isArray(billing.installments) && billing.installments.some(function (i) {
+                var dpInstallment = billing && Array.isArray(billing.installments) ? billing.installments.find(function (i) {
                     return String(i.type_code || "") === "INS_DP";
-                });
-                if (hasDp) {
+                }) : null;
+                if (dpInstallment && dpInstallment.has_pending_payment) {
+                    subtitleText += ". Bukti pembayaran DP sudah dikirim dan sedang menunggu verifikasi dari tim kami.";
+                } else if (dpInstallment) {
                     subtitleText += ". Tagihan DP sudah tersedia. Silakan lakukan pembayaran DP sesuai nominal yang tertera.";
                 } else {
                     subtitleText += ". Pengajuan Anda telah disetujui. Tim kami sedang menyiapkan tagihan DP Anda.";

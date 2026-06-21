@@ -308,12 +308,22 @@
 
     const scrollTopButton = document.querySelector('[data-scroll-top]');
     if (scrollTopButton) {
+      const getScrollTop = function () {
+        return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      };
+
+      const setScrollTop = function (position) {
+        window.scrollTo(0, position);
+        document.documentElement.scrollTop = position;
+        document.body.scrollTop = position;
+      };
+
       const toggleScrollTopButton = function () {
-        scrollTopButton.classList.toggle('is-visible', window.scrollY > 160);
+        scrollTopButton.classList.toggle('is-visible', getScrollTop() > 160);
       };
 
       const animateScrollToTop = function () {
-        const startPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        const startPosition = getScrollTop();
         const duration = 700;
         const startTime = performance.now();
 
@@ -326,7 +336,7 @@
           const progress = Math.min(elapsed / duration, 1);
           const nextPosition = startPosition * (1 - easeOutCubic(progress));
 
-          window.scrollTo(0, nextPosition);
+          setScrollTop(nextPosition);
 
           if (progress < 1) {
             requestAnimationFrame(step);

@@ -1294,7 +1294,7 @@ body.booking-confirm-open{
 }
 
 .booking-support-card{max-width:760px;margin:0 auto}
-.booking-support-title{margin-top:6px}
+.booking-support-title{margin-top:6px;color:#121212}
 .booking-support-state{
   display:flex;
   flex-direction:column;
