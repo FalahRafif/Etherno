@@ -259,6 +259,27 @@ body .container{max-width:1120px;margin:0 auto;padding-inline:24px;width:100%}
   transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease;
 }
 .package:hover{transform:translateY(-4px);box-shadow:0 22px 60px rgba(11,10,9,.1);border-color:rgba(181,143,66,.18)}
+.package-image{
+  position:relative;
+  margin:-28px -28px 20px;
+  aspect-ratio:4/3;
+  overflow:hidden;
+  background:linear-gradient(135deg,rgba(181,143,66,.16),rgba(255,255,255,.64));
+}
+.package-image:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,transparent 45%,rgba(11,10,9,.22));
+}
+.package-image img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transition:transform .35s ease;
+}
+.package:hover .package-image img{transform:scale(1.04)}
 .package:before{
   content:"";
   position:absolute;
@@ -1684,6 +1705,7 @@ body.booking-confirm-open{
   .testimonial-grid .testimonial-card-large{grid-column:auto}
   .footer-grid{grid-template-columns:1fr}
   .package{padding:24px}
+  .package-image{margin:-24px -24px 18px}
   .package h3{font-size:22px}
   .package-featured{transform:none}
   .packages-page-actions a{width:100%}

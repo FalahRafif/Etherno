@@ -10,3 +10,11 @@ Route::prefix('internal')
         Route::get('/attachments/{attachmentUuid}/preview', [AttachmentController::class, 'show'])
             ->name('attachments.preview');
     });
+
+Route::prefix('public')
+    ->name('api.public.')
+    ->middleware(['web', 'signed'])
+    ->group(function (): void {
+        Route::get('/attachments/{attachmentUuid}/package-thumbnail', [AttachmentController::class, 'showPackageThumbnail'])
+            ->name('attachments.package-thumbnail');
+    });
