@@ -17,6 +17,8 @@
 <script src="{{ asset('assets/pages/public/booking-page/status.js') }}?v={{ $bookingStatusScriptVersion }}"></script>
 @endif
 
+@stack('scripts')
+
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const header = document.querySelector('.public-header');

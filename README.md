@@ -144,6 +144,7 @@ Endpoint public booking request:
 - `GET /api/booking/status` (name `booking.status.lookup`), middleware `web` — cek status booking via booking code + 4 digit terakhir nomor telepon customer.
 - `POST /api/booking` (name `booking.store`), middleware `web` — submit booking request baru.
 - `POST /api/booking/upload-payment-proof` (name `booking.upload-payment-proof`), middleware `web` — upload bukti pembayaran oleh customer (DP atau pelunasan).
+- `POST /api/booking/reschedule-request` (name `booking.reschedule-request`), middleware `web` — customer mengajukan reschedule dari halaman public/status support.
 
 Booking code format yang didukung untuk status lookup dan referensi:
 - Case ID: `ETH-{YYYYMMDD}-{NNNNN}` (format utama, disimpan di `bookings.case_id`).
@@ -185,6 +186,8 @@ Endpoint admin booking management API (middleware `web` + `auth`, shared oleh Ad
 - Reject pending payment: `POST /api/admin/bookings/{booking}/payments/{payment}/reject` (name `api.admin.bookings.payments.reject`).
 - Cancel booking: `POST /api/admin/bookings/{booking}/cancel` (name `api.admin.bookings.cancel`).
 - Complete booking: `POST /api/admin/bookings/{booking}/complete` (name `api.admin.bookings.complete`).
+- Approve reschedule: `POST /api/admin/bookings/{booking}/approve-reschedule` (name `api.admin.bookings.approve-reschedule`).
+- Reject reschedule: `POST /api/admin/bookings/{booking}/reject-reschedule` (name `api.admin.bookings.reject-reschedule`).
 - Force majeure: `POST /api/admin/bookings/{booking}/force-majeure` (name `api.admin.bookings.force-majeure`).
 - Upload refund proof: `POST /api/admin/bookings/{booking}/upload-refund-proof` (name `api.admin.bookings.upload-refund-proof`).
 - Store billing detail: `POST /api/admin/bookings/{booking}/billing-details` (name `api.admin.bookings.billing-details.store`).
@@ -408,7 +411,7 @@ Portal services:
 - `app/Services/Portal/GuestPackageService.php`: payload paket untuk landing page dan halaman paket (wedding/non-wedding, aktif saja).
 - `app/Services/Portal/GuestBookingService.php`: orchestration booking request guest — create booking, form payload, availability, price estimate, status lookup, submission proof PDF, upload payment proof oleh customer, WhatsApp template generation.
 - `app/Services/Portal/InternalPageService.php`: mapping page internal ke view dan title.
-- `app/Services/Admin/BookingDetailService.php`: lifecycle booking management internal — approve, reject, verify DP, verify final payment, cancel, complete, force majeure (reschedule/refund), upload refund proof, billing details & installments management. Method kunci: `initializeBilling()` (dipanggil otomatis saat approve, membuat billing + base detail saja), `generateDpInstallment()` (generate DP installment manual, nominal otomatis dari persentase DP), `generateFinalInstallment()` (generate pelunasan manual, nominal otomatis dari sisa billing), `resolveAvailableActions()` (filter aksi berdasarkan status + existing installments, menyembunyikan generate_dp/generate_final jika installment sudah ada).
+- `app/Services/Admin/BookingDetailService.php`: lifecycle booking management internal — approve, reject, verify DP, verify final payment, cancel, complete, approve/reject reschedule, force majeure (reschedule/refund), upload refund proof, billing details & installments management. Method kunci: `initializeBilling()` (dipanggil otomatis saat approve, membuat billing + base detail saja), `generateDpInstallment()` (generate DP installment manual, nominal otomatis dari persentase DP), `generateFinalInstallment()` (generate pelunasan manual, nominal otomatis dari sisa billing), `approveReschedule()`/`rejectReschedule()` (proses request reschedule customer), `resolveAvailableActions()` (filter aksi berdasarkan status + existing installments, menyembunyikan generate_dp/generate_final jika installment sudah ada).
 - `app/Services/Admin/BookingListService.php`: payload halaman list booking admin dengan filter status, date range, case ID, dan stats.
 - `app/Services/Admin/BookingCalendarService.php`: payload halaman calendar admin dan JSON calendar events.
 
@@ -464,6 +467,13 @@ BS_APPROVED_WAITING_FINAL_PAYMENT
   ├→ verify-final   → BS_CONFIRMED (semua pending payments di-approve)
   ├→ cancel         → BS_CANCEL (billing cancelled)
   └→ approve/reject per-payment (PYS_PEDING → PYS_SUCCESS/PYS_FAILED)
+
+BS_APPROVED_WAITING_FINAL_PAYMENT / BS_CONFIRMED
+  └→ public reschedule request → BS_RESCHEDULE
+
+BS_RESCHEDULE
+  ├→ approve-reschedule → event_date dipindah ke reschedule_date, status kembali ke BS_CONFIRMED atau BS_APPROVED_WAITING_FINAL_PAYMENT sesuai billing
+  └→ reject-reschedule  → status kembali ke BS_CONFIRMED atau BS_APPROVED_WAITING_FINAL_PAYMENT sesuai billing
 
 BS_CONFIRMED
   ├→ complete       → BS_COMPLETE

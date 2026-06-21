@@ -32,6 +32,13 @@
         var uploadPaymentAmountInfo = document.getElementById("upload_payment_amount_info");
         var uploadPaymentInstallmentId = document.getElementById("upload_payment_installment_id");
 
+        var rescheduleModal = document.getElementById("reschedule_request_modal");
+        var rescheduleForm = document.getElementById("reschedule_request_form");
+        var rescheduleCloseButtons = Array.from(document.querySelectorAll("[data-reschedule-request-close]"));
+        var rescheduleError = document.getElementById("reschedule_request_error");
+        var rescheduleSuccess = document.getElementById("reschedule_request_success");
+        var rescheduleSubmitBtn = document.getElementById("reschedule_request_submit_btn");
+
         var isSubmitting = false;
         var lastFocusedElement = null;
         var currentPayload = null;
@@ -92,6 +99,18 @@
             if (p === "") return "#";
             if (p.startsWith("0")) p = "62" + p.substring(1);
             return "https://wa.me/" + p + "?text=" + encodeURIComponent(String(message || ""));
+        }
+
+        function findLatestHistoryDescription(requiredText, requiredSecondText) {
+            var items = currentPayload && Array.isArray(currentPayload.history) ? currentPayload.history : [];
+            for (var i = items.length - 1; i >= 0; i -= 1) {
+                var description = String(items[i] && items[i].description ? items[i].description : "").trim();
+                var normalized = description.toLowerCase();
+                if (description !== "" && normalized.indexOf(requiredText) !== -1 && normalized.indexOf(requiredSecondText) !== -1) {
+                    return description;
+                }
+            }
+            return "";
         }
 
         function renderHistory(items) {
@@ -258,6 +277,7 @@
             var isApprovedWaitingDp = statusCode === "BS_APPROVED_WAITING_DP";
             var isApprovedWaitingFinal = statusCode === "BS_APPROVED_WAITING_FINAL_PAYMENT";
             var isConfirmed = statusCode === "BS_CONFIRMED";
+            var isReschedule = statusCode === "BS_RESCHEDULE";
 
             var hasDpInstallment = billing && Array.isArray(billing.installments) && billing.installments.some(function (i) {
                 return String(i.type_code || "") === "INS_DP";
@@ -324,6 +344,15 @@
                 wrap.appendChild(finalReadyInfoDiv);
             }
 
+            var latestRejectedRescheduleReason = findLatestHistoryDescription("reschedule", "ditolak");
+            if (latestRejectedRescheduleReason) {
+                var rejectedRescheduleInfoDiv = document.createElement("div");
+                rejectedRescheduleInfoDiv.className = "estimate-box mb-3";
+                rejectedRescheduleInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-calendar-close-line me-1"></i><strong>Reschedule Ditolak</strong></p><p class="estimate-note mb-0"></p>';
+                rejectedRescheduleInfoDiv.querySelector(".estimate-note.mb-0").textContent = latestRejectedRescheduleReason;
+                wrap.appendChild(rejectedRescheduleInfoDiv);
+            }
+
             if (isConfirmed) {
                 var confirmedInfoDiv = document.createElement("div");
                 confirmedInfoDiv.className = "estimate-box mb-3";
@@ -341,8 +370,15 @@
                 }
             }
 
+            if (isReschedule) {
+                var rescheduleInfoDiv = document.createElement("div");
+                rescheduleInfoDiv.className = "estimate-box mb-3";
+                rescheduleInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-time-line me-1"></i><strong>Reschedule Menunggu Review</strong></p><p class="estimate-note mb-0">Request reschedule Anda sudah masuk. Tim Etherno sedang mengecek ketersediaan jadwal dan akan menghubungi Anda melalui WhatsApp.</p>';
+                wrap.appendChild(rescheduleInfoDiv);
+            }
+
             if (!Array.isArray(actions) || actions.length === 0) {
-                if (!isWaitingApproval && !(isApprovedWaitingDp && !hasDpInstallment) && !(isApprovedWaitingFinal && !hasFinalInstallment) && !isConfirmed) {
+                if (!isWaitingApproval && !(isApprovedWaitingDp && !hasDpInstallment) && !(isApprovedWaitingFinal && !hasFinalInstallment) && !isConfirmed && !isReschedule) {
                     var empty = document.createElement("p");
                     empty.className = "booking-disclaimer";
                     empty.textContent = "Tidak ada aksi yang tersedia saat ini.";
@@ -387,8 +423,100 @@
                 if (action === "reschedule_request") {
                     var info = document.createElement("div");
                     info.className = "estimate-box mb-2";
-                    info.innerHTML = '<p class="estimate-note mb-0">Ingin mengajukan reschedule? Silakan hubungi tim kami via WhatsApp.</p>';
+                    info.innerHTML = '<p class="estimate-note mb-1"><i class="ri-calendar-event-line me-1"></i><strong>Ajukan Reschedule</strong></p><p class="estimate-note mb-0">Anda dapat mengajukan perubahan tanggal acara dari halaman reschedule. Tim Etherno akan mengecek ketersediaan jadwal sebelum menyetujui perubahan.</p>';
                     wrap.appendChild(info);
+
+                    var rescheduleBtn = document.createElement("button");
+                    rescheduleBtn.className = "cta cta-outline mb-2";
+                    rescheduleBtn.type = "button";
+                    rescheduleBtn.innerHTML = '<i class="ri-calendar-check-line me-1"></i> Ajukan Reschedule';
+                    rescheduleBtn.addEventListener("click", openRescheduleModal);
+                    wrap.appendChild(rescheduleBtn);
+                }
+            });
+        }
+
+        function openRescheduleModal() {
+            if (!rescheduleModal) return;
+            if (rescheduleError) rescheduleError.hidden = true;
+            if (rescheduleSuccess) rescheduleSuccess.style.display = "none";
+            rescheduleModal.hidden = false;
+            document.body.classList.add("booking-confirm-open");
+            var dateInput = document.getElementById("reschedule_request_date");
+            if (dateInput) dateInput.focus();
+        }
+
+        function closeRescheduleModal() {
+            if (!rescheduleModal) return;
+            rescheduleModal.hidden = true;
+            document.body.classList.remove("booking-confirm-open");
+        }
+
+        function submitRescheduleRequest(event) {
+            event.preventDefault();
+            if (!rescheduleForm || !currentPayload) return;
+            var proposedDateInput = document.getElementById("reschedule_request_date");
+            var reasonInput = document.getElementById("reschedule_request_reason");
+            var proposedDate = proposedDateInput ? String(proposedDateInput.value || "").trim() : "";
+            var reason = reasonInput ? String(reasonInput.value || "").trim() : "";
+
+            if (rescheduleError) rescheduleError.hidden = true;
+            if (rescheduleSuccess) rescheduleSuccess.style.display = "none";
+
+            if (!proposedDate || !reason) {
+                if (rescheduleError) {
+                    rescheduleError.textContent = "Tanggal baru dan alasan reschedule wajib diisi.";
+                    rescheduleError.hidden = false;
+                }
+                return;
+            }
+
+            if (rescheduleSubmitBtn) {
+                rescheduleSubmitBtn.disabled = true;
+                rescheduleSubmitBtn.textContent = "Mengirim...";
+            }
+
+            fetch("/api/booking/reschedule-request", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: JSON.stringify({
+                    booking_code: String(bookingCodeInput.value || "").trim(),
+                    phone_last4: sanitizeLastFour(verifyInput ? verifyInput.value : ""),
+                    proposed_date: proposedDate,
+                    reason: reason
+                })
+            })
+            .then(function (response) {
+                return response.json().catch(function () { return {}; }).then(function (data) {
+                    if (!response.ok) throw new Error(data.message || "Gagal mengirim request reschedule.");
+                    return data;
+                });
+            })
+            .then(function (data) {
+                if (rescheduleSuccess) {
+                    rescheduleSuccess.textContent = data.message || "Request reschedule berhasil dikirim.";
+                    rescheduleSuccess.style.display = "block";
+                }
+                rescheduleForm.reset();
+                return submitLookup().then(function () {
+                    window.setTimeout(closeRescheduleModal, 600);
+                });
+            })
+            .catch(function (error) {
+                if (rescheduleError) {
+                    rescheduleError.textContent = error.message || "Terjadi kesalahan. Silakan coba lagi.";
+                    rescheduleError.hidden = false;
+                }
+            })
+            .finally(function () {
+                if (rescheduleSubmitBtn) {
+                    rescheduleSubmitBtn.disabled = false;
+                    rescheduleSubmitBtn.textContent = "Kirim Request Reschedule";
                 }
             });
         }
@@ -587,6 +715,10 @@
                 subtitleText += ". Pembayaran Anda telah lunas dan terverifikasi. Booking Anda sudah dikunci. Sampai jumpa di hari acara!";
             }
 
+            if (code === "BS_RESCHEDULE") {
+                subtitleText += ". Request reschedule Anda sedang menunggu review tim Etherno.";
+            }
+
             if (code === "BS_COMPLETE") {
                 subtitleText += ". Acara telah selesai. Terima kasih telah mempercayakan moment spesial Anda kepada Etherno.";
             }
@@ -743,6 +875,10 @@
             btn.addEventListener("click", closeUploadPaymentModal);
         });
 
+        rescheduleCloseButtons.forEach(function (btn) {
+            btn.addEventListener("click", closeRescheduleModal);
+        });
+
         if (openVerifyButton) {
             openVerifyButton.addEventListener("click", function (e) { e.preventDefault(); openVerifyModal(); });
         }
@@ -764,10 +900,15 @@
             });
         }
 
+        if (rescheduleForm) {
+            rescheduleForm.addEventListener("submit", submitRescheduleRequest);
+        }
+
         document.addEventListener("keydown", function (e) {
             if (e.key === "Escape") {
                 if (modal && !modal.hidden) closeVerifyModal();
                 if (uploadPaymentModal && !uploadPaymentModal.hidden) closeUploadPaymentModal();
+                if (rescheduleModal && !rescheduleModal.hidden) closeRescheduleModal();
             }
         });
 
