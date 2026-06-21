@@ -1127,32 +1127,82 @@ document.addEventListener('DOMContentLoaded', function() {
     var forceMajeureForm = document.getElementById('form_force_majeure');
     var uploadRefundForm = document.getElementById('form_upload_refund_proof');
 
-    function handleAction(btn, confirmMsg) {
+    var swalTheme = {
+        customClass: {
+            confirmButton: 'btn btn-primary px-4',
+            cancelButton: 'btn btn-light px-4 me-2',
+            popup: 'rounded-3',
+        },
+        buttonsStyling: false,
+    };
+
+    function swalConfirm(message, opts) {
+        return Swal.fire(Object.assign({}, swalTheme, {
+            title: message,
+            showCancelButton: true,
+            confirmButtonText: 'Ya',
+            cancelButtonText: 'Batal',
+        }, opts || {}));
+    }
+
+    function swalSuccess(message) {
+        return Swal.fire(Object.assign({}, swalTheme, {
+            title: 'Berhasil',
+            text: message,
+            icon: 'success',
+            confirmButtonText: 'OK',
+        }));
+    }
+
+    function swalError(message) {
+        return Swal.fire(Object.assign({}, swalTheme, {
+            title: 'Terjadi Kesalahan',
+            text: message,
+            icon: 'error',
+            confirmButtonText: 'OK',
+        }));
+    }
+
+    function swalPrompt(title, placeholder) {
+        return Swal.fire(Object.assign({}, swalTheme, {
+            title: title,
+            input: 'text',
+            inputPlaceholder: placeholder || '',
+            showCancelButton: true,
+            confirmButtonText: 'Kirim',
+            cancelButtonText: 'Batal',
+        }));
+    }
+
+    function handleAction(btn, confirmTitle, confirmText) {
         if (!btn) return;
         btn.addEventListener('click', function() {
-            if (!confirm(confirmMsg)) return;
-            var url = btn.dataset.url;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memproses...';
+            swalConfirm(confirmTitle, { text: confirmText || '' }).then(function(result) {
+                if (!result.isConfirmed) return;
+                var url = btn.dataset.url;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memproses...';
 
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                credentials: 'same-origin'
-            })
-            .then(function(res) { return res.json(); })
-            .then(function(data) {
-                alert(data.message || 'Berhasil');
-                window.location.reload();
-            })
-            .catch(function() {
-                alert('Terjadi kesalahan. Silakan coba lagi.');
-                btn.disabled = false;
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(function(res) { return safeParseJson(res); })
+                .then(function(data) {
+                    return swalSuccess(data.message || 'Berhasil').then(function() {
+                        window.location.reload();
+                    });
+                })
+                .catch(function() {
+                    swalError('Terjadi kesalahan. Silakan coba lagi.');
+                    btn.disabled = false;
+                });
             });
         });
     }
@@ -1221,15 +1271,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             })
             .then(function(data) {
-                alert(data.message || successMessage);
-                window.location.reload();
+                return swalSuccess(data.message || successMessage).then(function() {
+                    window.location.reload();
+                });
             })
             .catch(function(error) {
                 if (errorBox) {
                     errorBox.textContent = error.message || 'Terjadi kesalahan. Silakan coba lagi.';
                     errorBox.classList.remove('d-none');
                 } else {
-                    alert(error.message || 'Terjadi kesalahan. Silakan coba lagi.');
+                    swalError(error.message || 'Terjadi kesalahan. Silakan coba lagi.');
                 }
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = initialBtnHtml;
@@ -1237,8 +1288,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    handleAction(approveBtn, 'Approve booking ini? Billing DP akan otomatis dibuat.');
-    handleAction(rejectBtn, 'Reject booking ini? Aksi ini tidak bisa dibatalkan.');
+    handleAction(approveBtn, 'Approve Booking', 'Setujui booking ini? Billing akan diinisialisasi.');
+    handleAction(rejectBtn, 'Reject Booking', 'Tolak booking ini? Aksi ini tidak bisa dibatalkan.');
     bindModalFormSubmit(addBillingDetailForm, 'btn_submit_add_billing_detail', 'billing_detail_error_box', 'Komponen billing berhasil disimpan.');
     bindModalFormSubmit(generateInstallmentForm, 'btn_submit_generate_installment', 'installment_error_box', 'Tagihan installment berhasil dibuat.');
     bindModalFormSubmit(uploadDpForm, 'btn_submit_upload_dp', 'upload_dp_error_box', 'Pembayaran DP berhasil dicatat.');
@@ -1251,96 +1302,104 @@ document.addEventListener('DOMContentLoaded', function() {
     var verifyDpBtn = document.getElementById('btn_verify_dp');
     var verifyFinalBtn = document.getElementById('btn_verify_final');
     var completeBtn = document.getElementById('btn_complete_booking');
-    handleAction(verifyDpBtn, 'Verifikasi DP? Pastikan pembayaran DP sudah diterima. Status akan berubah ke Waiting Final Payment.');
-    handleAction(verifyFinalBtn, 'Verifikasi pelunasan? Pastikan semua pembayaran sudah diterima. Status akan berubah ke Confirmed.');
-    handleAction(completeBtn, 'Selesaikan booking? Ini menandakan acara sudah dilaksanakan.');
+    handleAction(verifyDpBtn, 'Verifikasi DP', 'Pastikan pembayaran DP sudah diterima. Status akan berubah ke Waiting Final Payment.');
+    handleAction(verifyFinalBtn, 'Verifikasi Pelunasan', 'Pastikan semua pembayaran sudah diterima. Status akan berubah ke Confirmed.');
+    handleAction(completeBtn, 'Selesaikan Booking', 'Ini menandakan acara sudah dilaksanakan.');
 
-    function bindGenerateButton(selector, typeCode, confirmMsg) {
+    function bindGenerateButton(selector, typeCode, confirmTitle, confirmText) {
         var btns = document.querySelectorAll(selector);
         if (!btns.length) return;
         btns.forEach(function(btn) {
             btn.addEventListener('click', function() {
-                if (!confirm(confirmMsg)) return;
-                var url = btn.dataset.url;
-                btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memproses...';
-                fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ installment_type_code: typeCode })
-                })
-                .then(function(res) { return safeParseJson(res); })
-                .then(function(data) {
-                    alert(data.message || 'Berhasil');
-                    window.location.reload();
-                })
-                .catch(function(err) {
-                    alert('Terjadi kesalahan. Silakan coba lagi.');
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="ri-money-dollar-circle-line me-1"></i> ' + (typeCode === 'INS_DP' ? 'Generate DP' : 'Generate Pelunasan');
+                swalConfirm(confirmTitle, { text: confirmText }).then(function(result) {
+                    if (!result.isConfirmed) return;
+                    var url = btn.dataset.url;
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memproses...';
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ installment_type_code: typeCode })
+                    })
+                    .then(function(res) { return safeParseJson(res); })
+                    .then(function(data) {
+                        return swalSuccess(data.message || 'Berhasil').then(function() {
+                            window.location.reload();
+                        });
+                    })
+                    .catch(function() {
+                        swalError('Terjadi kesalahan. Silakan coba lagi.');
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="ri-money-dollar-circle-line me-1"></i> ' + (typeCode === 'INS_DP' ? 'Generate DP' : 'Generate Pelunasan');
+                    });
                 });
             });
         });
     }
-    bindGenerateButton('#btn_generate_dp', 'INS_DP', 'Generate tagihan DP sekarang? Nominal DP akan dihitung otomatis dari total billing.');
-    bindGenerateButton('#btn_generate_final', 'INS_FINAL', 'Generate tagihan pelunasan sekarang? Nominal pelunasan akan dihitung otomatis dari sisa billing.');
+    bindGenerateButton('#btn_generate_dp', 'INS_DP', 'Generate DP', 'Nominal DP akan dihitung otomatis dari total billing.');
+    bindGenerateButton('#btn_generate_final', 'INS_FINAL', 'Generate Pelunasan', 'Nominal pelunasan akan dihitung otomatis dari sisa billing.');
 
     document.querySelectorAll('.btn-approve-payment').forEach(function(btn) {
         btn.addEventListener('click', function() {
-            if (!confirm('Approve bukti pembayaran ini? Nominal akan dicatat sebagai pembayaran valid.')) return;
-            var url = btn.dataset.url;
-            btn.disabled = true;
-            fetch(url, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(function(res) {
-                return res.json().then(function(data) {
-                    if (!res.ok) throw new Error(data.message || 'Gagal approve.');
-                    return data;
-                });
-            })
-            .then(function() { window.location.reload(); })
-            .catch(function(err) { alert(err.message); btn.disabled = false; });
+            swalConfirm('Approve Pembayaran', 'Setujui bukti pembayaran ini? Nominal akan dicatat sebagai pembayaran valid.').then(function(result) {
+                if (!result.isConfirmed) return;
+                var url = btn.dataset.url;
+                btn.disabled = true;
+                fetch(url, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(function(res) {
+                    return safeParseJson(res).then(function(data) {
+                        if (!res.ok) throw new Error(data.message || 'Gagal approve.');
+                        return data;
+                    });
+                })
+                .then(function() { window.location.reload(); })
+                .catch(function(err) { swalError(err.message); btn.disabled = false; });
+            });
         });
     });
 
     document.querySelectorAll('.btn-reject-payment').forEach(function(btn) {
         btn.addEventListener('click', function() {
-            var reason = prompt('Alasan penolakan (opsional):');
-            var url = btn.dataset.url;
-            btn.disabled = true;
-            fetch(url, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ reason: reason || '' })
-            })
-            .then(function(res) {
-                return res.json().then(function(data) {
-                    if (!res.ok) throw new Error(data.message || 'Gagal reject.');
-                    return data;
-                });
-            })
-            .then(function() { window.location.reload(); })
-            .catch(function(err) { alert(err.message); btn.disabled = false; });
+            swalPrompt('Alasan Penolakan', 'Masukkan alasan penolakan (opsional)').then(function(result) {
+                if (!result.isConfirmed) return;
+                var reason = result.value || '';
+                var url = btn.dataset.url;
+                btn.disabled = true;
+                fetch(url, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ reason: reason })
+                })
+                .then(function(res) {
+                    return safeParseJson(res).then(function(data) {
+                        if (!res.ok) throw new Error(data.message || 'Gagal reject.');
+                        return data;
+                    });
+                })
+                .then(function() { window.location.reload(); })
+                .catch(function(err) { swalError(err.message); btn.disabled = false; });
+            });
         });
     });
 
