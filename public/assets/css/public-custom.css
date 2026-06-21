@@ -4,8 +4,8 @@
   --sans:'Instrument Sans','Avenir Next','Segoe UI','Helvetica Neue',Arial,sans-serif;
 }
 
-html{height:100%;overflow-x:hidden;scroll-behavior:smooth}
-body{min-height:100%;overflow-x:hidden}
+html{scroll-behavior:smooth}
+html,body{height:100%;overflow-x:hidden}
 body{
   margin:0;
   font-family:var(--sans);
