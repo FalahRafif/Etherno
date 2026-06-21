@@ -338,9 +338,17 @@
             }
 
             if (isApprovedWaitingFinal && hasFinalInstallment) {
+                var finalInst = billing.installments.find(function (i) {
+                    return String(i.type_code || "") === "INS_FINAL";
+                });
+                var finalPending = finalInst && finalInst.has_pending_payment;
                 var finalReadyInfoDiv = document.createElement("div");
                 finalReadyInfoDiv.className = "estimate-box mb-3";
-                finalReadyInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-check-double-line me-1"></i><strong>DP Diverifikasi — Siap Pelunasan</strong></p><p class="estimate-note mb-0">Pembayaran DP Anda telah diverifikasi. Tagihan pelunasan sudah tersedia di tab Tagihan & Pembayaran. Silakan lakukan pembayaran pelunasan sebelum tanggal acara.</p>';
+                if (finalPending) {
+                    finalReadyInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-time-line me-1"></i><strong>Pelunasan Sedang Diverifikasi</strong></p><p class="estimate-note mb-0">Terima kasih! Bukti pembayaran pelunasan Anda sudah kami terima dan sedang dalam proses verifikasi. Anda akan dihubungi melalui WhatsApp setelah pembayaran terverifikasi.</p>';
+                } else {
+                    finalReadyInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-check-double-line me-1"></i><strong>DP Diverifikasi — Siap Pelunasan</strong></p><p class="estimate-note mb-0">Pembayaran DP Anda telah diverifikasi. Tagihan pelunasan sudah tersedia di tab Tagihan & Pembayaran. Silakan lakukan pembayaran pelunasan sebelum tanggal acara.</p>';
+                }
                 wrap.appendChild(finalReadyInfoDiv);
             }
 
@@ -764,10 +772,12 @@
             }
 
             if (code === "BS_APPROVED_WAITING_FINAL_PAYMENT") {
-                var hasFinal = billing && Array.isArray(billing.installments) && billing.installments.some(function (i) {
+                var finalInstallment = billing && Array.isArray(billing.installments) ? billing.installments.find(function (i) {
                     return String(i.type_code || "") === "INS_FINAL";
-                });
-                if (hasFinal) {
+                }) : null;
+                if (finalInstallment && finalInstallment.has_pending_payment) {
+                    subtitleText += ". Bukti pembayaran pelunasan sudah dikirim dan sedang menunggu verifikasi dari tim kami.";
+                } else if (finalInstallment) {
                     subtitleText += ". Tagihan pelunasan sudah tersedia. Silakan lakukan pembayaran pelunasan sebelum tanggal acara.";
                 } else {
                     subtitleText += ". DP Anda telah diverifikasi. Tim kami sedang menyiapkan tagihan pelunasan Anda.";
