@@ -309,11 +309,36 @@
     const scrollTopButton = document.querySelector('[data-scroll-top]');
     if (scrollTopButton) {
       const toggleScrollTopButton = function () {
-        scrollTopButton.classList.toggle('is-visible', window.scrollY > 420);
+        scrollTopButton.classList.toggle('is-visible', window.scrollY > 160);
       };
 
-      scrollTopButton.addEventListener('click', function () {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+      const animateScrollToTop = function () {
+        const startPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        const duration = 700;
+        const startTime = performance.now();
+
+        const easeOutCubic = function (progress) {
+          return 1 - Math.pow(1 - progress, 3);
+        };
+
+        const step = function (currentTime) {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const nextPosition = startPosition * (1 - easeOutCubic(progress));
+
+          window.scrollTo(0, nextPosition);
+
+          if (progress < 1) {
+            requestAnimationFrame(step);
+          }
+        };
+
+        requestAnimationFrame(step);
+      };
+
+      scrollTopButton.addEventListener('click', function (event) {
+        event.preventDefault();
+        animateScrollToTop();
       });
 
       window.addEventListener('scroll', toggleScrollTopButton, { passive: true });

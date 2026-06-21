@@ -4,7 +4,8 @@
   --sans:'Instrument Sans','Avenir Next','Segoe UI','Helvetica Neue',Arial,sans-serif;
 }
 
-html,body{height:100%;overflow-x:hidden}
+html{height:100%;overflow-x:hidden;scroll-behavior:smooth}
+body{min-height:100%;overflow-x:hidden}
 body{
   margin:0;
   font-family:var(--sans);
@@ -520,37 +521,45 @@ body .container{max-width:1120px;margin:0 auto;padding-inline:24px;width:100%}
   position:fixed;
   right:22px;
   bottom:22px;
-  z-index:50;
-  width:48px;
-  height:48px;
-  border:1px solid rgba(181,143,66,.34);
+  z-index:80;
+  width:54px;
+  height:54px;
+  border:1px solid rgba(255,255,255,.24);
   border-radius:999px;
-  background:rgba(255,253,248,.92);
-  box-shadow:0 14px 34px rgba(11,10,9,.16);
+  background:linear-gradient(135deg,#fffdf8,#e8d4a2);
+  box-shadow:0 16px 38px rgba(11,10,9,.22);
   display:flex;
   align-items:center;
   justify-content:center;
   cursor:pointer;
-  opacity:0;
-  pointer-events:none;
-  transform:translateY(12px) scale(.92);
+  opacity:1;
+  pointer-events:auto;
+  transform:translateY(0) scale(1);
   transition:opacity .2s ease,transform .2s ease,box-shadow .2s ease,border-color .2s ease;
   backdrop-filter:blur(10px);
 }
-.scroll-top-button img{width:26px;height:26px;object-fit:contain;border-radius:50%}
-.scroll-top-button:after{
-  content:"";
+.scroll-top-button i{font-size:25px;line-height:1;color:#8b661d}
+.scroll-top-button:before{
+  content:"Ke atas";
   position:absolute;
-  top:9px;
-  right:9px;
-  width:7px;
-  height:7px;
-  border-top:2px solid #9d7932;
-  border-left:2px solid #9d7932;
-  transform:rotate(45deg);
+  right:calc(100% + 10px);
+  top:50%;
+  transform:translateY(-50%) translateX(6px);
+  padding:6px 10px;
+  border-radius:999px;
+  background:#15120e;
+  color:#fff;
+  font-size:11px;
+  letter-spacing:.06em;
+  white-space:nowrap;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .18s ease,transform .18s ease;
 }
+.scroll-top-button:after{display:none}
 .scroll-top-button.is-visible{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}
-.scroll-top-button:hover{transform:translateY(-3px) scale(1.04);box-shadow:0 18px 42px rgba(11,10,9,.22);border-color:rgba(181,143,66,.62)}
+.scroll-top-button:hover{transform:translateY(-4px) scale(1.05);box-shadow:0 22px 48px rgba(11,10,9,.28);border-color:rgba(181,143,66,.72)}
+.scroll-top-button:hover:before{opacity:1;transform:translateY(-50%) translateX(0)}
 
 .booking-section{padding-top:72px;scroll-margin-top:96px}
 .booking-heading{margin-bottom:24px}
@@ -1691,7 +1700,9 @@ body.booking-confirm-open{
   .final-cta-copy{font-size:14px}
   .final-cta-actions{flex-direction:column;align-items:stretch;gap:10px}
   .final-cta-actions .cta{width:100%}
-  .scroll-top-button{right:16px;bottom:16px;width:44px;height:44px}
+  .scroll-top-button{right:16px;bottom:16px;width:50px;height:50px}
+  .scroll-top-button i{font-size:24px}
+  .scroll-top-button:before{display:none}
 
   .booking-section{padding-top:56px}
   .booking-tab-list{flex-direction:column;align-items:stretch}
@@ -1776,6 +1787,6 @@ body.booking-confirm-open{
   .final-cta{padding-block:48px 32px}
   .final-cta-card{padding:32px 18px;border-radius:20px}
   .final-cta-title{font-size:clamp(28px,9.5vw,36px)}
-  .scroll-top-button{right:14px;bottom:14px;width:42px;height:42px}
+  .scroll-top-button{right:14px;bottom:14px;width:48px;height:48px}
 }
 
