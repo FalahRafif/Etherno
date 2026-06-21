@@ -161,10 +161,10 @@
                                         <td class="text-muted ps-0">Tipe Paket</td>
                                         <td>{{ $booking->package->packageType?->description ?? '-' }}</td>
                                     </tr>
-                                    <tr>
+                                    {{-- <tr>
                                         <td class="text-muted ps-0">Alamat Paket</td>
                                         <td>{{ $booking->package->address ?? '-' }}</td>
-                                    </tr>
+                                    </tr> --}}
                                     <tr>
                                         <td class="text-muted ps-0">Deskripsi</td>
                                         <td>{{ $booking->package->description ?? '-' }}</td>
