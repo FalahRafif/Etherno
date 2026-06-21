@@ -4,7 +4,7 @@
   --sans:'Instrument Sans','Avenir Next','Segoe UI','Helvetica Neue',Arial,sans-serif;
 }
 
-html,body{height:100%}
+html,body{height:100%;overflow-x:hidden}
 body{
   margin:0;
   font-family:var(--sans);
@@ -12,10 +12,13 @@ body{
   color:#0f1113;
   background:#fbfaf8;
   text-rendering:optimizeLegibility;
+  -webkit-text-size-adjust:100%;
 }
 
-.container{max-width:1120px;margin:0 auto;padding:0 24px}
-.section-block{padding:64px 0 12px}
+*,*::before,*::after{box-sizing:border-box}
+
+body .container{max-width:1120px;margin:0 auto;padding-inline:24px;width:100%}
+.section-block{padding-block:64px 36px}
 .section-heading{max-width:780px;margin:0 auto 30px;text-align:center}
 .eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin:0 0 12px;font-weight:700}
 .section-heading h2{font-family:'Playfair Display',var(--serif);font-size:clamp(34px,4.2vw,52px);line-height:1.1;margin:0 0 14px;color:#121212}
@@ -167,7 +170,7 @@ body{
   gap:clamp(26px,4vw,64px);
   align-items:center;
   min-height:calc(100vh - 96px);
-  padding:116px 0 78px;
+  padding-block:116px 86px;
 }
 .hero-inner:after{
   content:"";
@@ -449,7 +452,7 @@ body{
 }
 
 .final-cta{
-  padding:48px 0 18px;
+  padding-block:64px 36px;
   text-align:center;
 }
 .final-cta-title{
@@ -1430,13 +1433,13 @@ body.booking-confirm-open{
 }
 
 @media(max-width:1080px){
-  .container{padding:0 20px}
+  body .container{padding-inline:20px}
   .hero-inner{grid-template-columns:minmax(0,1fr) minmax(320px,.92fr)}
   .section-heading h2{font-size:clamp(32px,4.8vw,46px)}
 }
 
 @media(max-width:900px){
-  .section-block{padding:54px 0 8px}
+  .section-block{padding-block:64px 42px}
   .section-heading{margin-bottom:22px}
   .public-header{padding:12px 0}
   .header-inner{min-height:52px}
@@ -1502,8 +1505,8 @@ body.booking-confirm-open{
   .hero-inner{
     grid-template-columns:1fr;
     min-height:auto;
-    padding:84px 0 56px;
-    gap:30px;
+    padding-block:96px 72px;
+    gap:36px;
   }
   .hero-inner:after{bottom:20px;width:96px}
   .hero .title{font-size:clamp(46px,11vw,58px)}
@@ -1539,13 +1542,17 @@ body.booking-confirm-open{
 }
 
 @media(max-width:640px){
-  .container{padding:0 16px}
+  body .container{padding-inline:18px}
+  .section-block{padding-block:52px 40px}
+  .section-heading{margin-bottom:26px}
   .section-heading h2{font-size:clamp(30px,10.2vw,40px)}
   .section-lead{font-size:14px;line-height:1.7}
 
-  .hero-inner{padding:72px 0 46px;gap:24px}
-  .hero .title{font-size:clamp(42px,12vw,52px)}
-  .hero-actions{margin-top:20px;align-items:stretch}
+  .hero-inner{padding-block:96px 72px;gap:36px}
+  .hero-copy{padding-bottom:12px}
+  .hero .title{margin-bottom:18px;font-size:clamp(38px,11vw,48px)}
+  .hero .subtitle{line-height:1.75}
+  .hero-actions{margin-top:28px;align-items:stretch;gap:12px}
   .hero-actions .cta{width:100%}
   .hero-visual{min-height:330px}
   .hero-frame-primary{width:min(100%,330px)}
@@ -1566,7 +1573,7 @@ body.booking-confirm-open{
   .portfolio-slider{mask-image:none}
   .portfolio-track{gap:14px;animation-duration:26s}
   .portfolio-slide{width:250px;border-radius:22px}
-  .final-cta{padding:36px 0 12px}
+  .final-cta{padding-block:56px 36px}
   .final-cta-title{font-size:clamp(34px,11.5vw,42px)}
   .final-cta-copy{font-size:14px}
 
@@ -1643,8 +1650,12 @@ body.booking-confirm-open{
 }
 
 @media(max-width:420px){
+  body .container{padding-inline:16px}
+  .section-block{padding-block:48px 36px}
+  .hero-inner{padding-block:88px 64px;gap:32px}
   .hero .title{font-size:40px}
   .cta{padding:9px 16px;font-size:14px}
   .package h3{font-size:20px}
   .faq-item summary{font-size:17px}
+  .final-cta{padding-block:48px 32px}
 }
