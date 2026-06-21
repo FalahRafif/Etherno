@@ -20,7 +20,7 @@ class StoreBookingRequest extends FormRequest
         return [
             'booking_name' => ['required', 'string', 'max:255'],
             'booking_whatsapp' => ['required', 'string', 'max:30'],
-            'booking_date' => ['required', 'date', 'after_or_equal:today'],
+            'booking_date' => ['required', 'date', 'after:today'],
             'booking_package_type' => [
                 'required',
                 'integer',
@@ -94,7 +94,7 @@ class StoreBookingRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'booking_date.after_or_equal' => 'Tanggal acara minimal hari ini atau setelahnya.',
+            'booking_date.after' => 'Tanggal acara minimal besok (H+1).',
             'booking_pin_lat.required' => 'Silakan pilih pin lokasi pada peta.',
             'booking_pin_lng.required' => 'Silakan pilih pin lokasi pada peta.',
             'booking_pin_lat.between' => 'Latitude harus berada di rentang -90 sampai 90.',

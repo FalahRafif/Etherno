@@ -18,7 +18,7 @@
 
     <label class="form-label" for="booking_date_check">Tanggal Acara</label>
     @php
-      $minBookingDate = now()->addDays(7)->format('Y-m-d');
+      $minBookingDate = now()->addDay()->format('Y-m-d');
     @endphp
     <input
       class="form-input"
