@@ -60,6 +60,8 @@ Route::prefix('admin')
         Route::post('/bookings/{booking}/payments/{payment}/reject', [BookingDetailController::class, 'rejectPayment'])->name('bookings.payments.reject');
         Route::post('/bookings/{booking}/cancel', [BookingDetailController::class, 'cancelBooking'])->name('bookings.cancel');
         Route::post('/bookings/{booking}/complete', [BookingDetailController::class, 'completeBooking'])->name('bookings.complete');
+        Route::post('/bookings/{booking}/approve-reschedule', [BookingDetailController::class, 'approveReschedule'])->name('bookings.approve-reschedule');
+        Route::post('/bookings/{booking}/reject-reschedule', [BookingDetailController::class, 'rejectReschedule'])->name('bookings.reject-reschedule');
         Route::post('/bookings/{booking}/force-majeure', [BookingDetailController::class, 'forceMajeure'])->name('bookings.force-majeure');
         Route::post('/bookings/{booking}/upload-refund-proof', [BookingDetailController::class, 'uploadRefundProof'])->name('bookings.upload-refund-proof');
 

@@ -206,6 +206,16 @@
                                     <td class="text-muted ps-0">Sesi</td>
                                     <td class="fw-semibold">{{ $booking->eventSession?->description ?? '-' }}</td>
                                 </tr>
+                                @if($booking->reschedule_date)
+                                    <tr>
+                                        <td class="text-muted ps-0">Tanggal Reschedule</td>
+                                        <td class="fw-semibold text-warning">{{ $booking->reschedule_date?->format('Y-m-d') ?? '-' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted ps-0">Alasan Reschedule</td>
+                                        <td class="booking-detail-preline">{{ $booking->reschedule_reason ?? '-' }}</td>
+                                    </tr>
+                                @endif
                                 @forelse($locationChain as $loc)
                                     <tr>
                                         <td class="text-muted ps-0">{{ $loc['level'] }}</td>
@@ -664,6 +674,16 @@
                         @if(in_array('complete_booking', $availableActions))
                             <button type="button" class="btn btn-success" id="btn_complete_booking" data-booking-id="{{ $booking->id }}" data-url="{{ route('api.admin.bookings.complete', $booking->id) }}">
                                 <i class="ri-check-line me-1"></i> Selesaikan Booking
+                            </button>
+                        @endif
+                        @if(in_array('approve_reschedule', $availableActions))
+                            <button type="button" class="btn btn-success" id="btn_approve_reschedule" data-booking-id="{{ $booking->id }}" data-url="{{ route('api.admin.bookings.approve-reschedule', $booking->id) }}">
+                                <i class="ri-calendar-check-line me-1"></i> Approve Reschedule
+                            </button>
+                        @endif
+                        @if(in_array('reject_reschedule', $availableActions))
+                            <button type="button" class="btn btn-outline-danger" id="btn_reject_reschedule" data-booking-id="{{ $booking->id }}" data-url="{{ route('api.admin.bookings.reject-reschedule', $booking->id) }}">
+                                <i class="ri-calendar-close-line me-1"></i> Reject Reschedule
                             </button>
                         @endif
                         @if(in_array('force_majeure', $availableActions))
@@ -1180,6 +1200,7 @@ document.addEventListener('DOMContentLoaded', function() {
             swalConfirm(confirmTitle, { text: confirmText || '' }).then(function(result) {
                 if (!result.isConfirmed) return;
                 var url = btn.dataset.url;
+                var initialBtnHtml = btn.innerHTML;
                 btn.disabled = true;
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memproses...';
 
@@ -1193,15 +1214,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     credentials: 'same-origin'
                 })
-                .then(function(res) { return safeParseJson(res); })
+                .then(function(res) {
+                    return safeParseJson(res).then(function(data) {
+                        if (!res.ok) throw new Error((data && data.message) ? data.message : 'Terjadi kesalahan.');
+                        return data;
+                    });
+                })
                 .then(function(data) {
                     return swalSuccess(data.message || 'Berhasil').then(function() {
                         window.location.reload();
                     });
                 })
-                .catch(function() {
-                    swalError('Terjadi kesalahan. Silakan coba lagi.');
+                .catch(function(error) {
+                    swalError(error.message || 'Terjadi kesalahan. Silakan coba lagi.');
                     btn.disabled = false;
+                    btn.innerHTML = initialBtnHtml;
                 });
             });
         });
@@ -1302,9 +1329,12 @@ document.addEventListener('DOMContentLoaded', function() {
     var verifyDpBtn = document.getElementById('btn_verify_dp');
     var verifyFinalBtn = document.getElementById('btn_verify_final');
     var completeBtn = document.getElementById('btn_complete_booking');
+    var approveRescheduleBtn = document.getElementById('btn_approve_reschedule');
+    var rejectRescheduleBtn = document.getElementById('btn_reject_reschedule');
     handleAction(verifyDpBtn, 'Verifikasi DP', 'Pastikan pembayaran DP sudah diterima. Status akan berubah ke Waiting Final Payment.');
     handleAction(verifyFinalBtn, 'Verifikasi Pelunasan', 'Pastikan semua pembayaran sudah diterima. Status akan berubah ke Confirmed.');
     handleAction(completeBtn, 'Selesaikan Booking', 'Ini menandakan acara sudah dilaksanakan.');
+    handleAction(approveRescheduleBtn, 'Approve Reschedule', 'Tanggal acara akan dipindahkan ke tanggal reschedule yang diajukan customer.');
 
     function bindGenerateButton(selector, typeCode, confirmTitle, confirmText) {
         var btns = document.querySelectorAll(selector);
@@ -1342,6 +1372,48 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+    if (rejectRescheduleBtn) {
+        rejectRescheduleBtn.addEventListener('click', function() {
+            swalPrompt('Reject Reschedule', 'Masukkan alasan penolakan reschedule').then(function(result) {
+                if (!result.isConfirmed) return;
+                var reason = String(result.value || '').trim();
+                if (!reason) {
+                    swalError('Alasan penolakan reschedule wajib diisi.');
+                    return;
+                }
+                rejectRescheduleBtn.disabled = true;
+                rejectRescheduleBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memproses...';
+                fetch(rejectRescheduleBtn.dataset.url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ reason: reason })
+                })
+                .then(function(res) {
+                    return safeParseJson(res).then(function(data) {
+                        if (!res.ok) throw new Error((data && data.message) ? data.message : 'Terjadi kesalahan.');
+                        return data;
+                    });
+                })
+                .then(function(data) {
+                    return swalSuccess(data.message || 'Reschedule berhasil ditolak.').then(function() {
+                        window.location.reload();
+                    });
+                })
+                .catch(function(error) {
+                    swalError(error.message || 'Terjadi kesalahan. Silakan coba lagi.');
+                    rejectRescheduleBtn.disabled = false;
+                    rejectRescheduleBtn.innerHTML = '<i class="ri-calendar-close-line me-1"></i> Reject Reschedule';
+                });
+            });
+        });
+    }
+
     bindGenerateButton('#btn_generate_dp', 'INS_DP', 'Generate DP', 'Nominal DP akan dihitung otomatis dari total billing.');
     bindGenerateButton('#btn_generate_final', 'INS_FINAL', 'Generate Pelunasan', 'Nominal pelunasan akan dihitung otomatis dari sisa billing.');
 

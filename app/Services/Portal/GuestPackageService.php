@@ -94,6 +94,7 @@ class GuestPackageService
         return [
             'status:id,code,description',
             'packageType:id,code,description',
+            'thumbnailAttachment:id,uuid,name,path',
             'benefits' => function (HasMany $query): void {
                 $query->orderBy('id');
             },

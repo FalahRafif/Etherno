@@ -79,7 +79,8 @@ document.addEventListener('DOMContentLoaded', function() {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': '{{ csrf_token() }}'
       },
       body: JSON.stringify({
         booking_code: bookingCode,

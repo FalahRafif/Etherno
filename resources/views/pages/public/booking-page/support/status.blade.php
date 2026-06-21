@@ -70,10 +70,10 @@
               <p class="booking-status-key">Harga Paket</p>
               <p class="booking-status-value" id="status_package_price">-</p>
             </div>
-            <div class="booking-status-item booking-status-item-full">
+            {{-- <div class="booking-status-item booking-status-item-full">
               <p class="booking-status-key">Alamat Paket</p>
               <p class="booking-status-value" id="status_package_address">-</p>
-            </div>
+            </div> --}}
             <div class="booking-status-item booking-status-item-full">
               <p class="booking-status-key">Lokasi Acara</p>
               <p class="booking-status-value" id="status_location">-</p>
@@ -172,6 +172,34 @@
         <button class="cta cta-outline" type="button" data-booking-status-verify-close>Batal</button>
         <button class="cta" type="button" id="booking_status_verify_submit">Verifikasi & Tampilkan</button>
       </div>
+    </div>
+  </div>
+
+  <div class="booking-confirm-modal" id="reschedule_request_modal" hidden>
+    <div class="booking-confirm-backdrop" data-reschedule-request-close></div>
+    <div class="booking-confirm-dialog booking-confirm-dialog-wide" role="dialog" aria-modal="true">
+      <div class="booking-confirm-header">
+        <h4>Ajukan Reschedule</h4>
+        <button class="booking-confirm-close" type="button" aria-label="Tutup" data-reschedule-request-close>&times;</button>
+      </div>
+      <form id="reschedule_request_form">
+        <div class="booking-form-grid">
+          <div class="form-field">
+            <label class="form-label" for="reschedule_request_date">Tanggal Baru</label>
+            <input class="form-input" type="date" id="reschedule_request_date" name="proposed_date" required>
+          </div>
+          <div class="form-field form-field-full">
+            <label class="form-label" for="reschedule_request_reason">Alasan Reschedule</label>
+            <textarea class="form-input form-textarea" id="reschedule_request_reason" name="reason" rows="4" placeholder="Tuliskan alasan perubahan jadwal acara." required></textarea>
+          </div>
+        </div>
+        <p class="booking-disclaimer text-danger mb-0" id="reschedule_request_error" hidden></p>
+        <p class="booking-alert mb-0" id="reschedule_request_success" style="display:none;"></p>
+        <div class="booking-confirm-actions">
+          <button class="cta cta-outline" type="button" data-reschedule-request-close>Batal</button>
+          <button class="cta" type="submit" id="reschedule_request_submit_btn">Kirim Request Reschedule</button>
+        </div>
+      </form>
     </div>
   </div>
 

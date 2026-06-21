@@ -15,6 +15,7 @@ use App\Http\Requests\Api\Admin\BookingRefundProofRequest;
 use App\Http\Requests\Api\Admin\BookingUploadPaymentRequest;
 use App\Services\Admin\BookingDetailService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use RuntimeException;
 
 class BookingDetailController extends Controller
@@ -28,7 +29,7 @@ class BookingDetailController extends Controller
         $operatorId = auth()->id();
 
         $booking = $this->bookingDetailService->approveBooking($booking, $operatorId);
-
+        
         return response()->json([
             'message' => 'Booking berhasil di-approve. Silakan inisialisasi billing dan tambahkan add-on jika diperlukan, lalu generate DP.',
             'status_code' => $booking->status?->code,
@@ -191,6 +192,45 @@ class BookingDetailController extends Controller
 
         return response()->json([
             'message' => 'Booking selesai.',
+            'status_code' => $updatedBooking->status?->code,
+        ]);
+    }
+
+    public function approveReschedule(int $booking): JsonResponse
+    {
+        $operatorId = auth()->id();
+
+        try {
+            $updatedBooking = $this->bookingDetailService->approveReschedule($booking, $operatorId);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Reschedule berhasil disetujui.',
+            'status_code' => $updatedBooking->status?->code,
+        ]);
+    }
+
+    public function rejectReschedule(int $booking, Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
+        $operatorId = auth()->id();
+
+        try {
+            $updatedBooking = $this->bookingDetailService->rejectReschedule($booking, $operatorId, (string) $validated['reason']);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Reschedule berhasil ditolak.',
             'status_code' => $updatedBooking->status?->code,
         ]);
     }
