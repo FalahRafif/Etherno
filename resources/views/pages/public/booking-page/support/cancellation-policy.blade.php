@@ -27,7 +27,7 @@
     </article>
   </div>
 
-  @include('pages.public.booking-page.sections.support-links')
+
 </section>
 @endsection
 

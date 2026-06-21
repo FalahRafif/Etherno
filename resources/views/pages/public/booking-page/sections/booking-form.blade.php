@@ -156,7 +156,7 @@
             </option>
           @endforeach
         </select>
-        <p class="booking-disclaimer mt-2 mb-0" id="booking_package_address_preview" data-default-text="Pilih paket untuk melihat referensi alamat paket.">Pilih paket untuk melihat referensi alamat paket.</p>
+        {{-- <p class="booking-disclaimer mt-2 mb-0" id="booking_package_address_preview" data-default-text="Pilih paket untuk melihat referensi alamat paket.">Pilih paket untuk melihat referensi alamat paket.</p> --}}
         @error('booking_package')
           <p class="booking-disclaimer text-danger mb-0">{{ $message }}</p>
         @enderror
