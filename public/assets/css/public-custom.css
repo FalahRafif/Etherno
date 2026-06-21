@@ -1561,7 +1561,37 @@ body.booking-confirm-open{
 
   .packages-page-section{padding-top:56px}
   .packages-more-button{width:100%}
-  .package-grid,.testimonial-grid,.footer-grid{grid-template-columns:1fr}
+  .package-grid{
+    display:flex;
+    grid-template-columns:none;
+    gap:16px;
+    overflow-x:auto;
+    padding:10px 2px 14px;
+    scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+  }
+  .package-grid .package,
+  .package-grid .package-empty{
+    flex:0 0 min(82vw,320px);
+    scroll-snap-align:start;
+  }
+  .testimonial-grid{
+    display:flex;
+    grid-template-columns:none;
+    gap:16px;
+    overflow-x:auto;
+    padding:6px 2px 14px;
+    scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+  }
+  .testimonial-grid .testimonial-card{
+    flex:0 0 min(82vw,320px);
+    scroll-snap-align:start;
+  }
+  .testimonial-grid .testimonial-card-large{grid-column:auto}
+  .footer-grid{grid-template-columns:1fr}
   .package{padding:24px}
   .package h3{font-size:22px}
   .package-featured{transform:none}

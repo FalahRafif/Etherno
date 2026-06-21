@@ -70,10 +70,10 @@
               <p class="booking-status-key">Harga Paket</p>
               <p class="booking-status-value" id="status_package_price">-</p>
             </div>
-            <div class="booking-status-item booking-status-item-full">
+            {{-- <div class="booking-status-item booking-status-item-full">
               <p class="booking-status-key">Alamat Paket</p>
               <p class="booking-status-value" id="status_package_address">-</p>
-            </div>
+            </div> --}}
             <div class="booking-status-item booking-status-item-full">
               <p class="booking-status-key">Lokasi Acara</p>
               <p class="booking-status-value" id="status_location">-</p>
