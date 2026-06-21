@@ -421,9 +421,27 @@
                     });
                 }
                 if (action === "reschedule_request") {
+                    var maxDaysInfo = 14;
+                    var eventDateRawInfo = "";
+                    if (currentPayload && currentPayload.event && currentPayload.event.date_raw) {
+                        eventDateRawInfo = String(currentPayload.event.date_raw).trim();
+                    }
+                    var infoDeadlineText = "";
+                    if (eventDateRawInfo) {
+                        var evDate = new Date(eventDateRawInfo + "T00:00:00");
+                        if (!isNaN(evDate.getTime())) {
+                            var dlDate = new Date(evDate);
+                            dlDate.setDate(dlDate.getDate() - maxDaysInfo);
+                            var dlStr = dlDate.toLocaleDateString("id-ID", {
+                                weekday: "long", day: "numeric", month: "long", year: "numeric"
+                            });
+                            infoDeadlineText = ' Batas pengajuan: <strong>' + dlStr + '</strong> (H-' + maxDaysInfo + ').';
+                        }
+                    }
+
                     var info = document.createElement("div");
                     info.className = "estimate-box mb-2";
-                    info.innerHTML = '<p class="estimate-note mb-1"><i class="ri-calendar-event-line me-1"></i><strong>Ajukan Reschedule</strong></p><p class="estimate-note mb-0">Anda dapat mengajukan perubahan tanggal acara dari halaman reschedule. Tim Etherno akan mengecek ketersediaan jadwal sebelum menyetujui perubahan.</p>';
+                    info.innerHTML = '<p class="estimate-note mb-1"><i class="ri-calendar-event-line me-1"></i><strong>Ajukan Reschedule</strong></p><p class="estimate-note mb-0">Anda dapat mengajukan perubahan tanggal acara. Tim Etherno akan mengecek ketersediaan jadwal sebelum menyetujui perubahan.' + infoDeadlineText + '</p>';
                     wrap.appendChild(info);
 
                     var rescheduleBtn = document.createElement("button");
@@ -440,9 +458,54 @@
             if (!rescheduleModal) return;
             if (rescheduleError) rescheduleError.hidden = true;
             if (rescheduleSuccess) rescheduleSuccess.style.display = "none";
+
+            var maxDays = 14;
+            var eventDateRaw = "";
+            if (currentPayload && currentPayload.event && currentPayload.event.date_raw) {
+                eventDateRaw = String(currentPayload.event.date_raw).trim();
+            }
+
+            var deadlineInfo = document.getElementById("reschedule_deadline_info");
+            var dateInput = document.getElementById("reschedule_request_date");
+
+            var today = new Date();
+            today.setHours(0, 0, 0, 0);
+            var todayStr = today.getFullYear() + "-" +
+                String(today.getMonth() + 1).padStart(2, "0") + "-" +
+                String(today.getDate()).padStart(2, "0");
+
+            if (dateInput) {
+                dateInput.min = todayStr;
+            }
+
+            if (eventDateRaw && deadlineInfo) {
+                var eventDate = new Date(eventDateRaw + "T00:00:00");
+                if (!isNaN(eventDate.getTime())) {
+                    var deadlineDate = new Date(eventDate);
+                    deadlineDate.setDate(deadlineDate.getDate() - maxDays);
+
+                    var isPastDeadline = today > deadlineDate;
+
+                    var deadlineStr = deadlineDate.toLocaleDateString("id-ID", {
+                        weekday: "long", day: "numeric", month: "long", year: "numeric"
+                    });
+
+                    var noteEl = deadlineInfo.querySelector(".estimate-note");
+                    if (noteEl) {
+                        if (isPastDeadline) {
+                            noteEl.innerHTML = '<i class="ri-error-warning-line me-1"></i><strong>Batas Reschedule Terlewati:</strong> Pengajuan reschedule seharusnya diajukan paling lambat <strong>' + deadlineStr + '</strong> (H-' + maxDays + ' sebelum acara). Hubungi tim Etherno via WhatsApp untuk bantuan.';
+                        } else {
+                            noteEl.innerHTML = '<i class="ri-calendar-event-line me-1"></i><strong>Batas Pengajuan:</strong> Reschedule harus diajukan paling lambat <strong>' + deadlineStr + '</strong> (H-' + maxDays + ' sebelum acara). Pilih tanggal baru di luar tanggal masa lalu.';
+                        }
+                    }
+                    deadlineInfo.hidden = false;
+                }
+            } else if (deadlineInfo) {
+                deadlineInfo.hidden = true;
+            }
+
             rescheduleModal.hidden = false;
             document.body.classList.add("booking-confirm-open");
-            var dateInput = document.getElementById("reschedule_request_date");
             if (dateInput) dateInput.focus();
         }
 
@@ -717,6 +780,10 @@
 
             if (code === "BS_RESCHEDULE") {
                 subtitleText += ". Request reschedule Anda sedang menunggu review tim Etherno.";
+            }
+
+            if (code === "BS_FORCE_MAJEURE") {
+                subtitleText += ". Terjadi force majeure pada booking Anda. Tim Etherno sedang menangani situasi ini.";
             }
 
             if (code === "BS_COMPLETE") {

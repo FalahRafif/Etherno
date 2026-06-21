@@ -57,14 +57,14 @@
                     unset($baseFilters['status']);
                     $targetFilters = $filterCode !== '' ? array_merge($baseFilters, ['status' => $filterCode]) : $baseFilters;
                 @endphp
-                <a href="{{ route('admin.bookings.list', $targetFilters) }}" class="btn btn-sm {{ $isActive ? 'btn-' . $tone : 'btn-outline-' . $tone }}">
+                <a href="{{ panel_route('admin.bookings.list', $targetFilters) }}" class="btn btn-sm {{ $isActive ? 'btn-' . $tone : 'btn-outline-' . $tone }}">
                     {{ $filter['label'] ?? '-' }}
                     <span class="badge {{ $badgeClass }} ms-2">{{ $filter['count'] ?? 0 }}</span>
                 </a>
             @endforeach
         </div>
 
-        <form method="GET" action="{{ route('admin.bookings.list') }}" class="row g-3 align-items-end" id="booking_filter_form">
+        <form method="GET" action="{{ panel_route('admin.bookings.list') }}" class="row g-3 align-items-end" id="booking_filter_form">
             <input type="hidden" name="status" value="{{ $currentStatus }}">
             <div class="col-12 col-md-4 col-xl-3">
                 <label for="case_id" class="form-label">Case ID</label>
@@ -89,7 +89,7 @@
             </div>
             <div class="col-12 col-md-3 col-xl-3 d-flex gap-2">
                 <button type="submit" class="btn btn-primary w-100">Terapkan Filter</button>
-                <a href="{{ route('admin.bookings.list') }}" class="btn btn-light w-100">Reset</a>
+                <a href="{{ panel_route('admin.bookings.list') }}" class="btn btn-light w-100">Reset</a>
             </div>
         </form>
     </div>

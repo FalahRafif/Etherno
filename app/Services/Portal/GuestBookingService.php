@@ -485,6 +485,7 @@ class GuestBookingService
             ],
             'event' => [
                 'date_label' => $eventDateLabel,
+                'date_raw' => $booking->event_date instanceof Carbon ? $booking->event_date->toDateString() : trim((string) ($booking->event_date ?? '')),
                 'session' => trim((string) ($booking->eventSession?->description ?? '')) ?: '-',
                 'detail' => $eventDetail !== '' ? $eventDetail : '-',
                 'submitted_at' => $submittedAt,

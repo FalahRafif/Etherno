@@ -655,6 +655,7 @@ class BookingDetailService
 
         $this->bookingRepository->update($booking, [
             'status_id' => $fmRef->id,
+            'event_date' => $parsedDate,
             'force_majeure_date' => $parsedDate,
             'force_majeure_reason' => $reason,
             'reschedule_date' => $parsedDate,
@@ -668,6 +669,38 @@ class BookingDetailService
             'status_id' => $fmRef->id,
             'operator_id' => $operatorId,
             'description' => 'Force Majeure - Reschedule ke ' . $parsedDate . ': ' . $reason,
+        ]);
+
+        return $booking->fresh($this->detailRelations());
+    }
+
+    public function confirmForceMajeureReschedule(int $bookingId, int $operatorId): Booking
+    {
+        $booking = $this->bookingRepository->findOrFail($bookingId, ['*'], $this->detailRelations());
+        $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+
+        if ($statusCode !== 'BS_FORCE_MAJEURE') {
+            throw new RuntimeException('Konfirmasi reschedule hanya untuk status Force Majeure.');
+        }
+
+        if (empty($booking->force_majeure_date)) {
+            throw new RuntimeException('Konfirmasi reschedule hanya tersedia untuk force majeure dengan reschedule, bukan refund.');
+        }
+
+        $confirmedRef = $this->findReference('booking_status', 'BS_CONFIRMED');
+        $fmDate = $booking->force_majeure_date instanceof Carbon ? $booking->force_majeure_date->toDateString() : (string) $booking->force_majeure_date;
+
+        $this->bookingRepository->update($booking, [
+            'status_id' => $confirmedRef->id,
+            'operator_id' => $operatorId,
+        ]);
+
+        $this->bookingHistoryRepository->create([
+            'uuid' => Str::uuid()->toString(),
+            'booking_id' => $booking->id,
+            'status_id' => $confirmedRef->id,
+            'operator_id' => $operatorId,
+            'description' => 'Force Majeure reschedule dikonfirmasi. Tanggal acara: ' . $fmDate,
         ]);
 
         return $booking->fresh($this->detailRelations());
@@ -1616,7 +1649,7 @@ class BookingDetailService
     {
         if ($statusCode === 'BS_FORCE_MAJEURE') {
             $isReschedule = !empty($booking->force_majeure_date);
-            return $isReschedule ? [] : ['upload_refund_proof'];
+            return $isReschedule ? ['confirm_fm_reschedule'] : ['upload_refund_proof'];
         }
 
         $actions = match ($statusCode) {
