@@ -17,6 +17,9 @@
     <p class="booking-caption">Maksimal 2 booking per hari, terbagi sesi pagi-siang dan sore-malam. Slot baru terblokir setelah DP diverifikasi.</p>
 
     <label class="form-label" for="booking_date_check">Tanggal Acara</label>
+    @php
+      $minBookingDate = now()->addDays(7)->format('Y-m-d');
+    @endphp
     <input
       class="form-input"
       type="date"
@@ -24,6 +27,7 @@
       name="booking_date"
       form="booking_form_preview"
       value="{{ old('booking_date') }}"
+      min="{{ $minBookingDate }}"
       data-availability-url="{{ route('booking.availability', [], false) }}"
       required>
     @error('booking_date')
