@@ -452,23 +452,105 @@ body .container{max-width:1120px;margin:0 auto;padding-inline:24px;width:100%}
 }
 
 .final-cta{
-  padding-block:64px 36px;
+  padding-block:72px 44px;
   text-align:center;
 }
+.final-cta-card{
+  position:relative;
+  overflow:hidden;
+  border:1px solid rgba(181,143,66,.22);
+  border-radius:28px;
+  background:linear-gradient(135deg,#15120e 0%,#2a2117 54%,#9d7932 130%);
+  color:#fff;
+  padding:54px 34px;
+  box-shadow:0 24px 70px rgba(11,10,9,.14);
+}
+.final-cta-card:before{
+  content:"";
+  position:absolute;
+  inset:-90px auto auto -70px;
+  width:220px;
+  height:220px;
+  border-radius:50%;
+  background:rgba(181,143,66,.22);
+  filter:blur(2px);
+}
+.final-cta-card:after{
+  content:"";
+  position:absolute;
+  right:-80px;
+  bottom:-110px;
+  width:260px;
+  height:260px;
+  border-radius:50%;
+  background:rgba(255,255,255,.08);
+}
+.final-cta-eyebrow{position:relative;z-index:1;color:#e7cf94}
 .final-cta-title{
+  position:relative;
+  z-index:1;
   margin:0;
   font-family:'Playfair Display',var(--serif);
-  font-size:clamp(36px,4.8vw,48px);
-  line-height:1.12;
-  color:#121212;
+  font-size:clamp(36px,4.8vw,52px);
+  line-height:1.08;
+  color:#fff;
 }
 .final-cta-copy{
-  margin:12px auto 0;
+  position:relative;
+  z-index:1;
+  margin:16px auto 0;
   max-width:620px;
-  color:rgba(15,15,15,.66);
+  color:rgba(255,255,255,.78);
   font-size:15px;
+  line-height:1.75;
 }
-.final-cta .cta{margin-top:14px}
+.final-cta-actions{
+  position:relative;
+  z-index:1;
+  margin-top:26px;
+  display:flex;
+  justify-content:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.final-cta-button{background:#d1a957;color:#17120b;box-shadow:0 12px 28px rgba(0,0,0,.22)}
+.final-cta-secondary{background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.28)}
+.final-cta-secondary:hover{color:#fff;border-color:rgba(255,255,255,.58)}
+.scroll-top-button{
+  position:fixed;
+  right:22px;
+  bottom:22px;
+  z-index:50;
+  width:48px;
+  height:48px;
+  border:1px solid rgba(181,143,66,.34);
+  border-radius:999px;
+  background:rgba(255,253,248,.92);
+  box-shadow:0 14px 34px rgba(11,10,9,.16);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  opacity:0;
+  pointer-events:none;
+  transform:translateY(12px) scale(.92);
+  transition:opacity .2s ease,transform .2s ease,box-shadow .2s ease,border-color .2s ease;
+  backdrop-filter:blur(10px);
+}
+.scroll-top-button img{width:26px;height:26px;object-fit:contain;border-radius:50%}
+.scroll-top-button:after{
+  content:"";
+  position:absolute;
+  top:9px;
+  right:9px;
+  width:7px;
+  height:7px;
+  border-top:2px solid #9d7932;
+  border-left:2px solid #9d7932;
+  transform:rotate(45deg);
+}
+.scroll-top-button.is-visible{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}
+.scroll-top-button:hover{transform:translateY(-3px) scale(1.04);box-shadow:0 18px 42px rgba(11,10,9,.22);border-color:rgba(181,143,66,.62)}
 
 .booking-section{padding-top:72px;scroll-margin-top:96px}
 .booking-heading{margin-bottom:24px}
@@ -1604,8 +1686,12 @@ body.booking-confirm-open{
   .portfolio-track{gap:14px;animation-duration:26s}
   .portfolio-slide{width:250px;border-radius:22px}
   .final-cta{padding-block:56px 36px}
-  .final-cta-title{font-size:clamp(34px,11.5vw,42px)}
+  .final-cta-card{padding:38px 20px;border-radius:22px}
+  .final-cta-title{font-size:clamp(32px,10vw,42px)}
   .final-cta-copy{font-size:14px}
+  .final-cta-actions{flex-direction:column;align-items:stretch;gap:10px}
+  .final-cta-actions .cta{width:100%}
+  .scroll-top-button{right:16px;bottom:16px;width:44px;height:44px}
 
   .booking-section{padding-top:56px}
   .booking-tab-list{flex-direction:column;align-items:stretch}
@@ -1688,4 +1774,8 @@ body.booking-confirm-open{
   .package h3{font-size:20px}
   .faq-item summary{font-size:17px}
   .final-cta{padding-block:48px 32px}
+  .final-cta-card{padding:32px 18px;border-radius:20px}
+  .final-cta-title{font-size:clamp(28px,9.5vw,36px)}
+  .scroll-top-button{right:14px;bottom:14px;width:42px;height:42px}
 }
+

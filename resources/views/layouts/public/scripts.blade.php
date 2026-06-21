@@ -305,6 +305,20 @@
 
       renderAvailability(dateCheckInput.value);
     }
+
+    const scrollTopButton = document.querySelector('[data-scroll-top]');
+    if (scrollTopButton) {
+      const toggleScrollTopButton = function () {
+        scrollTopButton.classList.toggle('is-visible', window.scrollY > 420);
+      };
+
+      scrollTopButton.addEventListener('click', function () {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      window.addEventListener('scroll', toggleScrollTopButton, { passive: true });
+      toggleScrollTopButton();
+    }
   });
 </script>
 </body>
