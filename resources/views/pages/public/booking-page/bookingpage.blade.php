@@ -24,7 +24,7 @@
                 </div>
                 <div class="booking-tab-panel @if($activeBookingTab === 'form') is-active @endif" role="tabpanel" id="booking_tab_form" aria-labelledby="booking_tab_form_button" data-booking-panel="form" @if($activeBookingTab !== 'form') hidden @endif>
                     @include('pages.public.booking-page.sections.booking-form')
-                    @include('pages.public.booking-page.sections.support-links')
+
                 </div>
             </div>
         </div>

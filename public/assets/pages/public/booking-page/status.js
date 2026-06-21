@@ -254,27 +254,95 @@
             wrap.innerHTML = "";
 
             var statusCode = currentPayload && currentPayload.status ? String(currentPayload.status.code || "") : "";
+            var isWaitingApproval = statusCode === "BS_WAITING_APPROVAL";
+            var isApprovedWaitingDp = statusCode === "BS_APPROVED_WAITING_DP";
             var isApprovedWaitingFinal = statusCode === "BS_APPROVED_WAITING_FINAL_PAYMENT";
+            var isConfirmed = statusCode === "BS_CONFIRMED";
 
-            if (isApprovedWaitingFinal) {
-                var statusInfoDiv = document.createElement("div");
-                statusInfoDiv.className = "estimate-box mb-3";
-                statusInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-information-line me-1"></i><strong>Status: APPROVED WAITING FINAL PAYMENT</strong></p><p class="estimate-note mb-0">DP Anda telah diverifikasi. Silakan hubungi admin untuk informasi pelunasan dan konfirmasi tanggal acara.</p>';
-                wrap.appendChild(statusInfoDiv);
+            var hasDpInstallment = billing && Array.isArray(billing.installments) && billing.installments.some(function (i) {
+                return String(i.type_code || "") === "INS_DP";
+            });
+            var hasFinalInstallment = billing && Array.isArray(billing.installments) && billing.installments.some(function (i) {
+                return String(i.type_code || "") === "INS_FINAL";
+            });
 
-                if (waPhone && waTemplates && waTemplates.support) {
+            if (isWaitingApproval) {
+                var waitingInfoDiv = document.createElement("div");
+                waitingInfoDiv.className = "estimate-box mb-3";
+                waitingInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-time-line me-1"></i><strong>Pengajuan Sedang Diverifikasi</strong></p><p class="estimate-note mb-0">Data booking Anda sudah kami terima dan sedang dalam proses review oleh tim Etherno. Anda akan dihubungi melalui WhatsApp setelah pengajuan disetujui untuk melanjutkan ke tahap pembayaran DP.</p>';
+                wrap.appendChild(waitingInfoDiv);
+
+                if (waPhone && waTemplates && waTemplates.waiting_approval) {
                     var waBtn = document.createElement("a");
                     waBtn.className = "cta mb-2";
-                    waBtn.href = buildWhatsappUrl(waPhone, waTemplates.support);
+                    waBtn.href = buildWhatsappUrl(waPhone, waTemplates.waiting_approval);
                     waBtn.target = "_blank";
                     waBtn.rel = "noopener";
-                    waBtn.innerHTML = '<i class="ri-whatsapp-line me-1"></i> Hubungi via WhatsApp';
+                    waBtn.innerHTML = '<i class="ri-whatsapp-line me-1"></i> Tanyakan Progres via WhatsApp';
                     wrap.appendChild(waBtn);
                 }
             }
 
+            if (isApprovedWaitingDp && !hasDpInstallment) {
+                var dpPendingInfoDiv = document.createElement("div");
+                dpPendingInfoDiv.className = "estimate-box mb-3";
+                dpPendingInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-search-line me-1"></i><strong>Menunggu Tagihan DP</strong></p><p class="estimate-note mb-0">Pengajuan booking Anda telah <strong>disetujui</strong>. Tim Etherno sedang melakukan pengecekan harga final termasuk biaya tambahan jika ada. Setelah selesai, tagihan DP akan otomatis muncul di tab Tagihan & Pembayaran dan Anda dapat melakukan pembayaran.</p>';
+                wrap.appendChild(dpPendingInfoDiv);
+
+                if (waPhone && waTemplates && waTemplates.support) {
+                    var waBtnDp = document.createElement("a");
+                    waBtnDp.className = "cta cta-outline mb-2";
+                    waBtnDp.href = buildWhatsappUrl(waPhone, waTemplates.support);
+                    waBtnDp.target = "_blank";
+                    waBtnDp.rel = "noopener";
+                    waBtnDp.innerHTML = '<i class="ri-whatsapp-line me-1"></i> Tanyakan Detail via WhatsApp';
+                    wrap.appendChild(waBtnDp);
+                }
+            }
+
+            if (isApprovedWaitingFinal && !hasFinalInstallment) {
+                var finalPendingInfoDiv = document.createElement("div");
+                finalPendingInfoDiv.className = "estimate-box mb-3";
+                finalPendingInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-search-line me-1"></i><strong>Menunggu Tagihan Pelunasan</strong></p><p class="estimate-note mb-0">Pembayaran DP Anda telah <strong>diverifikasi</strong>. Tim Etherno sedang menyiapkan tagihan pelunasan Anda. Setelah selesai, tagihan pelunasan akan otomatis muncul di tab Tagihan & Pembayaran.</p>';
+                wrap.appendChild(finalPendingInfoDiv);
+
+                if (waPhone && waTemplates && waTemplates.support) {
+                    var waBtnFinal = document.createElement("a");
+                    waBtnFinal.className = "cta cta-outline mb-2";
+                    waBtnFinal.href = buildWhatsappUrl(waPhone, waTemplates.support);
+                    waBtnFinal.target = "_blank";
+                    waBtnFinal.rel = "noopener";
+                    waBtnFinal.innerHTML = '<i class="ri-whatsapp-line me-1"></i> Tanyakan Detail via WhatsApp';
+                    wrap.appendChild(waBtnFinal);
+                }
+            }
+
+            if (isApprovedWaitingFinal && hasFinalInstallment) {
+                var finalReadyInfoDiv = document.createElement("div");
+                finalReadyInfoDiv.className = "estimate-box mb-3";
+                finalReadyInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-check-double-line me-1"></i><strong>DP Diverifikasi — Siap Pelunasan</strong></p><p class="estimate-note mb-0">Pembayaran DP Anda telah diverifikasi. Tagihan pelunasan sudah tersedia di tab Tagihan & Pembayaran. Silakan lakukan pembayaran pelunasan sebelum tanggal acara.</p>';
+                wrap.appendChild(finalReadyInfoDiv);
+            }
+
+            if (isConfirmed) {
+                var confirmedInfoDiv = document.createElement("div");
+                confirmedInfoDiv.className = "estimate-box mb-3";
+                confirmedInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-party-line me-1"></i><strong>Booking Dikunci!</strong></p><p class="estimate-note mb-0">Selamat! Semua pembayaran telah lunas dan terverifikasi. Slot jadwal Anda sudah dikunci. Tim Etherno akan menghubungi Anda untuk koordinasi sebelum hari acara. Sampai jumpa!</p>';
+                wrap.appendChild(confirmedInfoDiv);
+
+                if (waPhone && waTemplates && waTemplates.support) {
+                    var waBtnConf = document.createElement("a");
+                    waBtnConf.className = "cta cta-outline mb-2";
+                    waBtnConf.href = buildWhatsappUrl(waPhone, waTemplates.support);
+                    waBtnConf.target = "_blank";
+                    waBtnConf.rel = "noopener";
+                    waBtnConf.innerHTML = '<i class="ri-whatsapp-line me-1"></i> Koordinasi via WhatsApp';
+                    wrap.appendChild(waBtnConf);
+                }
+            }
+
             if (!Array.isArray(actions) || actions.length === 0) {
-                if (!isApprovedWaitingFinal) {
+                if (!isWaitingApproval && !(isApprovedWaitingDp && !hasDpInstallment) && !(isApprovedWaitingFinal && !hasFinalInstallment) && !isConfirmed) {
                     var empty = document.createElement("p");
                     empty.className = "booking-disclaimer";
                     empty.textContent = "Tidak ada aksi yang tersedia saat ini.";
@@ -328,7 +396,7 @@
         function renderPendingInfo(wrap, type, phone, template) {
             var box = document.createElement("div");
             box.className = "estimate-box mb-2";
-            box.innerHTML = '<p class="estimate-note mb-1">\u23F3 Bukti pembayaran ' + String(type || '') + ' sudah dikirim dan sedang menunggu verifikasi tim kami.</p><p class="estimate-note mb-0" style="font-size:0.85em;">Jika bukti ditolak, Anda bisa mengirim ulang dari halaman ini.</p>';
+            box.innerHTML = '<p class="estimate-note mb-1">\u23F3 Bukti pembayaran ' + String(type || '') + ' sudah dikirim dan sedang menunggu verifikasi dari tim kami.</p><p class="estimate-note mb-0" style="font-size:0.85em;">Proses verifikasi biasanya 1x24 jam. Jika bukti ditolak, Anda dapat mengirim ulang dari halaman ini.</p>';
             wrap.appendChild(box);
             if (phone && template) {
                 var waLink = document.createElement("a");
@@ -336,7 +404,7 @@
                 waLink.href = buildWhatsappUrl(phone, template);
                 waLink.target = "_blank";
                 waLink.rel = "noopener";
-                waLink.innerHTML = "Konfirmasi via WhatsApp";
+                waLink.innerHTML = '<i class="ri-whatsapp-line me-1"></i> Konfirmasi via WhatsApp';
                 wrap.appendChild(waLink);
             }
         }
@@ -438,7 +506,25 @@
             })
             .then(function (data) {
                 closeUploadPaymentModal();
-                submitLookup();
+                isSubmitting = false;
+
+                var refreshBtn = document.getElementById("btn_refresh_status");
+                if (refreshBtn) {
+                    refreshBtn.disabled = true;
+                    refreshBtn.textContent = "Memuat ulang data...";
+                }
+
+                submitLookup().then(function () {
+                    if (refreshBtn) {
+                        refreshBtn.disabled = false;
+                        refreshBtn.textContent = "Refresh Data Booking";
+                    }
+                }).catch(function () {
+                    if (refreshBtn) {
+                        refreshBtn.disabled = false;
+                        refreshBtn.textContent = "Refresh Data Booking";
+                    }
+                });
             })
             .catch(function (err) {
                 var msg = err instanceof Error ? err.message : "Terjadi kendala saat mengirim bukti pembayaran.";
@@ -466,9 +552,41 @@
                 statusState.classList.add(tone);
             }
             if (statusStateLabel) statusStateLabel.textContent = "Status: " + String(status.label || "-");
+            var code = String(status.code || "");
             var subtitleText = "Diajukan pada " + String(eventData.submitted_at || "-");
-            if (String(status.code || "") === "BS_APPROVED_WAITING_FINAL_PAYMENT") {
-                subtitleText += ". DP Anda telah diverifikasi. Silakan hubungi admin untuk informasi pelunasan.";
+
+            if (code === "BS_WAITING_APPROVAL") {
+                subtitleText += ". Pengajuan Anda sedang diverifikasi oleh tim kami. Mohon tunggu konfirmasi dari admin.";
+            }
+
+            if (code === "BS_APPROVED_WAITING_DP") {
+                var hasDp = billing && Array.isArray(billing.installments) && billing.installments.some(function (i) {
+                    return String(i.type_code || "") === "INS_DP";
+                });
+                if (hasDp) {
+                    subtitleText += ". Tagihan DP sudah tersedia. Silakan lakukan pembayaran DP sesuai nominal yang tertera.";
+                } else {
+                    subtitleText += ". Pengajuan Anda telah disetujui. Tim kami sedang menyiapkan tagihan DP Anda.";
+                }
+            }
+
+            if (code === "BS_APPROVED_WAITING_FINAL_PAYMENT") {
+                var hasFinal = billing && Array.isArray(billing.installments) && billing.installments.some(function (i) {
+                    return String(i.type_code || "") === "INS_FINAL";
+                });
+                if (hasFinal) {
+                    subtitleText += ". Tagihan pelunasan sudah tersedia. Silakan lakukan pembayaran pelunasan sebelum tanggal acara.";
+                } else {
+                    subtitleText += ". DP Anda telah diverifikasi. Tim kami sedang menyiapkan tagihan pelunasan Anda.";
+                }
+            }
+
+            if (code === "BS_CONFIRMED") {
+                subtitleText += ". Pembayaran Anda telah lunas dan terverifikasi. Booking Anda sudah dikunci. Sampai jumpa di hari acara!";
+            }
+
+            if (code === "BS_COMPLETE") {
+                subtitleText += ". Acara telah selesai. Terima kasih telah mempercayakan moment spesial Anda kepada Etherno.";
             }
             if (statusStateSubtitle) statusStateSubtitle.textContent = subtitleText;
 
@@ -548,7 +666,8 @@
         }
 
         function submitLookup() {
-            if (isSubmitting || !bookingCodeInput || !verifyInput) return;
+            if (!bookingCodeInput || !verifyInput) return Promise.resolve();
+            if (isSubmitting) return Promise.resolve();
             var bookingCode = String(bookingCodeInput.value || "").trim();
             var phoneLast4 = sanitizeLastFour(verifyInput.value);
             setVerifyError("");
@@ -557,11 +676,11 @@
             if (phoneLast4.length !== 4) {
                 setVerifyError("Masukkan tepat 4 digit terakhir nomor WhatsApp.");
                 verifyInput.focus();
-                return;
+                return Promise.resolve();
             }
             if (lookupUrl === "") {
                 setVerifyError("Endpoint cek status belum tersedia.");
-                return;
+                return Promise.resolve();
             }
 
             isSubmitting = true;
@@ -572,7 +691,7 @@
             requestUrl.searchParams.set("booking_code", bookingCode);
             requestUrl.searchParams.set("phone_last4", phoneLast4);
 
-            fetch(requestUrl.toString(), {
+            return fetch(requestUrl.toString(), {
                 method: "GET",
                 credentials: "same-origin",
                 headers: { "Accept": "application/json", "X-Requested-With": "XMLHttpRequest" }
@@ -682,11 +801,10 @@
                 if (currentPayload) {
                     refreshBtn.disabled = true;
                     refreshBtn.textContent = "Memuat ulang...";
-                    submitLookup();
-                    setTimeout(function () {
+                    submitLookup().finally(function () {
                         refreshBtn.disabled = false;
                         refreshBtn.textContent = "Refresh Data Booking";
-                    }, 1500);
+                    });
                 } else {
                     alert("Data booking belum dimuat. Cari booking terlebih dahulu.");
                 }
