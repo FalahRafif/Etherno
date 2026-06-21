@@ -171,7 +171,9 @@ Endpoint admin API (mutasi data internal):
 
 <!-- Updated: Tambah seluruh section booking management admin API endpoint -->
 
-Endpoint admin booking management API (seluruhnya middleware `web` + `auth` + `role:Admin`):
+<!-- Updated: Booking management API sekarang shared Admin+Petugas (auth only), bukan Admin-only -->
+
+Endpoint admin booking management API (middleware `web` + `auth`, shared oleh Admin dan Petugas):
 
 - Approve booking: `POST /api/admin/bookings/{booking}/approve` (name `api.admin.bookings.approve`).
 - Reject booking: `POST /api/admin/bookings/{booking}/reject` (name `api.admin.bookings.reject`).
@@ -186,9 +188,14 @@ Endpoint admin booking management API (seluruhnya middleware `web` + `auth` + `r
 - Force majeure: `POST /api/admin/bookings/{booking}/force-majeure` (name `api.admin.bookings.force-majeure`).
 - Upload refund proof: `POST /api/admin/bookings/{booking}/upload-refund-proof` (name `api.admin.bookings.upload-refund-proof`).
 - Store billing detail: `POST /api/admin/bookings/{booking}/billing-details` (name `api.admin.bookings.billing-details.store`).
-- Generate installment: `POST /api/admin/bookings/{booking}/installments` (name `api.admin.bookings.installments.store`).
+- Generate installment: `POST /api/admin/bookings/{booking}/installments` (name `api.admin.bookings.installments.store`). Body `{ installment_type_code: 'INS_DP' }` untuk generate DP otomatis, `{ installment_type_code: 'INS_FINAL' }` untuk generate pelunasan otomatis, atau `{ installment_type_code: 'INS_PARTIAL', amount, due_date }` untuk installment manual.
 
-Alur status booking internal: `BS_WAITING_APPROVAL` → `BS_APPROVED_WAITING_DP` (billing DP dibuat otomatis saat approve) → `BS_APPROVED_WAITING_FINAL_PAYMENT` (setelah DP verified) → `BS_CONFIRMED` (setelah pelunasan verified) → `BS_COMPLETE`. Status lain: `BS_REJECTED`, `BS_CANCEL`, `BS_EXPIRED`, `BS_EXPIRED_DP`, `BS_FORCE_MAJEURE`, `BS_REFUND`.
+Pemisahan route API internal:
+
+- **Admin-only** (`web` + `auth` + `role:Admin`): users, packages, location-rules, payment-date-rules, dp-percentage-rules, package-date-rules.
+- **Shared Admin + Petugas** (`web` + `auth`, tanpa `role:Admin`): seluruh booking management operations (approve, reject, verify, cancel, complete, force-majeure, upload-payment, upload-refund-proof), billing-details store, installments store, payments approve/reject, profile update.
+
+Alur status booking internal: `BS_WAITING_APPROVAL` → `BS_APPROVED_WAITING_DP` (billing diinisialisasi saat approve, DP installment di-generate manual oleh Admin/Petugas) → `BS_APPROVED_WAITING_FINAL_PAYMENT` (setelah DP verified) → `BS_CONFIRMED` (setelah pelunasan verified) → `BS_COMPLETE`. Status lain: `BS_REJECTED`, `BS_CANCEL`, `BS_EXPIRED`, `BS_EXPIRED_DP`, `BS_FORCE_MAJEURE`, `BS_REFUND`.
 
 Endpoint secure preview attachment internal:
 
@@ -373,7 +380,7 @@ Standard project saat ini:
 - Controller Web tipis: fokus render page, return view/redirect, dan tidak menerima `Request`/`FormRequest` di method signature. Kecuali `AdminPreviewController::bookingsList` dan `calendar` yang menerima `Request` untuk filter query.
 - Controller API tipis: menerima `Request`/`FormRequest`, delegasi ke service, dan tidak mengembalikan view.
 - Controller API Public (`app/Http/Controllers/Api/Public/`): endpoint untuk guest/customer tanpa auth.
-- Controller API Admin (`app/Http/Controllers/Api/Admin/`): endpoint internal memakai middleware `auth` + `role:Admin`.
+- Controller API Admin (`app/Http/Controllers/Api/Admin/`): endpoint internal. Route master CRUD (users, packages, rules) memakai middleware `auth` + `role:Admin`. Route booking management (approve, reject, verify, billing, installments, dll) memakai middleware `auth` saja (shared Admin + Petugas).
 - Service: orchestration business flow, pemilihan view/page, keputusan domain, transaksi jika dibutuhkan.
 - Repository contract: interface di `app/Repositories/Contracts`.
 - Repository implementation: Eloquent di `app/Repositories/Eloquent`.
@@ -401,7 +408,7 @@ Portal services:
 - `app/Services/Portal/GuestPackageService.php`: payload paket untuk landing page dan halaman paket (wedding/non-wedding, aktif saja).
 - `app/Services/Portal/GuestBookingService.php`: orchestration booking request guest — create booking, form payload, availability, price estimate, status lookup, submission proof PDF, upload payment proof oleh customer, WhatsApp template generation.
 - `app/Services/Portal/InternalPageService.php`: mapping page internal ke view dan title.
-- `app/Services/Admin/BookingDetailService.php`: lifecycle booking management internal — approve, reject, verify DP, verify final payment, cancel, complete, force majeure (reschedule/refund), upload refund proof, billing details & installments management.
+- `app/Services/Admin/BookingDetailService.php`: lifecycle booking management internal — approve, reject, verify DP, verify final payment, cancel, complete, force majeure (reschedule/refund), upload refund proof, billing details & installments management. Method kunci: `initializeBilling()` (dipanggil otomatis saat approve, membuat billing + base detail saja), `generateDpInstallment()` (generate DP installment manual, nominal otomatis dari persentase DP), `generateFinalInstallment()` (generate pelunasan manual, nominal otomatis dari sisa billing), `resolveAvailableActions()` (filter aksi berdasarkan status + existing installments, menyembunyikan generate_dp/generate_final jika installment sudah ada).
 - `app/Services/Admin/BookingListService.php`: payload halaman list booking admin dengan filter status, date range, case ID, dan stats.
 - `app/Services/Admin/BookingCalendarService.php`: payload halaman calendar admin dan JSON calendar events.
 
@@ -434,22 +441,27 @@ Saat booking request berhasil dibuat, sistem otomatis generate PDF bukti pengaju
 
 #### Booking Status Lifecycle
 
-Alur status booking dan aksi yang tersedia:
+<!-- Updated: Alur billing berubah — DP dan pelunasan tidak lagi auto-generate saat approve, tapi di-generate manual oleh Admin/Petugas -->
+
+Alur status booking, aksi yang tersedia, dan aktor:
 
 ```
 BS_WAITING_APPROVAL
-  ├→ approve  → BS_APPROVED_WAITING_DP (billing DP dibuat otomatis)
+  ├→ approve  → BS_APPROVED_WAITING_DP (billing diinisialisasi: base detail saja, tanpa DP installment)
   └→ reject   → BS_REJECTED
 
 BS_APPROVED_WAITING_DP
-  ├→ verify-dp      → BS_APPROVED_WAITING_FINAL_PAYMENT
-  ├→ upload-payment → auto-transition jika DP lunas
+  ├→ generate_dp (Admin/Petugas) → membuat installment DP secara manual, nominal dihitung otomatis dari total billing
+  ├→ billing-details store (Admin/Petugas) → menambah komponen add-on sebelum generate DP
+  ├→ upload-payment → record payment DP
+  ├→ verify-dp      → BS_APPROVED_WAITING_FINAL_PAYMENT (semua pending payments di-approve)
   ├→ reject-manual  → BS_REJECTED (billing cancelled)
   └→ approve/reject per-payment (PYS_PEDING → PYS_SUCCESS/PYS_FAILED)
 
 BS_APPROVED_WAITING_FINAL_PAYMENT
-  ├→ verify-final   → BS_CONFIRMED
-  ├→ upload-payment → record payment
+  ├→ generate_final (Admin/Petugas) → membuat installment pelunasan, nominal dihitung otomatis dari sisa billing
+  ├→ upload-payment → record payment pelunasan
+  ├→ verify-final   → BS_CONFIRMED (semua pending payments di-approve)
   ├→ cancel         → BS_CANCEL (billing cancelled)
   └→ approve/reject per-payment (PYS_PEDING → PYS_SUCCESS/PYS_FAILED)
 
@@ -461,14 +473,27 @@ BS_FORCE_MAJEURE
   └→ upload-refund-proof → BS_REFUND
 ```
 
-Billing lifecycle di-automate saat status berubah:
+Available actions per status difilter oleh `BookingDetailService::resolveAvailableActions()`. Method ini juga memeriksa apakah installment DP/final sudah ada — jika `INS_DP` sudah dibuat, aksi `generate_dp` disembunyikan dari UI (begitu juga `generate_final` jika `INS_FINAL` sudah ada).
 
-- **Approve**: billing + billing detail (base) + billing installment (DP) dibuat otomatis.
-- **Upload payment manual**: payment dicatat, installment status di-sync, billing status di-sync, auto-transition booking status jika DP lunas.
+Billing lifecycle (alur baru — **manual DP/final generation**):
+
+- **Approve**: `initializeBilling()` dipanggil otomatis — membuat billing + satu billing detail `BLT_BASE` (base price paket). **Tidak ada DP installment yang dibuat otomatis.**
+- **Tambah add-on** (opsional): Admin/Petugas menambah `BLT_ADDON` billing details sebelum generate DP.
+- **Generate DP** (manual): Admin/Petugas klik tombol Generate DP → `generateDpInstallment()` membuat installment `INS_DP`, nominal dihitung otomatis berdasarkan persentase DP dari total billing details.
+- **Upload payment manual**: payment dicatat, installment status di-sync, billing status di-sync.
 - **Verify DP**: semua pending payments di-approve, booking transisi ke waiting final payment.
+- **Generate pelunasan** (manual): Admin/Petugas klik tombol Generate Pelunasan → `generateFinalInstallment()` membuat installment `INS_FINAL`, nominal dihitung otomatis dari sisa billing setelah DP.
 - **Verify final payment**: semua pending payments di-approve, booking transisi ke confirmed.
 - **Cancel/reject-manual**: billing status di-set ke cancelled.
 - **Force majeure (refund)**: billing status ke refund, installment refund dibuat otomatis.
+
+Tombol Generate DP/Pelunasan di detail page (`detail.blade.php`) menggunakan `bindGenerateButton()` yang POST ke `installments.store` dengan body `{ installment_type_code: 'INS_DP' }` atau `{ installment_type_code: 'INS_FINAL' }`. Controller `storeInstallment()` merouting ke service method yang tepat berdasarkan `installment_type_code`:
+
+- `INS_DP` → `generateDpInstallment()` (nominal & due date otomatis, tidak butuh input amount/due_date).
+- `INS_FINAL` → `generateFinalInstallment()` (nominal & due date otomatis, tidak butuh input amount/due_date).
+- `INS_PARTIAL` → `generateInstallment()` (manual, butuh input amount & due_date dari modal form).
+
+Validasi `BookingInstallmentStoreRequest`: `amount` dan `due_date` hanya required saat `installment_type_code` adalah `INS_PARTIAL`. Untuk `INS_DP` dan `INS_FINAL`, kedua field tersebut menggunakan rules `sometimes` (opsional).
 
 #### Admin Booking Controllers
 
@@ -577,11 +602,11 @@ Case ID booking: format `ETH-{YYYYMMDD}-{NNNNN}` (misal `ETH-20260529-00001`). D
 
 ### Billing And Payments
 
-<!-- Updated: Perjelas bahwa billing dibuat otomatis saat approve, tambah context automated flow -->
+<!-- Updated: Perjelas bahwa billing diinisialisasi saat approve (base detail saja), DP/final installment di-generate manual -->
 
-- `billings`: tagihan per booking. Dibuat otomatis saat booking di-approve dengan base price dari paket.
+- `billings`: tagihan per booking. Dibuat otomatis saat booking di-approve dengan base price dari paket (`initializeBilling()`). Billing berisi satu base billing detail (`BLT_BASE`) saat approve. Admin/Petugas dapat menambah add-on (`BLT_ADDON`) kemudian.
 - `billing_details`: breakdown tagihan, `billing_type` ke reference `billing_type`. Saat approve, satu billing detail `BLT_BASE` dibuat otomatis. Admin dapat menambah komponen `BLT_ADDON` kemudian.
-- `billing_installments`: cicilan/tagihan DP/final/refund, `installment_type` ke reference `intallment_type`, `status_id` ke reference `billing_status`. Saat approve, satu installment DP (`INS_DP`) dibuat otomatis. Admin dapat generate installment tambahan (`INS_PARTIAL`, `INS_FINAL`). Force majeure refund membuat installment `INS_REFUND` otomatis.
+- `billing_installments`: cicilan/tagihan DP/final/refund, `installment_type` ke reference `intallment_type`, `status_id` ke reference `billing_status`. **DP installment (`INS_DP`) tidak lagi dibuat otomatis saat approve** — Admin/Petugas men-generate DP manual setelah menambah add-on jika diperlukan. Begitu juga pelunasan (`INS_FINAL`) di-generate manual setelah DP diverifikasi. Force majeure refund tetap membuat installment `INS_REFUND` otomatis.
 - `payments`: pembayaran aktual, join ke `billing_installments`, reference `payment_type`, `payment_status`, `payment_method`, dan optional attachment bukti transfer.
 
 Relasi penting:
@@ -619,8 +644,9 @@ Migrations diload dari `app/Providers/AppServiceProvider.php`:
 - `1.1.11`: insert settings quota per sesi (`PKDR_MAX_QUOTA_PAGI_SIANG`, `PKDR_MAX_QUOTA_SORE_MALAM`), alter packages tambah `address`, alter packages tambah `case_id` (unique), insert reference `BS_REJECTED` pada group `booking_status`.
 - `1.1.12`: alter `booking_history` tambah `description` (text nullable), alter `bookings` tambah `case_id` (unique) dengan backfill data existing.
 - `1.1.13`: alter `payments` tambah `rejection_reason` (text nullable) untuk anti-fraud payment proof flow.
+- `1.1.14`: alter reference `price_type` description — update `PT_RG` menjadi "Tambahan Ringan (100K-500K)" dan `PT_SD` menjadi "Tambahan Sedang (500K+)".
 
-<!-- Updated: Tambah versi migration 1.1.11 dan 1.1.12 -->
+<!-- Updated: Tambah versi migration 1.1.11, 1.1.12, 1.1.13, dan 1.1.14 -->
 
 Migration per versi:
 

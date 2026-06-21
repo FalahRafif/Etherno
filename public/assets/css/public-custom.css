@@ -1182,14 +1182,25 @@ body.booking-confirm-open{
 .booking-support-title{margin-top:6px}
 .booking-support-state{
   display:flex;
-  align-items:center;
-  gap:10px;
+  flex-direction:column;
+  gap:4px;
   margin:14px 0 4px;
-  padding:10px 12px;
+  padding:14px 16px;
   border-radius:10px;
   border:1px solid rgba(20,120,70,.28);
   background:rgba(229,247,237,.7);
   color:#1f6a44;
+}
+.booking-support-state strong{
+  font-size:15px;
+  font-weight:700;
+  line-height:1.3;
+}
+.booking-support-state span{
+  font-size:13px;
+  line-height:1.5;
+  color:inherit;
+  opacity:.82;
 }
 .booking-support-state.warning{
   border-color:rgba(183,137,21,.35);
@@ -1562,6 +1573,20 @@ body.booking-confirm-open{
   .booking-section{padding-top:56px}
   .booking-tab-list{flex-direction:column;align-items:stretch}
   .booking-tab{text-align:center;width:100%}
+  .booking-detail-tabs .booking-tab-list{
+    flex-direction:row;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+    gap:0;
+  }
+  .booking-detail-tabs .booking-tab{
+    flex-shrink:0;
+    white-space:nowrap;
+    width:auto;
+    text-align:center;
+  }
   .booking-flow-actions{flex-direction:column;align-items:stretch}
   .booking-form-grid{grid-template-columns:1fr}
   .booking-location-grid,

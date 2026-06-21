@@ -5,6 +5,7 @@ use App\Http\Controllers\Web\Admin\BlankController;
 use App\Http\Controllers\Web\Admin\LocationPricingRuleController;
 use App\Http\Controllers\Web\Admin\PackageController;
 use App\Http\Controllers\Web\Admin\DpPercentageRuleController;
+use App\Http\Controllers\Web\Admin\OperationalConfigController;
 use App\Http\Controllers\Web\Admin\PackageDateRuleController;
 use App\Http\Controllers\Web\Admin\PaymentDateRuleController;
 use App\Http\Controllers\Web\Admin\ProfileController;
@@ -33,6 +34,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->grou
     Route::get('/package-date-rules', [PackageDateRuleController::class, 'index'])->name('package-date-rules');
     Route::get('/package-date-rules/create', [PackageDateRuleController::class, 'create'])->name('package-date-rules.create');
     Route::get('/package-date-rules/{setting}/edit', [PackageDateRuleController::class, 'edit'])->name('package-date-rules.edit');
+    Route::get('/operational-config', [OperationalConfigController::class, 'index'])->name('operational-config');
+    Route::get('/operational-config/create', [OperationalConfigController::class, 'create'])->name('operational-config.create');
+    Route::get('/operational-config/{setting}/edit', [OperationalConfigController::class, 'edit'])->name('operational-config.edit');
     Route::get('/customers', [AdminPreviewController::class, 'customers'])->name('customers');
     Route::get('/users', [UserManagementController::class, 'index'])->name('users');
     Route::get('/users/create', [UserManagementController::class, 'create'])->name('users.create');

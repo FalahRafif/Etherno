@@ -1340,6 +1340,10 @@ class GuestBookingService
             'support' => 'Halo tim Etherno, saya ' . $customerName . ' dengan Case ID ' . $caseId . '. Saya butuh bantuan terkait booking saya.',
         ];
 
+        if ($statusCode === 'BS_WAITING_APPROVAL') {
+            $templates['waiting_approval'] = 'Halo tim Etherno, saya ' . $customerName . ' dengan Case ID ' . $caseId . '. Saya ingin menanyakan progres pengajuan booking saya. Terima kasih.';
+        }
+
         if ($statusCode === 'BS_APPROVED_WAITING_DP') {
             $templates['dp_paid'] = 'Halo tim Etherno, saya ' . $customerName . ' dengan Case ID ' . $caseId . '. Saya sudah melakukan pembayaran DP. Mohon diproses verifikasinya. Terima kasih.';
         }
