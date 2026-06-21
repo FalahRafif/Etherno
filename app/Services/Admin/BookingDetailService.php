@@ -996,8 +996,18 @@ class BookingDetailService
 
     private function getFinalDueDays(): int
     {
-        $setting = $this->settingRepository->findByGroupAndCode('package_date_rule', 'PKDR_MAX_RECHEDULE_DATE');
-        return (int) ($setting?->value ?? 14);
+        $setting = $this->settingRepository->query(true)
+            ->where('group_id', 'paymet_date_rule')
+            ->where('code', 'PDR_MAX_FINAL')
+            ->first();
+
+        $rawValue = trim((string) ($setting?->value ?? 'H-1'));
+        $parsed = preg_replace('/[^0-9]/', '', $rawValue);
+        if (!is_string($parsed) || $parsed === '') {
+            return 1;
+        }
+
+        return (int) $parsed;
     }
 
     private function createBillingOnApproval(Booking $booking): void
