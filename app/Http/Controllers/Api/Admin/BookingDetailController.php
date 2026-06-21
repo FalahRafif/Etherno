@@ -235,6 +235,24 @@ class BookingDetailController extends Controller
         ]);
     }
 
+    public function confirmForceMajeureReschedule(int $booking): JsonResponse
+    {
+        $operatorId = auth()->id();
+
+        try {
+            $updatedBooking = $this->bookingDetailService->confirmForceMajeureReschedule($booking, $operatorId);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Reschedule force majeure dikonfirmasi. Booking kembali ke Confirmed.',
+            'status_code' => $updatedBooking->status?->code,
+        ]);
+    }
+
     public function forceMajeure(int $booking, BookingForceMajeureRequest $request): JsonResponse
     {
         $operatorId = auth()->id();

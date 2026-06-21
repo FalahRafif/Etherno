@@ -183,6 +183,9 @@
         <button class="booking-confirm-close" type="button" aria-label="Tutup" data-reschedule-request-close>&times;</button>
       </div>
       <form id="reschedule_request_form">
+        <div class="estimate-box mb-3" id="reschedule_deadline_info" hidden>
+          <p class="estimate-note mb-0"></p>
+        </div>
         <div class="booking-form-grid">
           <div class="form-field">
             <label class="form-label" for="reschedule_request_date">Tanggal Baru</label>

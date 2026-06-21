@@ -691,6 +691,11 @@
                                 <i class="ri-alert-line me-1"></i> Force Majeure
                             </button>
                         @endif
+                        @if(in_array('confirm_fm_reschedule', $availableActions))
+                            <button type="button" class="btn btn-success" id="btn_confirm_fm_reschedule" data-booking-id="{{ $booking->id }}" data-url="{{ route('api.admin.bookings.confirm-fm-reschedule', $booking->id) }}">
+                                <i class="ri-calendar-check-line me-1"></i> Konfirmasi Reschedule Selesai
+                            </button>
+                        @endif
                         @if(in_array('upload_refund_proof', $availableActions))
                             <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#modal_upload_refund_proof">
                                 <i class="ri-refund-line me-1"></i> Upload Bukti Refund
@@ -1025,7 +1030,7 @@
                     </div>
                     <div class="mb-0" id="fm_new_date_wrap">
                         <label class="form-label">Tanggal Baru</label>
-                        <input type="date" name="new_date" class="form-control" id="fm_new_date" value="{{ $booking->event_date?->format('Y-m-d') ?? '' }}">
+                        <input type="date" name="new_date" class="form-control" id="fm_new_date" min="{{ now()->format('Y-m-d') }}" value="{{ $booking->event_date?->format('Y-m-d') ?? '' }}">
                     </div>
                     <div class="alert alert-danger py-2 px-3 mt-3 mb-0 d-none" id="force_majeure_error_box"></div>
                 </div>
@@ -1331,10 +1336,12 @@ document.addEventListener('DOMContentLoaded', function() {
     var completeBtn = document.getElementById('btn_complete_booking');
     var approveRescheduleBtn = document.getElementById('btn_approve_reschedule');
     var rejectRescheduleBtn = document.getElementById('btn_reject_reschedule');
+    var confirmFmRescheduleBtn = document.getElementById('btn_confirm_fm_reschedule');
     handleAction(verifyDpBtn, 'Verifikasi DP', 'Pastikan pembayaran DP sudah diterima. Status akan berubah ke Waiting Final Payment.');
     handleAction(verifyFinalBtn, 'Verifikasi Pelunasan', 'Pastikan semua pembayaran sudah diterima. Status akan berubah ke Confirmed.');
     handleAction(completeBtn, 'Selesaikan Booking', 'Ini menandakan acara sudah dilaksanakan.');
     handleAction(approveRescheduleBtn, 'Approve Reschedule', 'Tanggal acara akan dipindahkan ke tanggal reschedule yang diajukan customer.');
+    handleAction(confirmFmRescheduleBtn, 'Konfirmasi Reschedule Force Majeure', 'Tanggal acara sudah dipindahkan. Booking akan kembali ke Confirmed.');
 
     function bindGenerateButton(selector, typeCode, confirmTitle, confirmText) {
         var btns = document.querySelectorAll(selector);

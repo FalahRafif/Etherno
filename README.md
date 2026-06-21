@@ -188,6 +188,7 @@ Endpoint admin booking management API (middleware `web` + `auth`, shared oleh Ad
 - Complete booking: `POST /api/admin/bookings/{booking}/complete` (name `api.admin.bookings.complete`).
 - Approve reschedule: `POST /api/admin/bookings/{booking}/approve-reschedule` (name `api.admin.bookings.approve-reschedule`).
 - Reject reschedule: `POST /api/admin/bookings/{booking}/reject-reschedule` (name `api.admin.bookings.reject-reschedule`).
+- Confirm force majeure reschedule: `POST /api/admin/bookings/{booking}/confirm-fm-reschedule` (name `api.admin.bookings.confirm-fm-reschedule`).
 - Force majeure: `POST /api/admin/bookings/{booking}/force-majeure` (name `api.admin.bookings.force-majeure`).
 - Upload refund proof: `POST /api/admin/bookings/{booking}/upload-refund-proof` (name `api.admin.bookings.upload-refund-proof`).
 - Store billing detail: `POST /api/admin/bookings/{booking}/billing-details` (name `api.admin.bookings.billing-details.store`).
@@ -480,6 +481,7 @@ BS_CONFIRMED
   └→ force-majeure  → BS_FORCE_MAJEURE (reschedule atau refund)
 
 BS_FORCE_MAJEURE
+  ├→ confirm-fm-reschedule → BS_CONFIRMED (reschedule diterapkan, tanggal acara sudah dipindah)
   └→ upload-refund-proof → BS_REFUND
 ```
 

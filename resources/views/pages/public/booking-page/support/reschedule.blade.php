@@ -22,7 +22,7 @@
         </div>
         <div class="form-field">
           <label class="form-label" for="reschedule_date_new">Tanggal Baru (Usulan)</label>
-          <input class="form-input" type="date" id="reschedule_date_new" name="proposed_date" required>
+          <input class="form-input" type="date" id="reschedule_date_new" name="proposed_date" min="{{ now()->format('Y-m-d') }}" required>
         </div>
         <div class="form-field form-field-full">
           <label class="form-label" for="reschedule_reason">Alasan Reschedule</label>
