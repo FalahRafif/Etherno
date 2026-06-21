@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UserManagement\UpdateUserRequest;
 use App\Models\User;
 use App\Services\Admin\UserManagementService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use RuntimeException;
 
@@ -27,54 +28,46 @@ class UserManagementController extends Controller
         ]);
     }
 
-    public function store(StoreUserRequest $request): JsonResponse
+    public function store(StoreUserRequest $request): RedirectResponse
     {
         try {
-            $user = $this->userManagementService->createUser($request->payload());
+            $this->userManagementService->createUser($request->payload());
         } catch (RuntimeException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-            ], 422);
+            return back()
+                ->withInput()
+                ->withErrors(['general' => $exception->getMessage()]);
         }
 
-        return response()->json([
-            'message' => 'Akun berhasil ditambahkan.',
-            'data' => [
-                'user' => $this->userManagementService->transformUsers(collect([$user]))[0],
-            ],
-        ], 201);
+        return redirect()
+            ->route('admin.users')
+            ->with('status', 'Akun berhasil ditambahkan.');
     }
 
-    public function update(UpdateUserRequest $request, User $user): JsonResponse
+    public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
         try {
-            $updatedUser = $this->userManagementService->updateUser($user, $request->payload());
+            $this->userManagementService->updateUser($user, $request->payload());
         } catch (RuntimeException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-            ], 422);
+            return back()
+                ->withInput()
+                ->withErrors(['general' => $exception->getMessage()]);
         }
 
-        return response()->json([
-            'message' => 'Data akun berhasil diperbarui.',
-            'data' => [
-                'user' => $this->userManagementService->transformUsers(collect([$updatedUser]))[0],
-            ],
-        ]);
+        return redirect()
+            ->route('admin.users')
+            ->with('status', 'Data akun berhasil diperbarui.');
     }
 
-    public function destroy(User $user): JsonResponse
+    public function destroy(User $user): RedirectResponse
     {
         try {
             $this->userManagementService->deleteUser($user);
         } catch (RuntimeException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-            ], 422);
+            return back()->withErrors(['general' => $exception->getMessage()]);
         }
 
-        return response()->json([
-            'message' => 'Akun berhasil dihapus.',
-        ]);
+        return redirect()
+            ->route('admin.users')
+            ->with('status', 'Akun berhasil dihapus.');
     }
 }
