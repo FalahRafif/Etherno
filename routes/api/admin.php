@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Admin\BookingDetailController;
 use App\Http\Controllers\Api\Admin\LocationPricingRuleController;
+use App\Http\Controllers\Api\Admin\OperationalConfigController;
 use App\Http\Controllers\Api\Admin\PackageController;
 use App\Http\Controllers\Api\Admin\DpPercentageRuleController;
 use App\Http\Controllers\Api\Admin\PackageDateRuleController;
@@ -39,6 +40,10 @@ Route::prefix('admin')
         Route::post('/package-date-rules', [PackageDateRuleController::class, 'store'])->name('package-date-rules.store');
         Route::put('/package-date-rules/{setting}', [PackageDateRuleController::class, 'update'])->name('package-date-rules.update');
         Route::delete('/package-date-rules/{setting}', [PackageDateRuleController::class, 'destroy'])->name('package-date-rules.destroy');
+
+        Route::post('/operational-config', [OperationalConfigController::class, 'store'])->name('operational-config.store');
+        Route::put('/operational-config/{setting}', [OperationalConfigController::class, 'update'])->name('operational-config.update');
+        Route::delete('/operational-config/{setting}', [OperationalConfigController::class, 'destroy'])->name('operational-config.destroy');
     });
 
 Route::prefix('admin')

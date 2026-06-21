@@ -131,6 +131,12 @@ return [
                     'active' => ['package-date-rules', 'package-date-rules.create', 'package-date-rules.edit'],
                     'roles' => ['Admin'],
                 ],
+                [
+                    'label' => 'Aturan Aplikasi',
+                    'route_name' => 'operational-config',
+                    'active' => ['operational-config', 'operational-config.create', 'operational-config.edit'],
+                    'roles' => ['Admin'],
+                ],
             ],
         ],
         [
