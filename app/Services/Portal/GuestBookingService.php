@@ -1908,6 +1908,7 @@ class GuestBookingService
      *   package_address:string,
      *   event_session:string,
      *   location_label:string,
+     *   pin_address:string,
      *   event_detail:string,
      *   google_maps_pin:string
      * }
@@ -1927,7 +1928,19 @@ class GuestBookingService
 
         $submittedAt = $booking->created_at instanceof Carbon ? $booking->created_at : now();
         $eventDetail = trim((string) ($booking->event_detail ?? ''));
-        $eventDetail = $eventDetail !== '' ? $eventDetail : '-';
+        $eventDetailPdf = $eventDetail;
+        $pinAddressPdf = '-';
+
+        if (str_contains($eventDetail, "\n\nPatokan pin lokasi: ")) {
+            [$eventDetailMain, $pinDetailRaw] = explode("\n\nPatokan pin lokasi: ", $eventDetail, 2);
+            $eventDetailPdf = trim($eventDetailMain);
+            $pinAddressPdf = trim($pinDetailRaw) !== '' ? trim($pinDetailRaw) : '-';
+        } elseif (str_starts_with($eventDetail, 'Patokan pin lokasi: ')) {
+            $pinAddressPdf = trim(substr($eventDetail, strlen('Patokan pin lokasi: '))) ?: '-';
+            $eventDetailPdf = '';
+        }
+
+        $eventDetailPdf = $eventDetailPdf !== '' ? $eventDetailPdf : '-';
 
         return [
             'booking_case_id' => $this->buildBookingCaseId($booking),
@@ -1946,7 +1959,8 @@ class GuestBookingService
             'package_address' => trim((string) ($booking->package?->address ?? '')) ?: '-',
             'event_session' => trim((string) ($booking->eventSession?->description ?? '')) ?: '-',
             'location_label' => $this->resolveLocationHierarchyLabel($booking->location),
-            'event_detail' => $eventDetail,
+            'event_detail' => $eventDetailPdf,
+            'pin_address' => $pinAddressPdf,
             'google_maps_pin' => trim((string) ($booking->google_maps_pin ?? '')) ?: '-',
         ];
     }
