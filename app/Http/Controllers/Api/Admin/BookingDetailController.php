@@ -235,12 +235,12 @@ class BookingDetailController extends Controller
         ]);
     }
 
-    public function confirmForceMajeureReschedule(int $booking): JsonResponse
+    public function approveForceMajeureReschedule(int $booking): JsonResponse
     {
         $operatorId = auth()->id();
 
         try {
-            $updatedBooking = $this->bookingDetailService->confirmForceMajeureReschedule($booking, $operatorId);
+            $updatedBooking = $this->bookingDetailService->approveForceMajeureReschedule($booking, $operatorId);
         } catch (RuntimeException $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),
@@ -248,7 +248,46 @@ class BookingDetailController extends Controller
         }
 
         return response()->json([
-            'message' => 'Reschedule force majeure dikonfirmasi. Booking kembali ke Confirmed.',
+            'message' => 'Customer dinyatakan setuju. Booking kembali ke Confirmed dengan tanggal baru.',
+            'status_code' => $updatedBooking->status?->code,
+        ]);
+    }
+
+    public function approveForceMajeureRefund(int $booking): JsonResponse
+    {
+        $operatorId = auth()->id();
+
+        try {
+            $updatedBooking = $this->bookingDetailService->approveForceMajeureRefund($booking, $operatorId);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Customer dinyatakan setuju. Proses refund force majeure dapat dilanjutkan.',
+            'status_code' => $updatedBooking->status?->code,
+        ]);
+    }
+
+    public function rejectForceMajeure(int $booking, Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
+        $operatorId = auth()->id();
+
+        try {
+            $updatedBooking = $this->bookingDetailService->rejectForceMajeure($booking, $operatorId, (string) $validated['reason']);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Customer dinyatakan tidak setuju. Booking kembali ke Confirmed.',
             'status_code' => $updatedBooking->status?->code,
         ]);
     }

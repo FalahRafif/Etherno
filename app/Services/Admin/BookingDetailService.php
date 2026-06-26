@@ -646,19 +646,24 @@ class BookingDetailService
         }
 
         try {
-            $parsedDate = Carbon::parse($newDate)->toDateString();
+            $parsedDate = Carbon::parse($newDate)->startOfDay();
         } catch (\Throwable) {
             throw new RuntimeException('Format tanggal tidak valid.');
         }
+
+        if ($parsedDate->lessThanOrEqualTo(now()->startOfDay())) {
+            throw new RuntimeException('Tanggal baru force majeure harus minimal besok (H+1).');
+        }
+
+        $this->assertRescheduleSlotAvailable($booking, $parsedDate->toDateString());
 
         $fmRef = $this->findReference('booking_status', 'BS_FORCE_MAJEURE');
 
         $this->bookingRepository->update($booking, [
             'status_id' => $fmRef->id,
-            'event_date' => $parsedDate,
-            'force_majeure_date' => $parsedDate,
+            'force_majeure_date' => $parsedDate->toDateString(),
             'force_majeure_reason' => $reason,
-            'reschedule_date' => $parsedDate,
+            'reschedule_date' => $parsedDate->toDateString(),
             'reschedule_reason' => 'Force Majeure: ' . $reason,
             'operator_id' => $operatorId,
         ]);
@@ -668,30 +673,33 @@ class BookingDetailService
             'booking_id' => $booking->id,
             'status_id' => $fmRef->id,
             'operator_id' => $operatorId,
-            'description' => 'Force Majeure - Reschedule ke ' . $parsedDate . ': ' . $reason,
+            'description' => 'Force majeure diajukan petugas. Usulan reschedule ke ' . $parsedDate->toDateString() . ': ' . $reason,
         ]);
 
         return $booking->fresh($this->detailRelations());
     }
 
-    public function confirmForceMajeureReschedule(int $bookingId, int $operatorId): Booking
+    public function approveForceMajeureReschedule(int $bookingId, int $operatorId): Booking
     {
         $booking = $this->bookingRepository->findOrFail($bookingId, ['*'], $this->detailRelations());
         $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
 
         if ($statusCode !== 'BS_FORCE_MAJEURE') {
-            throw new RuntimeException('Konfirmasi reschedule hanya untuk status Force Majeure.');
+            throw new RuntimeException('Persetujuan force majeure hanya untuk status Force Majeure.');
         }
 
         if (empty($booking->force_majeure_date)) {
-            throw new RuntimeException('Konfirmasi reschedule hanya tersedia untuk force majeure dengan reschedule, bukan refund.');
+            throw new RuntimeException('Persetujuan ini hanya tersedia untuk force majeure dengan reschedule, bukan refund.');
         }
 
         $confirmedRef = $this->findReference('booking_status', 'BS_CONFIRMED');
         $fmDate = $booking->force_majeure_date instanceof Carbon ? $booking->force_majeure_date->toDateString() : (string) $booking->force_majeure_date;
 
+        $this->assertRescheduleSlotAvailable($booking, $fmDate);
+
         $this->bookingRepository->update($booking, [
             'status_id' => $confirmedRef->id,
+            'event_date' => $fmDate,
             'operator_id' => $operatorId,
         ]);
 
@@ -700,7 +708,77 @@ class BookingDetailService
             'booking_id' => $booking->id,
             'status_id' => $confirmedRef->id,
             'operator_id' => $operatorId,
-            'description' => 'Force Majeure reschedule dikonfirmasi. Tanggal acara: ' . $fmDate,
+            'description' => 'Customer setuju force majeure reschedule. Tanggal acara dipindah ke ' . $fmDate . '.',
+        ]);
+
+        return $booking->fresh($this->detailRelations());
+    }
+
+    public function approveForceMajeureRefund(int $bookingId, int $operatorId): Booking
+    {
+        $booking = $this->bookingRepository->findOrFail($bookingId, ['*'], $this->detailRelations());
+        $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+
+        if ($statusCode !== 'BS_FORCE_MAJEURE') {
+            throw new RuntimeException('Persetujuan refund force majeure hanya untuk status Force Majeure.');
+        }
+
+        if (!empty($booking->force_majeure_date)) {
+            throw new RuntimeException('Persetujuan refund hanya tersedia untuk force majeure dengan refund.');
+        }
+
+        $this->bookingHistoryRepository->create([
+            'uuid' => Str::uuid()->toString(),
+            'booking_id' => $booking->id,
+            'status_id' => $booking->status_id,
+            'operator_id' => $operatorId,
+            'description' => 'Customer setuju force majeure refund. Proses refund dapat dilanjutkan.',
+        ]);
+
+        return $booking->fresh($this->detailRelations());
+    }
+
+    public function rejectForceMajeure(int $bookingId, int $operatorId, string $reason): Booking
+    {
+        $booking = $this->bookingRepository->findOrFail($bookingId, ['*'], $this->detailRelations());
+        $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+
+        if ($statusCode !== 'BS_FORCE_MAJEURE') {
+            throw new RuntimeException('Penolakan force majeure hanya untuk status Force Majeure.');
+        }
+
+        $confirmedRef = $this->findReference('booking_status', 'BS_CONFIRMED');
+        $fmTypeLabel = !empty($booking->force_majeure_date) ? 'reschedule' : 'refund';
+
+        if ($fmTypeLabel === 'refund') {
+            $billing = $booking->billings->sortByDesc('id')->first();
+            if ($billing) {
+                $billing->loadMissing(['installments.installmentType:id,code,description']);
+                foreach ($billing->installments as $installment) {
+                    $typeCode = strtoupper(trim((string) ($installment->installmentType?->code ?? '')));
+                    if ($typeCode === 'INS_REFUND') {
+                        $this->billingInstallmentRepository->delete($installment);
+                    }
+                }
+                $this->syncBillingStatus($billing->fresh(['installments.installmentType:id,code,description', 'payments']));
+            }
+        }
+
+        $this->bookingRepository->update($booking, [
+            'status_id' => $confirmedRef->id,
+            'force_majeure_date' => null,
+            'force_majeure_reason' => null,
+            'reschedule_date' => null,
+            'reschedule_reason' => null,
+            'operator_id' => $operatorId,
+        ]);
+
+        $this->bookingHistoryRepository->create([
+            'uuid' => Str::uuid()->toString(),
+            'booking_id' => $booking->id,
+            'status_id' => $confirmedRef->id,
+            'operator_id' => $operatorId,
+            'description' => 'Customer tidak setuju force majeure ' . $fmTypeLabel . '. Booking kembali ke Confirmed: ' . trim($reason),
         ]);
 
         return $booking->fresh($this->detailRelations());
@@ -725,6 +803,8 @@ class BookingDetailService
             'status_id' => $fmRef->id,
             'force_majeure_date' => null,
             'force_majeure_reason' => $reason,
+            'reschedule_date' => null,
+            'reschedule_reason' => null,
             'operator_id' => $operatorId,
         ]);
 
@@ -733,7 +813,7 @@ class BookingDetailService
             'booking_id' => $booking->id,
             'status_id' => $fmRef->id,
             'operator_id' => $operatorId,
-            'description' => 'Force Majeure - Akan diproses refund: ' . $reason,
+            'description' => 'Force majeure diajukan petugas. Opsi refund: ' . $reason,
         ]);
 
         $billing = $booking->billings->sortByDesc('id')->first();
@@ -1177,7 +1257,7 @@ class BookingDetailService
             'billings.installments.payments.status:id,code,description',
             'billings.installments.payments.paymentMethod:id,code,description',
             'billings.installments.payments.transferReceiptAttachment:id,uuid,name,path',
-            'history:id,booking_id,status_id,operator_id,created_at',
+            'history:id,booking_id,status_id,operator_id,description,created_at',
             'history.status:id,code,description',
             'history.operator:id,name',
         ];
@@ -1577,12 +1657,11 @@ class BookingDetailService
     private function buildStats(Booking $booking, string $statusCode): array
     {
         $stats = [
-            ['label' => 'Booking Status', 'value' => $this->resolveStatusLabel($statusCode), 'hint' => trim((string) ($booking->status?->description ?? '')), 'tone' => $this->resolveStatusBadge($statusCode)['tone']],
+            ['label' => 'Booking Status', 'value' => $this->resolveStatusLabel($statusCode), 'hint' => $this->resolveStatusHint($booking, $statusCode), 'tone' => $this->resolveStatusBadge($statusCode)['tone']],
             ['label' => 'Payment', 'value' => $this->resolvePaymentBadge($statusCode)['label'], 'hint' => $this->resolvePaymentHint($statusCode), 'tone' => $this->resolvePaymentBadge($statusCode)['tone']],
             ['label' => 'Tanggal Acara', 'value' => $booking->event_date?->format('Y-m-d') ?? '-', 'hint' => trim((string) ($booking->eventSession?->description ?? '')), 'tone' => 'primary'],
             ['label' => 'Jenis Paket', 'value' => trim((string) ($booking->package?->packageType?->description ?? '-')), 'hint' => 'DP ' . $this->getDpPercentage(strtoupper(trim((string) ($booking->package?->packageType?->code ?? '')))) . '%', 'tone' => 'success'],
         ];
-
         return $stats;
     }
 
@@ -1649,7 +1728,19 @@ class BookingDetailService
     {
         if ($statusCode === 'BS_FORCE_MAJEURE') {
             $isReschedule = !empty($booking->force_majeure_date);
-            return $isReschedule ? ['confirm_fm_reschedule'] : ['upload_refund_proof'];
+            if ($isReschedule) {
+                return ['approve_fm_reschedule', 'reject_force_majeure'];
+            }
+
+            $hasCustomerApprovedRefund = $booking->history
+                ->contains(function ($item): bool {
+                    $description = strtolower(trim((string) ($item->description ?? '')));
+                    return str_contains($description, 'customer setuju force majeure refund');
+                });
+
+            return $hasCustomerApprovedRefund
+                ? ['upload_refund_proof', 'reject_force_majeure']
+                : ['approve_fm_refund', 'reject_force_majeure'];
         }
 
         $actions = match ($statusCode) {
@@ -1783,6 +1874,24 @@ class BookingDetailService
         ];
 
         return $map[$statusCode] ?? ucwords(strtolower(str_replace(['BS_', '_'], ['', ' '], $statusCode)));
+    }
+
+    private function resolveStatusHint(Booking $booking, string $statusCode): string
+    {
+        if ($statusCode === 'BS_FORCE_MAJEURE') {
+            $fmReason = trim((string) ($booking->force_majeure_reason ?? ''));
+            $rescheduleDate = $booking->force_majeure_date instanceof Carbon
+                ? $booking->force_majeure_date->format('Y-m-d')
+                : null;
+
+            if ($rescheduleDate !== null) {
+                return 'Force majeure - usulan reschedule ke ' . $rescheduleDate . ($fmReason !== '' ? "\nAlasan: " . $fmReason : '.');
+            }
+
+            return 'Force majeure - usulan refund' . ($fmReason !== '' ? "\nAlasan: " . $fmReason : '.');
+        }
+
+        return trim((string) ($booking->status?->description ?? ''));
     }
 
     private function resolveStatusBadge(string $statusCode): array

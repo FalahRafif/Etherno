@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Dokumentasi pernikahan - elegan, minimalis, mewah">
     <title>{{ $title ?? 'Etherno' }}</title>
+    <link rel="icon" href="{{ asset('assets/etherno/public/icon_web_browser_black.png') }}" type="image/png">
 
         @php
             $fontPath = public_path('assets/fonts/InstrumentSans-Regular.woff2');

@@ -18,7 +18,7 @@ class GuestPageService
         'booking.success' => ['view' => 'pages.public.booking-page.support.success', 'title' => 'Request Booking Terkirim - Etherno'],
         'booking.status' => ['view' => 'pages.public.booking-page.support.status', 'title' => 'Cek Status Booking - Etherno'],
         'booking.reschedule' => ['view' => 'pages.public.booking-page.support.reschedule', 'title' => 'Request Reschedule - Etherno'],
-        'booking.cancellation.policy' => ['view' => 'pages.public.booking-page.support.cancellation-policy', 'title' => 'Kebijakan Booking - Etherno'],
+        'booking.policy' => ['view' => 'pages.public.booking-page.support.cancellation-policy', 'title' => 'Kebijakan Booking - Etherno'],
     ];
 
     public function render(string $pageKey, array $payload = []): View

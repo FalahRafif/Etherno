@@ -104,13 +104,24 @@
         function findLatestHistoryDescription(requiredText, requiredSecondText) {
             var items = currentPayload && Array.isArray(currentPayload.history) ? currentPayload.history : [];
             for (var i = items.length - 1; i >= 0; i -= 1) {
-                var description = String(items[i] && items[i].description ? items[i].description : "").trim();
-                var normalized = description.toLowerCase();
-                if (description !== "" && normalized.indexOf(requiredText) !== -1 && normalized.indexOf(requiredSecondText) !== -1) {
-                    return description;
+                var info = String(items[i] && items[i].info ? items[i].info : "").trim();
+                var message = String(items[i] && items[i].message ? items[i].message : "").trim();
+                var combined = (info + " " + message).trim();
+                var normalized = combined.toLowerCase();
+                if (combined !== "" && normalized.indexOf(requiredText) !== -1 && normalized.indexOf(requiredSecondText) !== -1) {
+                    return message !== "" ? message : info;
                 }
             }
             return "";
+        }
+
+        function escHtml(value) {
+            return String(value == null ? "" : value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/\"/g, "&quot;")
+                .replace(/'/g, "&#39;");
         }
 
         function renderHistory(items) {
@@ -118,28 +129,62 @@
             historyList.innerHTML = "";
             if (!Array.isArray(items) || items.length === 0) {
                 var emptyItem = document.createElement("li");
-                emptyItem.className = "booking-status-history-item";
+                emptyItem.className = "booking-status-timeline-empty";
                 emptyItem.textContent = "Riwayat status belum tersedia.";
                 historyList.appendChild(emptyItem);
                 return;
             }
             items.forEach(function (item) {
                 var li = document.createElement("li");
-                li.className = "booking-status-history-item";
+                li.className = "booking-status-timeline-item";
+
+                var marker = document.createElement("span");
+                marker.className = "booking-status-timeline-marker";
+                marker.setAttribute("aria-hidden", "true");
+                li.appendChild(marker);
+
+                var content = document.createElement("div");
+                content.className = "booking-status-timeline-content";
+
+                var header = document.createElement("div");
+                header.className = "booking-status-timeline-head";
+
                 var statusSpan = document.createElement("span");
-                statusSpan.className = "booking-status-history-status";
+                statusSpan.className = "booking-status-timeline-status";
                 statusSpan.textContent = String(item && item.status ? item.status : "-");
+
                 var timeSpan = document.createElement("span");
-                timeSpan.className = "booking-status-history-time";
+                timeSpan.className = "booking-status-timeline-time";
                 timeSpan.textContent = String(item && item.time ? item.time : "-");
-                li.appendChild(statusSpan);
-                li.appendChild(timeSpan);
-                if (item && item.description) {
+
+                header.appendChild(statusSpan);
+                header.appendChild(timeSpan);
+                content.appendChild(header);
+
+                var infoSpan = document.createElement("span");
+                infoSpan.className = "booking-status-timeline-info-card";
+                infoSpan.textContent = String(item && item.info ? item.info : "Informasi status");
+                content.appendChild(infoSpan);
+
+                if (item && item.message) {
+                    var descWrap = document.createElement("div");
+                    descWrap.className = "booking-status-timeline-detail";
+
+                    var descSubject = String(item && item.message_subject ? item.message_subject : "Pesan / alasan");
+                    var descLabel = document.createElement("span");
+                    descLabel.className = "booking-status-timeline-detail-label";
+                    descLabel.textContent = descSubject;
+
                     var descSpan = document.createElement("span");
-                    descSpan.className = "booking-status-history-desc";
-                    descSpan.textContent = item.description;
-                    li.appendChild(descSpan);
+                    descSpan.className = "booking-status-timeline-desc";
+                    descSpan.textContent = item.message;
+
+                    descWrap.appendChild(descLabel);
+                    descWrap.appendChild(descSpan);
+                    content.appendChild(descWrap);
                 }
+
+                li.appendChild(content);
                 historyList.appendChild(li);
             });
         }
@@ -155,21 +200,110 @@
             }
             wrap.hidden = false;
             var grid = document.createElement("div");
-            grid.className = "booking-status-grid";
+            grid.className = "billing-detail-list";
             details.forEach(function (d) {
                 var item = document.createElement("div");
-                item.className = "booking-status-item";
+                item.className = "billing-detail-row";
+                var textWrap = document.createElement("div");
                 var k = document.createElement("p");
-                k.className = "booking-status-key";
-                k.textContent = String(d.type || "-") + ": " + String(d.name || "-");
+                k.className = "billing-detail-name";
+                k.textContent = String(d.name || "-");
+                var sub = document.createElement("p");
+                sub.className = "billing-detail-meta";
+                sub.textContent = String(d.type || "-");
+                textWrap.appendChild(k);
+                textWrap.appendChild(sub);
                 var v = document.createElement("p");
-                v.className = "booking-status-value";
+                v.className = "billing-detail-amount";
                 v.textContent = String(d.amount_label || "-");
-                item.appendChild(k);
+                item.appendChild(textWrap);
                 item.appendChild(v);
                 grid.appendChild(item);
             });
             list.appendChild(grid);
+        }
+
+        function renderBillingOverview(billing) {
+            var badge = document.getElementById("billing_overview_status_badge");
+            var refundCard = document.getElementById("billing_refund_summary_card");
+            if (!badge || !refundCard) return;
+
+            var statusCode = String((billing && billing.status_code) || "");
+            var statusLabel = String((billing && billing.status) || "Belum ada billing");
+            var refundAmount = Number((billing && billing.refunded) ? String(billing.refunded).replace(/[^0-9]/g, "") : 0);
+            badge.textContent = statusLabel;
+            badge.className = "billing-overview-badge";
+            if (statusCode === "BLS_PAID") badge.classList.add("is-success");
+            else if (statusCode === "BLS_PARTIAL") badge.classList.add("is-warning");
+            else if (statusCode === "BLS_UNPAID") badge.classList.add("is-neutral");
+            else badge.classList.add("is-info");
+
+            if (refundAmount > 0) {
+                refundCard.hidden = false;
+            } else {
+                refundCard.hidden = true;
+            }
+        }
+
+        function renderPrimaryCharges(installments) {
+            var wrap = document.getElementById("billing_primary_charges_wrap");
+            var list = document.getElementById("billing_primary_charges_list");
+            if (!wrap || !list) return;
+            list.innerHTML = "";
+
+            var mainCharges = Array.isArray(installments) ? installments.filter(function (inst) {
+                return String(inst.type_code || "") !== "INS_REFUND";
+            }) : [];
+
+            if (!mainCharges.length) {
+                wrap.hidden = true;
+                return;
+            }
+
+            wrap.hidden = false;
+            var grid = document.createElement("div");
+            grid.className = "billing-charge-grid";
+
+            mainCharges.forEach(function (inst) {
+                var card = document.createElement("article");
+                card.className = "billing-charge-card";
+                card.innerHTML = ''
+                    + '<div class="billing-charge-head"><p class="billing-charge-title">' + escHtml(inst.type || "-") + '</p><span class="billing-charge-badge">' + escHtml(inst.status || "-") + '</span></div>'
+                    + '<p class="billing-charge-amount">' + escHtml(inst.amount_label || "-") + '</p>'
+                    + '<div class="billing-charge-meta"><span>Terbayar: ' + escHtml(inst.paid_label || "-") + '</span><span>Sisa: ' + escHtml(inst.remaining_label || "-") + '</span></div>'
+                    + '<div class="billing-charge-meta"><span>Jatuh tempo: ' + escHtml(inst.due_date || "-") + '</span><span>' + ((inst.payments || []).length) + ' transaksi</span></div>';
+                grid.appendChild(card);
+            });
+
+            list.appendChild(grid);
+        }
+
+        function renderRefunds(installments) {
+            var wrap = document.getElementById("billing_refund_wrap");
+            var list = document.getElementById("billing_refund_list");
+            if (!wrap || !list) return;
+            list.innerHTML = "";
+
+            var refunds = Array.isArray(installments) ? installments.filter(function (inst) {
+                return String(inst.type_code || "") === "INS_REFUND";
+            }) : [];
+
+            if (!refunds.length) {
+                wrap.hidden = true;
+                return;
+            }
+
+            wrap.hidden = false;
+            refunds.forEach(function (inst) {
+                var card = document.createElement("article");
+                card.className = "billing-refund-card";
+                card.innerHTML = ''
+                    + '<div class="billing-charge-head"><p class="billing-charge-title">Refund</p><span class="billing-charge-badge">' + escHtml(inst.status || "-") + '</span></div>'
+                    + '<p class="billing-charge-amount">' + escHtml(inst.amount_label || "-") + '</p>'
+                    + '<div class="billing-charge-meta"><span>Sudah direfund: ' + escHtml(inst.paid_label || "-") + '</span><span>Sisa refund: ' + escHtml(inst.remaining_label || "-") + '</span></div>'
+                    + '<div class="billing-charge-meta"><span>Target proses: ' + escHtml(inst.due_date || "-") + '</span><span>' + ((inst.payments || []).length) + ' transaksi</span></div>';
+                list.appendChild(card);
+            });
         }
 
         function renderInstallments(installments) {
@@ -182,89 +316,161 @@
                 return;
             }
             wrap.hidden = false;
+            var tableWrap = document.createElement("div");
+            tableWrap.className = "booking-history-table-wrap";
+            var table = document.createElement("table");
+            table.className = "booking-history-table";
+            table.innerHTML = '<thead><tr><th>Tagihan</th><th>Status</th><th>Nominal</th><th>Terbayar</th><th>Jatuh Tempo</th><th>Lampiran</th><th>Update Terakhir</th></tr></thead>';
+            var tbody = document.createElement("tbody");
+            var totals = {
+                accumulationAmount: 0,
+                paymentAmount: 0,
+                refundPaid: 0
+            };
+
             installments.forEach(function (inst) {
-                var card = document.createElement("div");
-                card.className = "billing-installment-card";
+                var payments = Array.isArray(inst && inst.payments) ? inst.payments : [];
+                var latestPayment = payments.length ? payments[payments.length - 1] : null;
+                var statusLabel = String((inst && inst.status) || "-");
+                var latestUpdate = latestPayment ? String(latestPayment.paid_at || "-") : "Belum ada pembayaran";
+                var latestReceiptUrl = latestPayment && latestPayment.receipt_url ? String(latestPayment.receipt_url) : "";
+                var typeCode = String((inst && inst.type_code) || "");
+                var isRefund = typeCode === "INS_REFUND";
 
-                var header = document.createElement("div");
-                header.className = "billing-installment-header";
-
-                var typeEl = document.createElement("span");
-                typeEl.className = "billing-installment-type";
-                typeEl.textContent = String(inst.type || "-");
-
-                var statusEl = document.createElement("span");
-                statusEl.className = "billing-installment-status";
-                statusEl.textContent = String(inst.status || "-");
-
-                header.appendChild(typeEl);
-                header.appendChild(statusEl);
-                card.appendChild(header);
-
-                var grid = document.createElement("div");
-                grid.className = "booking-status-grid";
-
-                var fields = [
-                    { key: "Tagihan", val: inst.amount_label },
-                    { key: "Dibayar", val: inst.paid_label },
-                    { key: "Sisa", val: inst.remaining_label },
-                    { key: "Jatuh Tempo", val: inst.due_date }
-                ];
-                fields.forEach(function (f) {
-                    var item = document.createElement("div");
-                    item.className = "booking-status-item";
-                    var k = document.createElement("p");
-                    k.className = "booking-status-key";
-                    k.textContent = f.key;
-                    var v = document.createElement("p");
-                    v.className = "booking-status-value";
-                    v.textContent = f.val || "-";
-                    item.appendChild(k);
-                    item.appendChild(v);
-                    grid.appendChild(item);
-                });
-                card.appendChild(grid);
-
-                if (Array.isArray(inst.payments) && inst.payments.length > 0) {
-                    var payTitle = document.createElement("p");
-                    payTitle.className = "booking-status-key mt-2";
-                    payTitle.textContent = "Riwayat Pembayaran";
-                    card.appendChild(payTitle);
-
-                    inst.payments.forEach(function (p) {
-                        var payRow = document.createElement("div");
-                        payRow.className = "booking-status-item booking-status-item-full";
-                        var k = document.createElement("p");
-                        k.className = "booking-status-key";
-                        k.textContent = String(p.paid_at || "-") + " \u2022 " + String(p.method || "-");
-                        var v = document.createElement("p");
-                        v.className = "booking-status-value";
-                        var statusLabel = String(p.status || "-");
-                        var pCode = String(p.status_code || "");
-                        if (pCode === "PYS_PEDING") {
-                            statusLabel = "\u23F3 Menunggu Verifikasi";
-                        } else if (pCode === "PYS_FAILED") {
-                            statusLabel = "\u274C Ditolak";
-                        } else if (pCode === "PYS_SUCCESS") {
-                            statusLabel = "\u2705 Terverifikasi";
-                        }
-                        v.textContent = String(p.amount_label || "-") + " (" + statusLabel + ")";
-                        payRow.appendChild(k);
-                        payRow.appendChild(v);
-
-                        if (pCode === "PYS_FAILED" && p.rejection_reason) {
-                            var reasonEl = document.createElement("p");
-                            reasonEl.className = "booking-disclaimer text-danger mt-1 mb-0";
-                            reasonEl.textContent = "Alasan: " + p.rejection_reason;
-                            payRow.appendChild(reasonEl);
-                        }
-
-                        card.appendChild(payRow);
-                    });
+                if (isRefund) {
+                    totals.refundPaid += Number((inst && inst.paid_amount) || 0);
+                } else {
+                    totals.accumulationAmount += Number((inst && inst.amount) || 0);
+                    totals.paymentAmount += Number((inst && inst.paid_amount) || 0);
                 }
 
-                list.appendChild(card);
+                var row = document.createElement("tr");
+                if (Number((inst && inst.paid_amount) || 0) > 0) {
+                    row.className = isRefund ? "booking-history-table-row-paid-refund" : "booking-history-table-row-paid-charge";
+                }
+                var cells = [
+                    { html: '<strong>' + escHtml((inst && inst.type) || "-") + '</strong><div class="booking-history-table-note">' + escHtml(payments.length ? ('Riwayat pembayaran: ' + payments.length + ' transaksi') : 'Belum ada transaksi') + '</div>' },
+                    { text: statusLabel },
+                    { text: String((inst && inst.amount_label) || "-") },
+                    { text: String((inst && inst.paid_label) || "-") },
+                    { text: String((inst && inst.due_date) || "-") },
+                    { html: latestReceiptUrl ? '<a href="' + escHtml(latestReceiptUrl) + '" target="_blank" rel="noopener">Bukti Pembayaran</a>' : '<span class="booking-history-table-note">-</span>' },
+                    { text: latestUpdate }
+                ];
+
+                cells.forEach(function (cellData) {
+                    var td = document.createElement("td");
+                    if (cellData.html) {
+                        td.innerHTML = cellData.html;
+                    } else {
+                        td.textContent = cellData.text;
+                    }
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+
+                payments.forEach(function (p) {
+                    var pCode = String((p && p.status_code) || "");
+                    var paymentStatus = String((p && p.status) || "-");
+                    if (pCode === "PYS_PEDING") paymentStatus = "Menunggu Verifikasi";
+                    else if (pCode === "PYS_FAILED") paymentStatus = "Ditolak";
+                    else if (pCode === "PYS_SUCCESS") paymentStatus = "Terverifikasi";
+
+                    var payRow = document.createElement("tr");
+                    payRow.className = "booking-history-table-subrow";
+
+                    var payInfoTd = document.createElement("td");
+                    payInfoTd.innerHTML = '<span class="booking-history-table-subtitle">Pembayaran</span><div class="booking-history-table-note">' + escHtml((p && p.method) || "-") + '</div>';
+                    if (p && p.rejection_reason) {
+                        var reasonDiv = document.createElement("div");
+                        reasonDiv.className = "booking-history-table-note text-danger";
+                        reasonDiv.textContent = 'Alasan: ' + p.rejection_reason;
+                        payInfoTd.appendChild(reasonDiv);
+                    }
+                    payRow.appendChild(payInfoTd);
+
+                    var payStatusTd = document.createElement("td");
+                    payStatusTd.textContent = paymentStatus;
+                    payRow.appendChild(payStatusTd);
+
+                    var payAmountTd = document.createElement("td");
+                    payAmountTd.textContent = String((p && p.amount_label) || "-");
+                    payRow.appendChild(payAmountTd);
+
+                    var paySummaryTd = document.createElement("td");
+                    paySummaryTd.colSpan = 1;
+                    paySummaryTd.textContent = pCode === "PYS_SUCCESS" ? 'Masuk ke total pembayaran' : '-';
+                    payRow.appendChild(paySummaryTd);
+
+                    var payDateTd = document.createElement("td");
+                    payDateTd.textContent = String((p && p.paid_at) || "-");
+                    payRow.appendChild(payDateTd);
+                    
+                    var payReceiptTd = document.createElement("td");
+                    if (p && p.receipt_url) {
+                        var receiptLink = document.createElement("a");
+                        receiptLink.href = p.receipt_url;
+                        receiptLink.target = "_blank";
+                        receiptLink.rel = "noopener";
+                        receiptLink.textContent = "Bukti Pembayaran";
+                        payReceiptTd.appendChild(receiptLink);
+                    } else {
+                        payReceiptTd.textContent = '-';
+                    }
+                    payRow.appendChild(payReceiptTd);
+                    var fillEmpty = document.createElement("td");
+                    fillEmpty.textContent = '';
+                    payRow.appendChild(fillEmpty);
+
+
+                    tbody.appendChild(payRow);
+                });
             });
+
+            table.appendChild(tbody);
+
+            var remainingAmount = Math.max(totals.accumulationAmount - totals.paymentAmount, 0);
+            var hasOutstanding = remainingAmount > 0;
+            var hasRefund = totals.refundPaid > 0;
+
+            var tfoot = document.createElement("tfoot");
+            tfoot.className = "booking-history-table-footer";
+
+            var accumulationRow = document.createElement("tr");
+            accumulationRow.className = "booking-history-table-footer-row";
+            accumulationRow.innerHTML = ''
+                + '<td colspan="2"><strong>Total Akumulasi Tagihan</strong><div class="booking-history-table-note">Total seluruh tagihan utama (DP, pelunasan, dll). Refund tidak ikut dihitung.</div></td>'
+                + '<td colspan="5"><strong>' + formatCurrency(totals.accumulationAmount) + '</strong></td>';
+            tfoot.appendChild(accumulationRow);
+
+            var paymentRow = document.createElement("tr");
+            paymentRow.className = "booking-history-table-footer-row";
+            paymentRow.innerHTML = ''
+                + '<td colspan="2"><strong>Total Pembayaran Diterima</strong><div class="booking-history-table-note">Total pembayaran yang telah diterima untuk tagihan utama. Refund tidak mengurangi nominal ini.</div></td>'
+                + '<td colspan="5"><strong>' + formatCurrency(totals.paymentAmount) + '</strong></td>';
+            tfoot.appendChild(paymentRow);
+
+            var remainingRow = document.createElement("tr");
+            remainingRow.className = "booking-history-table-footer-row";
+            remainingRow.innerHTML = ''
+                + '<td colspan="2"><strong>Sisa Tagihan</strong><div class="booking-history-table-note">Total akumulasi tagihan dikurangi total pembayaran diterima.</div></td>'
+                + '<td colspan="5"><strong class="' + (hasOutstanding ? 'booking-history-table-amount-danger' : '') + '">' + formatCurrency(remainingAmount) + '</strong></td>';
+            tfoot.appendChild(remainingRow);
+
+            var refundRow = document.createElement("tr");
+            refundRow.className = "booking-history-table-footer-row";
+            refundRow.innerHTML = ''
+                + '<td colspan="2"><strong>Total Refund</strong><div class="booking-history-table-note">Total dana yang telah dikembalikan ke customer.</div></td>'
+                + '<td colspan="5"><strong class="' + (hasRefund ? 'booking-history-table-amount-success' : '') + '">' + formatCurrency(totals.refundPaid) + '</strong></td>';
+            tfoot.appendChild(refundRow);
+            table.appendChild(tfoot);
+            tableWrap.appendChild(table);
+            list.appendChild(tableWrap);
+        }
+
+        function formatCurrency(value) {
+            var amount = Number(value || 0);
+            return "Rp " + amount.toLocaleString("id-ID");
         }
 
         function renderCustomerActions(actions, billing, waPhone, waTemplates) {
@@ -277,7 +483,11 @@
             var isApprovedWaitingDp = statusCode === "BS_APPROVED_WAITING_DP";
             var isApprovedWaitingFinal = statusCode === "BS_APPROVED_WAITING_FINAL_PAYMENT";
             var isConfirmed = statusCode === "BS_CONFIRMED";
+            var isComplete = statusCode === "BS_COMPLETE";
             var isReschedule = statusCode === "BS_RESCHEDULE";
+            var isForceMajeure = statusCode === "BS_FORCE_MAJEURE";
+            var isRefund = statusCode === "BS_REFUND";
+            var canShowRejectedRescheduleInfo = isApprovedWaitingFinal || isConfirmed || isReschedule;
 
             var hasDpInstallment = billing && Array.isArray(billing.installments) && billing.installments.some(function (i) {
                 return String(i.type_code || "") === "INS_DP";
@@ -353,7 +563,7 @@
             }
 
             var latestRejectedRescheduleReason = findLatestHistoryDescription("reschedule", "ditolak");
-            if (latestRejectedRescheduleReason) {
+            if (latestRejectedRescheduleReason && canShowRejectedRescheduleInfo) {
                 var rejectedRescheduleInfoDiv = document.createElement("div");
                 rejectedRescheduleInfoDiv.className = "estimate-box mb-3";
                 rejectedRescheduleInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-calendar-close-line me-1"></i><strong>Reschedule Ditolak</strong></p><p class="estimate-note mb-0"></p>';
@@ -385,8 +595,73 @@
                 wrap.appendChild(rescheduleInfoDiv);
             }
 
+            if (isForceMajeure) {
+                var forceMajeureData = currentPayload && currentPayload.force_majeure ? currentPayload.force_majeure : {};
+                var fmReason = String(forceMajeureData.reason || "").trim();
+                var fmType = String(forceMajeureData.type || "").trim();
+                var fmDateLabel = String(forceMajeureData.date_label || "").trim();
+                var fmTitle = fmType === "reschedule" ? "Force Majeure - Usulan Reschedule" : "Force Majeure - Usulan Refund";
+                var fmCopy = fmType === "reschedule"
+                    ? "Tim Etherno mengajukan perubahan jadwal karena kondisi force majeure. Usulan tanggal baru: " + (fmDateLabel || "-") + "."
+                    : "Tim Etherno mengajukan proses refund karena kondisi force majeure pada jadwal Anda.";
+                if (fmReason) {
+                    fmCopy += " Alasan: " + fmReason;
+                }
+
+                var forceMajeureInfoDiv = document.createElement("div");
+                forceMajeureInfoDiv.className = "estimate-box mb-3";
+                forceMajeureInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-alert-line me-1"></i><strong></strong></p><p class="estimate-note mb-0"></p>';
+                forceMajeureInfoDiv.querySelector("strong").textContent = fmTitle;
+                forceMajeureInfoDiv.querySelector(".estimate-note.mb-0").textContent = fmCopy;
+                wrap.appendChild(forceMajeureInfoDiv);
+
+                if (waPhone && waTemplates && waTemplates.force_majeure) {
+                    var waBtnFm = document.createElement("a");
+                    waBtnFm.className = "cta cta-outline mb-2";
+                    waBtnFm.href = buildWhatsappUrl(waPhone, waTemplates.force_majeure);
+                    waBtnFm.target = "_blank";
+                    waBtnFm.rel = "noopener";
+                    waBtnFm.innerHTML = '<i class="ri-whatsapp-line me-1"></i> Diskusikan Force Majeure via WhatsApp';
+                    wrap.appendChild(waBtnFm);
+                }
+            }
+
+            if (isRefund) {
+                var refundInfoDiv = document.createElement("div");
+                refundInfoDiv.className = "estimate-box mb-3";
+                refundInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-refund-2-line me-1"></i><strong>Refund Sedang / Sudah Diproses</strong></p><p class="estimate-note mb-0">Booking Anda masuk ke tahap refund. Jika bukti refund sudah diproses oleh tim Etherno, dana akan dikembalikan sesuai nominal refund yang telah disetujui. Untuk memastikan progres terakhir, silakan hubungi tim kami melalui WhatsApp.</p>';
+                wrap.appendChild(refundInfoDiv);
+
+                if (waPhone && waTemplates && waTemplates.support) {
+                    var waBtnRefund = document.createElement("a");
+                    waBtnRefund.className = "cta cta-outline mb-2";
+                    waBtnRefund.href = buildWhatsappUrl(waPhone, waTemplates.support);
+                    waBtnRefund.target = "_blank";
+                    waBtnRefund.rel = "noopener";
+                    waBtnRefund.innerHTML = '<i class="ri-whatsapp-line me-1"></i> Konfirmasi Refund via WhatsApp';
+                    wrap.appendChild(waBtnRefund);
+                }
+            }
+
+            if (isComplete) {
+                var completeInfoDiv = document.createElement("div");
+                completeInfoDiv.className = "estimate-box mb-3";
+                completeInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-checkbox-circle-line me-1"></i><strong>Acara Telah Selesai Dilaksanakan</strong></p><p class="estimate-note mb-0">Dokumentasi untuk booking ini telah selesai dilaksanakan sesuai jadwal. Terima kasih telah mempercayakan momen spesial Anda kepada Etherno. Jika Anda masih membutuhkan bantuan lanjutan, konfirmasi file, atau tindak lanjut lainnya, silakan hubungi tim kami melalui WhatsApp.</p>';
+                wrap.appendChild(completeInfoDiv);
+
+                if (waPhone && waTemplates && waTemplates.support) {
+                    var waBtnComplete = document.createElement("a");
+                    waBtnComplete.className = "cta cta-outline mb-2";
+                    waBtnComplete.href = buildWhatsappUrl(waPhone, waTemplates.support);
+                    waBtnComplete.target = "_blank";
+                    waBtnComplete.rel = "noopener";
+                    waBtnComplete.innerHTML = '<i class="ri-whatsapp-line me-1"></i> Hubungi Tim Etherno';
+                    wrap.appendChild(waBtnComplete);
+                }
+            }
+
             if (!Array.isArray(actions) || actions.length === 0) {
-                if (!isWaitingApproval && !(isApprovedWaitingDp && !hasDpInstallment) && !(isApprovedWaitingFinal && !hasFinalInstallment) && !isConfirmed && !isReschedule) {
+                if (!isWaitingApproval && !(isApprovedWaitingDp && !hasDpInstallment) && !(isApprovedWaitingFinal && !hasFinalInstallment) && !isConfirmed && !isComplete && !isReschedule && !isForceMajeure && !isRefund) {
                     var empty = document.createElement("p");
                     empty.className = "booking-disclaimer";
                     empty.textContent = "Tidak ada aksi yang tersedia saat ini.";
@@ -793,11 +1068,26 @@
             }
 
             if (code === "BS_FORCE_MAJEURE") {
-                subtitleText += ". Terjadi force majeure pada booking Anda. Tim Etherno sedang menangani situasi ini.";
+                var forceMajeureData = payload.force_majeure || {};
+                var fmReason = String(forceMajeureData.reason || "").trim();
+                var fmType = String(forceMajeureData.type || "").trim();
+                var fmDateLabel = String(forceMajeureData.date_label || "").trim();
+                if (fmType === "reschedule") {
+                    subtitleText += ". Tim Etherno mengajukan force majeure dengan usulan reschedule ke " + (fmDateLabel || "tanggal baru") + ".";
+                } else {
+                    subtitleText += ". Tim Etherno mengajukan force majeure dengan opsi refund untuk booking Anda.";
+                }
+                if (fmReason) {
+                    subtitleText += " Alasan: " + fmReason;
+                }
             }
 
             if (code === "BS_COMPLETE") {
                 subtitleText += ". Acara telah selesai. Terima kasih telah mempercayakan moment spesial Anda kepada Etherno.";
+            }
+
+            if (code === "BS_REFUND") {
+                subtitleText += ". Booking Anda berada pada tahap refund. Silakan cek tab Tagihan & Pembayaran atau hubungi tim Etherno melalui WhatsApp untuk memastikan progres pengembalian dana.";
             }
             if (statusStateSubtitle) statusStateSubtitle.textContent = subtitleText;
 
@@ -915,11 +1205,17 @@
             })
             .then(function (payload) {
                 closeVerifyModal();
-                renderPayload(payload);
+                try {
+                    renderPayload(payload);
+                } catch (error) {
+                    console.error("Failed to render booking payload", payload, error);
+                    throw new Error("Data booking berhasil ditemukan, tetapi tampilan detail gagal dirender. Silakan refresh halaman lalu coba lagi.");
+                }
             })
             .catch(function (error) {
                 var message = error instanceof Error ? error.message : "Terjadi kendala saat mengambil data booking.";
                 setVerifyError(message);
+                setLookupError(message);
             })
             .finally(function () {
                 isSubmitting = false;
@@ -1013,6 +1309,32 @@
             });
 
             setActiveStatusTab("info");
+        }
+
+        var billingTabs = document.querySelector("[data-billing-tabs]");
+        if (billingTabs) {
+            var billingTabBtns = billingTabs.querySelectorAll("[data-billing-tab]");
+            var billingTabPanels = billingTabs.querySelectorAll("[data-billing-panel]");
+
+            function setActiveBillingTab(tabName) {
+                billingTabBtns.forEach(function (btn) {
+                    var isActive = btn.getAttribute("data-billing-tab") === tabName;
+                    btn.classList.toggle("is-active", isActive);
+                });
+                billingTabPanels.forEach(function (panel) {
+                    var isActive = panel.getAttribute("data-billing-panel") === tabName;
+                    panel.classList.toggle("is-active", isActive);
+                    panel.hidden = !isActive;
+                });
+            }
+
+            billingTabBtns.forEach(function (btn) {
+                btn.addEventListener("click", function () {
+                    setActiveBillingTab(btn.getAttribute("data-billing-tab"));
+                });
+            });
+
+            setActiveBillingTab("details");
         }
 
         var refreshBtn = document.getElementById("btn_refresh_status");

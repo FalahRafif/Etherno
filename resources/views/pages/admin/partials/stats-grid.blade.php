@@ -23,7 +23,7 @@
                             {{ $stat['value'] }}
                         </h4>
                         @if(!empty($stat['hint']))
-                            <small class="text-muted d-block">{{ $stat['hint'] }}</small>
+                            <small class="text-muted d-block">{!! nl2br(e($stat['hint'])) !!}</small>
                         @endif
                     </div>
                 </div>

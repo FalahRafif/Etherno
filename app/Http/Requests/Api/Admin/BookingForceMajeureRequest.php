@@ -16,7 +16,7 @@ class BookingForceMajeureRequest extends FormRequest
         return [
             'action' => ['required', 'string', 'in:reschedule,refund'],
             'reason' => ['required', 'string', 'max:600'],
-            'new_date' => ['required_if:action,reschedule', 'nullable', 'date'],
+            'new_date' => ['required_if:action,reschedule', 'nullable', 'date', 'after:today'],
         ];
     }
 

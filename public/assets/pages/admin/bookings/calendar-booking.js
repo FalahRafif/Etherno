@@ -19,7 +19,21 @@
         var applyButton = document.getElementById("booking_calendar_apply_filter");
         var resetButton = document.getElementById("booking_calendar_reset_filter");
         var activeFilterBadge = document.getElementById("booking_calendar_active_filter");
-        var statusPills = Array.from(document.querySelectorAll(".booking-calendar-status-pill"));
+        var statusPills = Array.from(document.querySelectorAll(".calendar-status-pill"));
+        var previewPanel = document.getElementById("booking_calendar_preview");
+        var previewClose = document.getElementById("calendar_preview_close");
+        var previewDetail = document.getElementById("calendar_preview_detail");
+        var defaultDateStart = dateStartInput ? String(dateStartInput.value || "").trim() : "";
+        var defaultDateEnd = dateEndInput ? String(dateEndInput.value || "").trim() : "";
+
+        function setText(id, value) {
+            var element = document.getElementById(id);
+            if (!element) {
+                return;
+            }
+
+            element.textContent = String(value || "-");
+        }
 
         function getStatusValue() {
             if (!statusSelect) {
@@ -30,21 +44,21 @@
         }
 
         function getStatusLabel() {
-            if (!statusSelect || !statusSelect.options || statusSelect.selectedIndex < 0) {
-                return "Semua Status";
+            var currentStatus = getStatusValue().toUpperCase();
+            var activePill = statusPills.find(function (pill) {
+                var code = String(pill.getAttribute("data-status-code") || "").toUpperCase();
+                return code === currentStatus || (code === "" && currentStatus === "");
+            });
+
+            if (activePill) {
+                var label = activePill.querySelector("span:first-child");
+                var rawLabel = String(label ? label.textContent : activePill.textContent || "").trim();
+                if (rawLabel !== "") {
+                    return rawLabel;
+                }
             }
 
-            var option = statusSelect.options[statusSelect.selectedIndex];
-            if (!option) {
-                return "Semua Status";
-            }
-
-            var rawLabel = String(option.textContent || "").trim();
-            if (rawLabel === "") {
-                return "Semua Status";
-            }
-
-            return rawLabel;
+            return "Semua Status";
         }
 
         function syncStatusPills() {
@@ -78,7 +92,15 @@
                 rangeLabel = "Sampai " + endDate;
             }
 
-            activeFilterBadge.textContent = statusLabel + " • " + rangeLabel;
+            var advancedParts = [];
+            if (getStatusValue() !== "") {
+                advancedParts.push(statusLabel);
+            }
+            if (startDate !== "" || endDate !== "") {
+                advancedParts.push(rangeLabel);
+            }
+
+            activeFilterBadge.textContent = advancedParts.length > 0 ? advancedParts.join(" | ") : "Semua Status";
         }
 
         function getFilters() {
@@ -87,6 +109,37 @@
                 date_start: dateStartInput ? String(dateStartInput.value || "").trim() : "",
                 date_end: dateEndInput ? String(dateEndInput.value || "").trim() : ""
             };
+        }
+
+        function openPreview(event) {
+            if (!previewPanel || !event || !event.extendedProps) {
+                return;
+            }
+
+            var props = event.extendedProps;
+            var detailUrl = String(props.detail_url || "").trim();
+            setText("calendar_preview_case", props.case_id || event.title || "-");
+            setText("calendar_preview_customer", props.customer_name || "-");
+            setText("calendar_preview_status", props.status_label || "-");
+            setText("calendar_preview_readiness", props.readiness_label || "-");
+            setText("calendar_preview_source", props.date_source_label || "-");
+            setText("calendar_preview_schedule", [props.event_date_label, props.session_label].filter(Boolean).join(" | "));
+            setText("calendar_preview_package", props.package_name || "-");
+            setText("calendar_preview_location", props.location_name || "-");
+            setText("calendar_preview_risk", String(props.risk_level || "preview").replace(/_/g, " "));
+
+            if (previewDetail) {
+                previewDetail.href = detailUrl !== "" ? detailUrl : "#";
+                previewDetail.textContent = props.next_action_label || "Buka Detail";
+            }
+
+            previewPanel.classList.remove("d-none");
+        }
+
+        function closePreview() {
+            if (previewPanel) {
+                previewPanel.classList.add("d-none");
+            }
         }
 
         if (!window.EthernoFullCalendar || typeof window.EthernoFullCalendar.init !== "function") {
@@ -99,8 +152,8 @@
             eventsEndpoint: eventsUrl,
             locale: "id",
             getFilters: getFilters,
-            onEventNavigate: function (detailUrl) {
-                window.location.href = detailUrl;
+            onEventNavigate: function (detailUrl, event) {
+                openPreview(event);
             },
             onAfterLoad: function () {
                 updateActiveFilterBadge();
@@ -131,14 +184,14 @@
                     statusSelect.value = "";
                 }
                 if (dateStartInput) {
-                    dateStartInput.value = "";
+                    dateStartInput.value = defaultDateStart;
                 }
                 if (dateEndInput) {
-                    dateEndInput.value = "";
+                    dateEndInput.value = defaultDateEnd;
                 }
-
                 syncStatusPills();
                 updateActiveFilterBadge();
+                closePreview();
                 calendarApi.refetch();
             });
         }
@@ -152,9 +205,14 @@
                 statusSelect.value = String(pill.getAttribute("data-status-code") || "").trim();
                 syncStatusPills();
                 updateActiveFilterBadge();
+                closePreview();
                 calendarApi.refetch();
             });
         });
+
+        if (previewClose) {
+            previewClose.addEventListener("click", closePreview);
+        }
 
         syncStatusPills();
         updateActiveFilterBadge();
