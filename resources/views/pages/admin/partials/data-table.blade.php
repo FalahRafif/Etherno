@@ -2,6 +2,7 @@
     $columns = $columns ?? [];
     $rows = $rows ?? [];
     $emptyMessage = $emptyMessage ?? 'Belum ada data.';
+    $pagination = $pagination ?? null;
     $toneClasses = [
         'primary' => 'bg-primary-transparent text-primary',
         'secondary' => 'bg-secondary-transparent text-secondary',
@@ -120,5 +121,63 @@
                 </tbody>
             </table>
         </div>
+
+        @if($pagination instanceof \Illuminate\Pagination\LengthAwarePaginator && $pagination->hasPages())
+            <div class="px-4 py-3 border-top d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 booking-table-pagination-wrap">
+                <p class="text-muted small mb-0">
+                    Menampilkan {{ $pagination->firstItem() ?? 0 }}-{{ $pagination->lastItem() ?? 0 }} dari {{ $pagination->total() }} data
+                </p>
+                <nav aria-label="Navigasi halaman booking">
+                    <ul class="booking-table-pagination mb-0">
+                        @if ($pagination->onFirstPage())
+                            <li class="is-disabled" aria-disabled="true" aria-label="Halaman sebelumnya">
+                                <span>Sebelumnya</span>
+                            </li>
+                        @else
+                            <li>
+                                <a href="{{ $pagination->previousPageUrl() }}" rel="prev" aria-label="Halaman sebelumnya">Sebelumnya</a>
+                            </li>
+                        @endif
+
+                        @php
+                            $startPage = max(1, $pagination->currentPage() - 1);
+                            $endPage = min($pagination->lastPage(), $pagination->currentPage() + 1);
+                        @endphp
+
+                        @if ($startPage > 1)
+                            <li><a href="{{ $pagination->url(1) }}">1</a></li>
+                            @if ($startPage > 2)
+                                <li class="is-disabled" aria-disabled="true"><span>...</span></li>
+                            @endif
+                        @endif
+
+                        @for ($page = $startPage; $page <= $endPage; $page++)
+                            @if ($page === $pagination->currentPage())
+                                <li class="is-active" aria-current="page"><span>{{ $page }}</span></li>
+                            @else
+                                <li><a href="{{ $pagination->url($page) }}">{{ $page }}</a></li>
+                            @endif
+                        @endfor
+
+                        @if ($endPage < $pagination->lastPage())
+                            @if ($endPage < $pagination->lastPage() - 1)
+                                <li class="is-disabled" aria-disabled="true"><span>...</span></li>
+                            @endif
+                            <li><a href="{{ $pagination->url($pagination->lastPage()) }}">{{ $pagination->lastPage() }}</a></li>
+                        @endif
+
+                        @if ($pagination->hasMorePages())
+                            <li>
+                                <a href="{{ $pagination->nextPageUrl() }}" rel="next" aria-label="Halaman berikutnya">Berikutnya</a>
+                            </li>
+                        @else
+                            <li class="is-disabled" aria-disabled="true" aria-label="Halaman berikutnya">
+                                <span>Berikutnya</span>
+                            </li>
+                        @endif
+                    </ul>
+                </nav>
+            </div>
+        @endif
     </div>
 </div>

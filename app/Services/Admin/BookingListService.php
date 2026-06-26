@@ -11,11 +11,14 @@ use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\Contracts\ReferenceRepositoryInterface;
 use App\Repositories\Contracts\SettingRepositoryInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
+
 class BookingListService
 {
     private const STATUS_GROUP = 'booking_status';
     private const CASE_ID_PATTERN = '/^ETH-(\d{8})-(\d{5})$/i';
+    private const PER_PAGE = 15;
 
     public function __construct(
         private BookingRepositoryInterface $bookingRepository,
@@ -44,10 +47,10 @@ class BookingListService
 
         $bookings = $filteredQuery
             ->orderByDesc('created_at')
-            ->limit(50)
-            ->get();
+            ->paginate(self::PER_PAGE)
+            ->withQueryString();
 
-        $rows = $bookings->map(function (Booking $booking): array {
+        $rows = $bookings->getCollection()->map(function (Booking $booking): array {
             $caseId = $this->buildCaseId($booking);
             $customerName = trim(implode(' ', array_filter([
                 $booking->customer?->first_name,
@@ -104,6 +107,7 @@ class BookingListService
             'stats' => $stats,
             'statusFilters' => $statusFilters,
             'rows' => $rows,
+            'pagination' => $bookings,
             'totalCount' => $totalCount,
             'filteredCount' => $filteredCount,
         ];

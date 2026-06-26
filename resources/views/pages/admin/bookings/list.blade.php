@@ -14,6 +14,7 @@
     $rows = $rows ?? [];
     $statusFilters = $statusFilters ?? [];
     $filters = $filters ?? [];
+    $pagination = $pagination ?? null;
     $totalCount = $totalCount ?? 0;
     $filteredCount = $filteredCount ?? 0;
     $currentStatus = strtoupper(trim((string) ($filters['status'] ?? '')));
@@ -34,7 +35,7 @@
         <span class="badge bg-primary-transparent text-primary">Menampilkan {{ $filteredCount }} dari {{ $totalCount }} booking</span>
     </div>
     <div class="card-body">
-        <div class="d-flex flex-wrap gap-2 mb-3">
+        <div class="booking-filter-strip mb-3">
             @foreach ($statusFilters as $filter)
                 @php
                     $isActive = $filter['is_active'] ?? false;
@@ -57,9 +58,9 @@
                     unset($baseFilters['status']);
                     $targetFilters = $filterCode !== '' ? array_merge($baseFilters, ['status' => $filterCode]) : $baseFilters;
                 @endphp
-                <a href="{{ panel_route('admin.bookings.list', $targetFilters) }}" class="btn btn-sm {{ $isActive ? 'btn-' . $tone : 'btn-outline-' . $tone }}">
-                    {{ $filter['label'] ?? '-' }}
-                    <span class="badge {{ $badgeClass }} ms-2">{{ $filter['count'] ?? 0 }}</span>
+                <a href="{{ panel_route('admin.bookings.list', $targetFilters) }}" class="booking-filter-pill {{ $isActive ? 'is-active btn-' . $tone : 'btn-outline-' . $tone }}">
+                    <span class="booking-filter-pill__label">{{ $filter['label'] ?? '-' }}</span>
+                    <span class="badge {{ $badgeClass }} booking-filter-pill__count">{{ $filter['count'] ?? 0 }}</span>
                 </a>
             @endforeach
         </div>
@@ -100,9 +101,117 @@
     'tableBadge' => 'Semua Status',
     'columns' => $columns,
     'rows' => $rows,
+    'pagination' => $pagination,
     'emptyMessage' => 'Belum ada booking yang cocok dengan filter.',
 ])
 @endsection
+
+@push('styles')
+<style>
+.booking-filter-strip {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+    scrollbar-width: thin;
+}
+
+.booking-filter-pill {
+    min-width: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.95rem 1rem;
+    border-radius: 1rem;
+    border: 1px solid currentColor;
+    text-decoration: none;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    font-weight: 600;
+}
+
+.booking-filter-pill:hover {
+    text-decoration: none;
+}
+
+.booking-filter-pill__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.booking-filter-pill__count {
+    flex-shrink: 0;
+    font-size: 0.85rem;
+}
+
+@media (max-width: 767.98px) {
+    .booking-filter-pill {
+        min-width: 260px;
+    }
+}
+
+.booking-table-pagination-wrap {
+    overflow-x: auto;
+}
+
+.booking-table-pagination {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    list-style: none;
+    padding: 0;
+    white-space: nowrap;
+}
+
+.booking-table-pagination li {
+    flex: 0 0 auto;
+}
+
+.booking-table-pagination a,
+.booking-table-pagination span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+    height: 42px;
+    padding: 0 0.95rem;
+    border-radius: 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+    color: inherit;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.booking-table-pagination a:hover {
+    background: rgba(var(--primary-rgb), 0.12);
+    border-color: rgba(var(--primary-rgb), 0.35);
+    color: rgb(var(--primary-rgb));
+}
+
+.booking-table-pagination .is-active span {
+    background: rgb(var(--primary-rgb));
+    border-color: rgb(var(--primary-rgb));
+    color: #fff;
+}
+
+.booking-table-pagination .is-disabled span {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+@media (max-width: 767.98px) {
+    .booking-table-pagination a,
+    .booking-table-pagination span {
+        height: 38px;
+        min-width: 38px;
+        padding: 0 0.8rem;
+        border-radius: 0.8rem;
+    }
+}
+</style>
+@endpush
 
 @push('scripts')
 <script>
