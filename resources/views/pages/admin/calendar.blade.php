@@ -6,7 +6,7 @@
 @php
     $actions = [
         ['label' => 'Daftar Booking', 'url' => panel_route('admin.bookings.list'), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Booking Requests', 'url' => panel_route('admin.bookings.list', ['status' => 'BS_WAITING_APPROVAL']), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Booking Menunggu Review', 'url' => panel_route('admin.bookings.list', ['status' => 'BS_WAITING_APPROVAL']), 'class' => 'btn btn-outline-primary btn-sm'],
         ['label' => 'Booking Aktif', 'url' => panel_route('admin.bookings.list', ['status' => 'BS_CONFIRMED']), 'class' => 'btn btn-primary btn-sm'],
     ];
 
@@ -27,7 +27,7 @@
 @endphp
 
 @include('pages.admin.partials.page-header', [
-    'heading' => 'Calender Booking',
+    'heading' => 'Kalender Booking',
     'summary' => 'Visualisasi jadwal booking untuk membantu petugas melihat status booking per tanggal, lalu lanjut review ke detail booking.',
     'actions' => $actions,
 ])
@@ -121,7 +121,7 @@
     <div class="col-12 col-xxl-9">
         <div class="card custom-card mb-0">
             <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <h5 class="card-title mb-0">Visualisasi Calender Booking</h5>
+                <h5 class="card-title mb-0">Visualisasi Kalender Booking</h5>
                 <span id="booking_calendar_active_filter" class="badge bg-primary-transparent text-primary">Semua Status</span>
             </div>
             <div class="card-body position-relative">
@@ -231,4 +231,3 @@
 @endphp
 <script src="{{ asset('assets/pages/admin/bookings/calendar-booking.js') }}?v={{ $calendarBookingScriptVersion }}"></script>
 @endpush
-

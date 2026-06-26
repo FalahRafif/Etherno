@@ -467,9 +467,9 @@ class BookingListService
 
         return [
             ['label' => 'Total Booking', 'value' => $total, 'hint' => 'Semua status', 'tone' => 'primary'],
-            ['label' => 'Waiting Approval', 'value' => $waitingApproval, 'hint' => 'Belum DP', 'tone' => 'warning'],
-            ['label' => 'Active', 'value' => $active, 'hint' => 'DP verified / paid', 'tone' => 'success'],
-            ['label' => 'Cancelled/Expired', 'value' => $inactive, 'hint' => 'Tidak aktif', 'tone' => 'danger'],
+            ['label' => 'Menunggu Review', 'value' => $waitingApproval, 'hint' => 'Pengajuan baru yang belum diproses', 'tone' => 'warning'],
+            ['label' => 'Booking Aktif', 'value' => $active, 'hint' => 'Masih berjalan hingga selesai acara', 'tone' => 'success'],
+            ['label' => 'Tidak Aktif', 'value' => $inactive, 'hint' => 'Batal, expired, refund, atau ditolak', 'tone' => 'danger'],
         ];
     }
 
@@ -515,11 +515,11 @@ class BookingListService
 
         return [
             ['label' => 'Request Baru', 'value' => (string) $waitingApproval, 'hint' => 'Menunggu review', 'tone' => 'warning'],
-            ['label' => 'Approved Menunggu DP', 'value' => (string) $waitingDp, 'hint' => 'Belum mengunci slot', 'tone' => 'info'],
-            ['label' => 'Booking Aktif', 'value' => (string) $active, 'hint' => 'DP verified / confirmed', 'tone' => 'success'],
+            ['label' => 'Menunggu Pembayaran DP', 'value' => (string) $waitingDp, 'hint' => 'Belum mengunci slot acara', 'tone' => 'info'],
+            ['label' => 'Booking Aktif', 'value' => (string) $active, 'hint' => 'DP terverifikasi atau booking sudah confirmed', 'tone' => 'success'],
             ['label' => 'Pelunasan Jatuh Tempo', 'value' => (string) $dueSoon, 'hint' => 'H-1 atau lewat, perlu follow-up', 'tone' => 'danger'],
-            ['label' => 'Selesai Bulan Ini', 'value' => (string) $completedThisMonth, 'hint' => 'Event completed', 'tone' => 'primary'],
-            ['label' => 'Revenue Bulan Ini', 'value' => 'Rp ' . number_format((float) $revenue, 0, ',', '.'), 'hint' => 'Total lunas terbayar', 'tone' => 'secondary'],
+            ['label' => 'Selesai Bulan Ini', 'value' => (string) $completedThisMonth, 'hint' => 'Acara yang sudah dilaksanakan', 'tone' => 'primary'],
+            ['label' => 'Pendapatan Bulan Ini', 'value' => 'Rp ' . number_format((float) $revenue, 0, ',', '.'), 'hint' => 'Total pembayaran yang sudah masuk', 'tone' => 'secondary'],
         ];
     }
 
@@ -545,9 +545,9 @@ class BookingListService
             ])));
             $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
             $actionLabel = match ($statusCode) {
-                'BS_WAITING_APPROVAL' => 'Review',
+                'BS_WAITING_APPROVAL' => 'Review Booking',
                 'BS_APPROVED_WAITING_DP' => 'Verifikasi DP',
-                'BS_APPROVED_WAITING_FINAL_PAYMENT' => 'Verifikasi Final',
+                'BS_APPROVED_WAITING_FINAL_PAYMENT' => 'Tinjau Pelunasan',
                 default => 'Detail',
             };
 
@@ -608,7 +608,7 @@ class BookingListService
                     'Semua koordinasi lanjutan tetap dipusatkan melalui WhatsApp.',
                 ],
                 'items' => [
-                    ['label' => 'Cancelled / Expired / Refund', 'value' => (string) $cancelled],
+                    ['label' => 'Batal / Expired / Refund', 'value' => (string) $cancelled],
                 ],
             ],
         ];
@@ -633,11 +633,7 @@ class BookingListService
     private function resolveStatusBadge(string $statusCode, ?Booking $booking = null): array
     {
         $statusCode = strtoupper($statusCode);
-        $label = $statusCode !== '' ? strtolower(str_replace('BS_', '', $statusCode)) : 'unknown';
-
-        if ($statusCode === 'BS_FORCE_MAJEURE' && $booking instanceof Booking) {
-            $label = !empty($booking->force_majeure_date) ? 'force majeure - reschedule' : 'force majeure - refund';
-        }
+        $label = $this->resolveReadableStatusBadgeLabel($statusCode, $booking);
 
         $tone = match ($statusCode) {
             'BS_WAITING_APPROVAL' => 'warning',
@@ -662,11 +658,33 @@ class BookingListService
         $statusCode = strtoupper($statusCode);
 
         return match ($statusCode) {
-            'BS_APPROVED_WAITING_DP' => ['type' => 'badge', 'tone' => 'warning', 'label' => 'dp_waiting_payment'],
-            'BS_APPROVED_WAITING_FINAL_PAYMENT' => ['type' => 'badge', 'tone' => 'info', 'label' => 'final_waiting_payment'],
-            'BS_CONFIRMED', 'BS_COMPLETE' => ['type' => 'badge', 'tone' => 'success', 'label' => 'paid'],
-            'BS_CANCEL', 'BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_REFUND' => ['type' => 'badge', 'tone' => 'danger', 'label' => 'inactive'],
-            default => ['type' => 'badge', 'tone' => 'light', 'label' => 'n/a'],
+            'BS_APPROVED_WAITING_DP' => ['type' => 'badge', 'tone' => 'warning', 'label' => 'Menunggu Pembayaran DP'],
+            'BS_APPROVED_WAITING_FINAL_PAYMENT' => ['type' => 'badge', 'tone' => 'info', 'label' => 'Menunggu Pelunasan'],
+            'BS_CONFIRMED' => ['type' => 'badge', 'tone' => 'success', 'label' => 'Lunas & Terkonfirmasi'],
+            'BS_COMPLETE' => ['type' => 'badge', 'tone' => 'success', 'label' => 'Booking Selesai'],
+            'BS_CANCEL', 'BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_REFUND', 'BS_REJECTED' => ['type' => 'badge', 'tone' => 'danger', 'label' => 'Tidak Aktif'],
+            default => ['type' => 'badge', 'tone' => 'light', 'label' => 'Belum Tersedia'],
+        };
+    }
+
+    private function resolveReadableStatusBadgeLabel(string $statusCode, ?Booking $booking = null): string
+    {
+        return match ($statusCode) {
+            'BS_WAITING_APPROVAL' => 'Menunggu Review',
+            'BS_APPROVED_WAITING_DP' => 'Disetujui - Menunggu DP',
+            'BS_APPROVED_WAITING_FINAL_PAYMENT' => 'Disetujui - Menunggu Pelunasan',
+            'BS_CONFIRMED' => 'Booking Terkonfirmasi',
+            'BS_COMPLETE' => 'Booking Selesai',
+            'BS_CANCEL' => 'Booking Dibatalkan',
+            'BS_EXPIRED' => 'Booking Expired',
+            'BS_EXPIRED_DP' => 'Expired - DP Tidak Dibayar',
+            'BS_REFUND' => 'Refund Diproses',
+            'BS_REJECTED' => 'Pengajuan Ditolak',
+            'BS_RESCHEDULE' => 'Menunggu Review Reschedule',
+            'BS_FORCE_MAJEURE' => $booking instanceof Booking
+                ? (!empty($booking->force_majeure_date) ? 'Force Majeure - Usulan Reschedule' : 'Force Majeure - Usulan Refund')
+                : 'Force Majeure',
+            default => 'Status Booking',
         };
     }
 

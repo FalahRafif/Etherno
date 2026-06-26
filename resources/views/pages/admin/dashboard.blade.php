@@ -5,9 +5,9 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Booking Requests', 'url' => panel_route('admin.bookings.list', ['status' => 'BS_WAITING_APPROVAL']), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Booking Menunggu Review', 'url' => panel_route('admin.bookings.list', ['status' => 'BS_WAITING_APPROVAL']), 'class' => 'btn btn-outline-primary btn-sm'],
         ['label' => 'Verifikasi DP', 'url' => panel_route('admin.bookings.list', ['status' => 'BS_APPROVED_WAITING_DP']), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Calendar & Slots', 'url' => panel_route('admin.calendar'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Kalender & Slot', 'url' => panel_route('admin.calendar'), 'class' => 'btn btn-primary btn-sm'],
     ];
 
     $alerts = [];
@@ -31,7 +31,7 @@
     <div class="col-12 col-xl-8">
         @include('pages.admin.partials.data-table', [
             'tableTitle' => 'Antrian Operasional',
-            'tableBadge' => 'Live',
+            'tableBadge' => 'Perlu Tindak Lanjut',
             'columns' => $columns,
             'rows' => $rows,
         ])
@@ -41,4 +41,3 @@
     </div>
 </div>
 @endsection
-

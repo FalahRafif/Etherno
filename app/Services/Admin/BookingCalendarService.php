@@ -294,10 +294,10 @@ class BookingCalendarService
 
         return [
             ['label' => 'Total Booking', 'value' => $total, 'hint' => 'Sesuai filter tanggal', 'tone' => 'primary'],
-            ['label' => 'Menunggu Proses', 'value' => $waiting, 'hint' => 'Belum selesai', 'tone' => 'warning'],
-            ['label' => 'Booking Aktif', 'value' => $active, 'hint' => 'Sudah berjalan', 'tone' => 'success'],
+            ['label' => 'Menunggu Proses', 'value' => $waiting, 'hint' => 'Perlu review atau tindak lanjut', 'tone' => 'warning'],
+            ['label' => 'Booking Aktif', 'value' => $active, 'hint' => 'Masih berjalan hingga hari acara', 'tone' => 'success'],
             ['label' => 'Hari Terisi', 'value' => $occupiedDays, 'hint' => 'Jumlah tanggal event', 'tone' => 'info'],
-            ['label' => 'Closed / Inactive', 'value' => $closed, 'hint' => 'Selesai / batal / expired', 'tone' => 'danger'],
+            ['label' => 'Selesai / Tidak Aktif', 'value' => $closed, 'hint' => 'Selesai, batal, expired, atau refund', 'tone' => 'danger'],
         ];
     }
 
@@ -385,18 +385,23 @@ class BookingCalendarService
 
     private function resolveStatusLabel(string $statusCode, string $description): string
     {
-        $cleanDescription = trim(preg_replace('/\s*\(.*\)$/', '', trim($description)) ?? '');
-        if ($cleanDescription !== '') {
-            return $cleanDescription;
-        }
-
-        if ($statusCode === '') {
-            return '-';
-        }
-
-        $label = str_replace('_', ' ', strtolower(str_replace('BS_', '', $statusCode)));
-
-        return ucwords($label);
+        return match ($statusCode) {
+            'BS_WAITING_APPROVAL' => 'Menunggu Review',
+            'BS_APPROVED_WAITING_DP' => 'Disetujui - Menunggu DP',
+            'BS_APPROVED_WAITING_FINAL_PAYMENT' => 'Disetujui - Menunggu Pelunasan',
+            'BS_CONFIRMED' => 'Booking Terkonfirmasi',
+            'BS_COMPLETE' => 'Booking Selesai',
+            'BS_CANCEL' => 'Booking Dibatalkan',
+            'BS_EXPIRED' => 'Booking Expired',
+            'BS_EXPIRED_DP' => 'Expired - DP Tidak Dibayar',
+            'BS_REFUND' => 'Refund Diproses',
+            'BS_REJECTED' => 'Pengajuan Ditolak',
+            'BS_RESCHEDULE' => 'Menunggu Review Reschedule',
+            'BS_FORCE_MAJEURE' => 'Force Majeure',
+            default => (trim(preg_replace('/\s*\(.*\)$/', '', trim($description)) ?? '') !== '')
+                ? trim((string) preg_replace('/\s*\(.*\)$/', '', trim($description)))
+                : '-',
+        };
     }
 
     private function resolveStatusTone(string $statusCode): string
@@ -426,4 +431,3 @@ class BookingCalendarService
         };
     }
 }
-

@@ -5,9 +5,9 @@
 @section('content')
 @php
     $actions = [
-        ['label' => 'Booking Requests', 'url' => panel_route('admin.bookings.list', ['status' => 'BS_WAITING_APPROVAL']), 'class' => 'btn btn-outline-primary btn-sm'],
+        ['label' => 'Booking Menunggu Review', 'url' => panel_route('admin.bookings.list', ['status' => 'BS_WAITING_APPROVAL']), 'class' => 'btn btn-outline-primary btn-sm'],
         ['label' => 'Booking Aktif', 'url' => panel_route('admin.bookings.list', ['status' => 'BS_CONFIRMED']), 'class' => 'btn btn-outline-primary btn-sm'],
-        ['label' => 'Calendar & Slots', 'url' => panel_route('admin.calendar'), 'class' => 'btn btn-primary btn-sm'],
+        ['label' => 'Kalender & Slot', 'url' => panel_route('admin.calendar'), 'class' => 'btn btn-primary btn-sm'],
     ];
     $columns = ['Case ID', 'Customer', 'Tanggal Pengajuan', 'Tanggal Acara', 'Sesi', 'Paket', 'Lokasi', 'Status', 'Aksi'];
     $stats = $stats ?? [];
@@ -97,7 +97,7 @@
 
 @include('pages.admin.partials.data-table', [
     'tableTitle' => 'List Booking',
-    'tableBadge' => 'All Status',
+    'tableBadge' => 'Semua Status',
     'columns' => $columns,
     'rows' => $rows,
     'emptyMessage' => 'Belum ada booking yang cocok dengan filter.',
