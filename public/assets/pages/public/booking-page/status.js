@@ -403,7 +403,7 @@
                     var payDateTd = document.createElement("td");
                     payDateTd.textContent = String((p && p.paid_at) || "-");
                     payRow.appendChild(payDateTd);
-
+                    
                     var payReceiptTd = document.createElement("td");
                     if (p && p.receipt_url) {
                         var receiptLink = document.createElement("a");
@@ -416,6 +416,10 @@
                         payReceiptTd.textContent = '-';
                     }
                     payRow.appendChild(payReceiptTd);
+                    var fillEmpty = document.createElement("td");
+                    fillEmpty.textContent = '';
+                    payRow.appendChild(fillEmpty);
+
 
                     tbody.appendChild(payRow);
                 });
@@ -423,23 +427,40 @@
 
             table.appendChild(tbody);
 
-            var netPaid = Math.max(totals.paymentAmount - totals.refundPaid, 0);
+            var remainingAmount = Math.max(totals.accumulationAmount - totals.paymentAmount, 0);
+            var hasOutstanding = remainingAmount > 0;
+            var hasRefund = totals.refundPaid > 0;
 
             var tfoot = document.createElement("tfoot");
+            tfoot.className = "booking-history-table-footer";
+
             var accumulationRow = document.createElement("tr");
             accumulationRow.className = "booking-history-table-footer-row";
             accumulationRow.innerHTML = ''
-                + '<td colspan="2"><strong>Total Akumulasi</strong><div class="booking-history-table-note">Akumulasi tagihan utama tanpa pengurangan refund dan tanpa menambahkan nominal refund.</div></td>'
+                + '<td colspan="2"><strong>Total Akumulasi Tagihan</strong><div class="booking-history-table-note">Total seluruh tagihan utama (DP, pelunasan, dll). Refund tidak ikut dihitung.</div></td>'
                 + '<td colspan="5"><strong>' + formatCurrency(totals.accumulationAmount) + '</strong></td>';
             tfoot.appendChild(accumulationRow);
 
             var paymentRow = document.createElement("tr");
             paymentRow.className = "booking-history-table-footer-row";
             paymentRow.innerHTML = ''
-                + '<td colspan="2"><strong>Total Pembayaran</strong><div class="booking-history-table-note">Total pembayaran bersih setelah dikurangi refund.</div></td>'
-                + '<td colspan="2"><strong>' + formatCurrency(netPaid) + '</strong></td>'
-                + '<td colspan="3"><strong>Total Refund:</strong> ' + formatCurrency(totals.refundPaid) + '</td>';
+                + '<td colspan="2"><strong>Total Pembayaran Diterima</strong><div class="booking-history-table-note">Total pembayaran yang telah diterima untuk tagihan utama. Refund tidak mengurangi nominal ini.</div></td>'
+                + '<td colspan="5"><strong>' + formatCurrency(totals.paymentAmount) + '</strong></td>';
             tfoot.appendChild(paymentRow);
+
+            var remainingRow = document.createElement("tr");
+            remainingRow.className = "booking-history-table-footer-row";
+            remainingRow.innerHTML = ''
+                + '<td colspan="2"><strong>Sisa Tagihan</strong><div class="booking-history-table-note">Total akumulasi tagihan dikurangi total pembayaran diterima.</div></td>'
+                + '<td colspan="5"><strong class="' + (hasOutstanding ? 'booking-history-table-amount-danger' : '') + '">' + formatCurrency(remainingAmount) + '</strong></td>';
+            tfoot.appendChild(remainingRow);
+
+            var refundRow = document.createElement("tr");
+            refundRow.className = "booking-history-table-footer-row";
+            refundRow.innerHTML = ''
+                + '<td colspan="2"><strong>Total Refund</strong><div class="booking-history-table-note">Total dana yang telah dikembalikan ke customer.</div></td>'
+                + '<td colspan="5"><strong class="' + (hasRefund ? 'booking-history-table-amount-success' : '') + '">' + formatCurrency(totals.refundPaid) + '</strong></td>';
+            tfoot.appendChild(refundRow);
             table.appendChild(tfoot);
             tableWrap.appendChild(table);
             list.appendChild(tableWrap);

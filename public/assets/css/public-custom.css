@@ -1468,6 +1468,42 @@ body.booking-confirm-open{
 }
 .booking-detail-tabs .booking-tab-panel{padding-top:0}
 
+.billing-detail-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.billing-detail-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  border:1px solid rgba(15,15,15,.08);
+  border-radius:10px;
+  background:#fff;
+  padding:10px 12px;
+}
+.billing-detail-name{
+  margin:0;
+  font-size:14px;
+  font-weight:600;
+  color:#1b1b1a;
+}
+.billing-detail-meta{
+  margin:2px 0 0;
+  font-size:11px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:#6f5622;
+}
+.billing-detail-amount{
+  margin:0;
+  font-size:14px;
+  font-weight:700;
+  color:#1b1b1a;
+  white-space:nowrap;
+}
+
 .billing-installment-card{
   border:1px solid rgba(15,15,15,.08);
   border-radius:10px;
@@ -1660,6 +1696,12 @@ body.booking-confirm-open{
 }
 .booking-history-table tfoot tr:last-child td{
   border-bottom:none;
+}
+.booking-history-table-amount-danger{
+  color:#b42318;
+}
+.booking-history-table-amount-success{
+  color:#027a48;
 }
 .booking-history-table-note{
   margin-top:4px;

@@ -446,6 +446,11 @@ class GuestBookingService
 
                 return $createdAt?->timestamp ?? 0;
             })
+            ->filter(function ($history): bool {
+                $description = trim((string) ($history->description ?? ''));
+
+                return !$this->isInternalHistoryDescription($description);
+            })
             ->values()
             ->map(function ($history): array {
                 $statusDescription = trim((string) ($history->status?->description ?? ''));
@@ -1642,6 +1647,39 @@ class GuestBookingService
             'BS_CANCEL', 'BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_REFUND' => 'danger',
             default => 'neutral',
         };
+    }
+
+    /**
+     * Determine whether a history description is purely internal/technical
+     * and should not be exposed to the public timeline.
+     */
+    private function isInternalHistoryDescription(string $description): bool
+    {
+        $description = trim($description);
+
+        if ($description === '') {
+            return false;
+        }
+
+        $internalPatterns = [
+            '/^DP installment dibuat/iu',
+            '/^Installment pelunasan dibuat/iu',
+            '/^Installment .+ dibuat/iu',
+            '/^Billing diinisialisasi/iu',
+            '/^Bukti refund diupload/iu',
+            '/^Bukti pembayaran di-approve/iu',
+            '/^DP lunas secara otomatis/iu',
+            '/^DP verified\s*-/iu',
+            '/^Pelunasan terverifikasi\s*-\s*booking confirmed/iu',
+        ];
+
+        foreach ($internalPatterns as $pattern) {
+            if (preg_match($pattern, $description) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
