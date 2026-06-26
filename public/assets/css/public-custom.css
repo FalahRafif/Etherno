@@ -1495,12 +1495,186 @@ body.booking-confirm-open{
   background:rgba(181,143,66,.1);
   color:var(--gold);
 }
-.booking-status-history-desc{
-  display:block;
-  font-size:12px;
-  color:#999;
-  margin-top:2px;
+.booking-status-timeline{
+  list-style:none;
+  margin:0;
+  padding:8px 0 0;
+  position:relative;
 }
+.booking-status-timeline::before{
+  content:"";
+  position:absolute;
+  left:12px;
+  top:8px;
+  bottom:8px;
+  width:1px;
+  background:linear-gradient(180deg,rgba(181,143,66,.55),rgba(181,143,66,.12));
+}
+.booking-status-timeline-item{
+  position:relative;
+  display:flex;
+  gap:16px;
+  padding:0 0 18px;
+}
+.booking-status-timeline-item:last-child{
+  padding-bottom:0;
+}
+.booking-status-timeline-marker{
+  position:relative;
+  z-index:1;
+  flex:0 0 24px;
+  width:24px;
+  height:24px;
+  margin-top:12px;
+  border-radius:999px;
+  border:4px solid #fbfaf8;
+  background:linear-gradient(135deg,#d0ab61,#9c7525);
+  box-shadow:0 8px 18px rgba(181,143,66,.25);
+}
+.booking-status-timeline-content{
+  flex:1 1 auto;
+  min-width:0;
+  padding:8px 0 0;
+}
+.booking-status-timeline-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.booking-status-timeline-status{
+  display:block;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:#5f4818;
+}
+.booking-status-timeline-time{
+  flex:0 0 auto;
+  font-size:12px;
+  color:rgba(15,15,15,.54);
+  white-space:nowrap;
+}
+.booking-status-timeline-info-card{
+  display:block;
+  margin-top:8px;
+  border:1px solid rgba(15,15,15,.08);
+  border-radius:12px;
+  background:linear-gradient(180deg,#fff,#fcfaf5);
+  padding:10px 12px;
+  font-size:13px;
+  line-height:1.6;
+  color:rgba(15,15,15,.72);
+  box-shadow:0 10px 24px rgba(11,10,9,.04);
+}
+.booking-status-timeline-desc{
+  display:block;
+  font-size:13px;
+  line-height:1.6;
+  color:rgba(15,15,15,.72);
+}
+.booking-status-timeline-detail{
+  margin-top:10px;
+  border:1px solid rgba(181,143,66,.16);
+  border-radius:12px;
+  background:rgba(181,143,66,.06);
+  padding:10px 12px;
+}
+.booking-status-timeline-detail-label{
+  display:block;
+  margin-bottom:6px;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:#8a6a27;
+}
+.booking-status-timeline-empty{
+  position:relative;
+  margin-left:40px;
+  border:1px dashed rgba(15,15,15,.14);
+  border-radius:14px;
+  background:rgba(255,255,255,.72);
+  padding:14px 16px;
+  color:rgba(15,15,15,.58);
+}
+
+.booking-history-table-wrap{
+  border:1px solid rgba(15,15,15,.08);
+  border-radius:12px;
+  overflow:auto;
+  background:#fff;
+}
+.booking-history-table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:760px;
+}
+.booking-history-table th,
+.booking-history-table td{
+  padding:12px 14px;
+  border-bottom:1px solid rgba(15,15,15,.08);
+  text-align:left;
+  vertical-align:top;
+  font-size:13px;
+  color:#1b1b1a;
+}
+.booking-history-table th{
+  background:rgba(181,143,66,.08);
+  color:#6f5622;
+  font-size:11px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  font-weight:700;
+  white-space:nowrap;
+}
+.booking-history-table tbody tr:last-child td{border-bottom:none}
+.booking-history-table tfoot td{
+  background:rgba(181,143,66,.1);
+  color:#3f3111;
+  font-size:13px;
+  border-top:1px solid rgba(181,143,66,.22);
+  border-bottom:none;
+}
+.booking-history-table-subrow td{
+  background:rgba(250,248,243,.72);
+  color:rgba(15,15,15,.72);
+}
+.booking-history-table-subrow td:first-child{
+  padding-left:30px;
+}
+.booking-history-table-row-paid-charge td:nth-child(3),
+.booking-history-table-row-paid-charge td:nth-child(4){
+  color:#b42318;
+  font-weight:700;
+}
+.booking-history-table-row-paid-refund td:nth-child(3),
+.booking-history-table-row-paid-refund td:nth-child(4){
+  color:#027a48;
+  font-weight:700;
+}
+.booking-history-table-footer-row td{
+  border-bottom:1px solid rgba(181,143,66,.18);
+}
+.booking-history-table tfoot tr:last-child td{
+  border-bottom:none;
+}
+.booking-history-table-note{
+  margin-top:4px;
+  font-size:12px;
+  color:rgba(15,15,15,.56);
+  line-height:1.55;
+}
+.booking-history-table-subtitle{
+  display:inline-block;
+  font-size:11px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--gold);
+  font-weight:700;
+}
+
 
 .booking-confirm-dialog-wide{max-width:520px}
 
@@ -2131,4 +2305,3 @@ body.booking-confirm-open{
   .final-cta-title{font-size:clamp(28px,9.5vw,36px)}
   .scroll-top-button{right:14px;bottom:14px;width:48px;height:48px}
 }
-

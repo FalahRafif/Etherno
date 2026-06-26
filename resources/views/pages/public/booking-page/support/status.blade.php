@@ -33,6 +33,7 @@
         <div class="booking-tab-list">
           <button class="booking-tab is-active" data-status-tab="info">Informasi Detail</button>
           <button class="booking-tab" data-status-tab="billing">Tagihan & Pembayaran</button>
+          <button class="booking-tab" data-status-tab="history">History Status</button>
           <button class="booking-tab" data-status-tab="actions">Aksi</button>
         </div>
 
@@ -90,40 +91,53 @@
         </div>
 
         <div class="booking-tab-panel" data-status-panel="billing" hidden>
-          <div id="billing_summary_wrap" class="mt-3">
-            <div class="booking-status-grid">
-              <div class="booking-status-item">
-                <p class="booking-status-key">Status Billing</p>
-                <p class="booking-status-value" id="status_billing_status">Belum ada data pembayaran.</p>
+          <div class="booking-detail-tabs mt-3" data-billing-tabs>
+            <div class="booking-tab-list">
+              <button class="booking-tab is-active" data-billing-tab="details">Detail Tagihan</button>
+              <button class="booking-tab" data-billing-tab="payments">History Pembayaran</button>
+            </div>
+
+            <div class="booking-tab-panel is-active" data-billing-panel="details">
+              <div id="billing_summary_wrap" class="pt-3">
+                <div class="booking-status-grid">
+                  <div class="booking-status-item">
+                    <p class="booking-status-key">Status Billing</p>
+                    <p class="booking-status-value" id="status_billing_status">Belum ada data pembayaran.</p>
+                  </div>
+                  <div class="booking-status-item">
+                    <p class="booking-status-key">Total Tagihan</p>
+                    <p class="booking-status-value" id="status_billing_total">-</p>
+                  </div>
+                  <div class="booking-status-item">
+                    <p class="booking-status-key">Total Dibayar</p>
+                    <p class="booking-status-value" id="status_billing_paid">-</p>
+                  </div>
+                  <div class="booking-status-item">
+                    <p class="booking-status-key">Sisa Pembayaran</p>
+                    <p class="booking-status-value" id="status_billing_remaining">-</p>
+                  </div>
+                </div>
               </div>
-              <div class="booking-status-item">
-                <p class="booking-status-key">Total Tagihan</p>
-                <p class="booking-status-value" id="status_billing_total">-</p>
+
+              <div id="billing_details_wrap" class="mt-3 pt-3" hidden>
+                <p class="booking-estimate-label mb-2">Komponen Biaya</p>
+                <div id="billing_details_list"></div>
               </div>
-              <div class="booking-status-item">
-                <p class="booking-status-key">Total Dibayar</p>
-                <p class="booking-status-value" id="status_billing_paid">-</p>
-              </div>
-              <div class="booking-status-item">
-                <p class="booking-status-key">Sisa Pembayaran</p>
-                <p class="booking-status-value" id="status_billing_remaining">-</p>
+            </div>
+
+            <div class="booking-tab-panel" data-billing-panel="payments" hidden>
+              <div id="billing_installments_wrap" class="pt-3" hidden>
+                <p class="booking-estimate-label mb-2">History Pembayaran & Tagihan</p>
+                <div id="billing_installments_list"></div>
               </div>
             </div>
           </div>
+        </div>
 
-          <div id="billing_details_wrap" class="mt-3 pt-3" hidden>
-            <p class="booking-estimate-label mb-2">Komponen Biaya</p>
-            <div id="billing_details_list"></div>
-          </div>
-
-          <div id="billing_installments_wrap" class="mt-3 pt-3" hidden>
-            <p class="booking-estimate-label mb-2">Detail Tagihan</p>
-            <div id="billing_installments_list"></div>
-          </div>
-
-          <div id="billing_history_wrap" class="mt-3 pt-3">
-            <p class="booking-estimate-label mb-2">Riwayat Status</p>
-            <ul class="booking-status-history" id="booking_status_history"></ul>
+        <div class="booking-tab-panel" data-status-panel="history" hidden>
+          <div id="booking_status_history_wrap" class="pt-3">
+            <p class="booking-estimate-label mb-2">Riwayat Status Booking</p>
+            <ul class="booking-status-timeline" id="booking_status_history"></ul>
           </div>
         </div>
 

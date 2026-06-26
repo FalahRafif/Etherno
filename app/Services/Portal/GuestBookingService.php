@@ -403,6 +403,14 @@ class GuestBookingService
                     'has_pending_payment' => $hasPendingPayment,
                     'payments' => $inst->payments->map(function ($p) {
                         $pStatusCode = strtoupper(trim((string) ($p->status?->code ?? '')));
+                        $receiptUrl = null;
+                        if ($p->transferReceiptAttachment?->uuid) {
+                            $receiptUrl = \Illuminate\Support\Facades\URL::signedRoute(
+                                'api.public.attachments.payment-receipt',
+                                ['attachmentUuid' => $p->transferReceiptAttachment->uuid],
+                                now()->addMinutes((int) config('app.attachments.temp_url_ttl_minutes', 30))
+                            );
+                        }
                         return [
                             'amount' => (float) $p->amount,
                             'amount_label' => $this->formatRupiah((float) $p->amount),
@@ -411,6 +419,7 @@ class GuestBookingService
                             'status_code' => $pStatusCode,
                             'paid_at' => $p->paid_at instanceof Carbon ? $p->paid_at->translatedFormat('d M Y H:i') : '-',
                             'rejection_reason' => $pStatusCode === 'PYS_FAILED' ? trim((string) ($p->rejection_reason ?? '')) : null,
+                            'receipt_url' => $receiptUrl,
                         ];
                     })->values()->all(),
                 ];
@@ -432,7 +441,7 @@ class GuestBookingService
         }
 
         $historyPayload = $booking->history
-            ->sortBy(function ($history): int {
+            ->sortByDesc(function ($history): int {
                 $createdAt = $history->created_at instanceof Carbon ? $history->created_at : null;
 
                 return $createdAt?->timestamp ?? 0;
@@ -459,10 +468,19 @@ class GuestBookingService
                     }
                 }
 
+                $description = trim((string) ($history->description ?? ''));
+                $parsedHistory = $this->parsePublicHistoryDescription(
+                    $statusLabel,
+                    $description,
+                    trim((string) ($history->operator?->name ?? ''))
+                );
+
                 return [
                     'status' => $statusLabel,
                     'time' => $timeLabel,
-                    'description' => trim((string) ($history->description ?? '')),
+                    'info' => $parsedHistory['info'],
+                    'message' => $parsedHistory['message'],
+                    'message_subject' => $parsedHistory['message_subject'],
                 ];
             })
             ->all();
@@ -1485,10 +1503,11 @@ class GuestBookingService
             'billings.installments:id,billing_id,installment_type,status_id,amount,due_date,paid_amount',
             'billings.installments.installmentType:id,code,description',
             'billings.installments.status:id,code,description',
-            'billings.installments.payments:id,billing_installment_id,payment_type,status_id,payment_method,amount,paid_at',
+            'billings.installments.payments:id,billing_installment_id,payment_type,status_id,payment_method,amount,paid_at,transfer_receipt_attachment_id,rejection_reason',
             'billings.installments.payments.paymentType:id,code,description',
             'billings.installments.payments.status:id,code,description',
             'billings.installments.payments.paymentMethod:id,code,description',
+            'billings.installments.payments.transferReceiptAttachment:id,uuid,name,path',
         ]);
     }
 
@@ -1623,6 +1642,183 @@ class GuestBookingService
             'BS_CANCEL', 'BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_REFUND' => 'danger',
             default => 'neutral',
         };
+    }
+
+    /**
+     * @return array{info:string,message:string,message_subject:string}
+     */
+    private function parsePublicHistoryDescription(string $statusLabel, string $description, string $operatorName): array
+    {
+        $statusLabel = trim($statusLabel);
+        $description = trim($description);
+        $operatorName = trim($operatorName);
+
+        $isStaff = $operatorName !== '';
+        $actorInfo = $isStaff ? 'Tim Etherno' : 'Customer';
+        $messageSubject = $isStaff
+            ? 'Pesan / alasan dari petugas'
+            : 'Pesan / alasan dari customer';
+        $defaultInfo = $statusLabel !== ''
+            ? 'Update status ' . $statusLabel . ' telah dicatat pada booking ini.'
+            : 'Update status booking telah dicatat.';
+
+        if ($description === '') {
+            return [
+                'info' => $defaultInfo,
+                'message' => '',
+                'message_subject' => $messageSubject,
+            ];
+        }
+
+        if (preg_match('/^Customer mengajukan reschedule ke\s+(.+?)\.\s+Alasan:\s*(.+)$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Customer mengajukan perubahan jadwal acara ke ' . trim($matches[1]) . '. Permintaan ini sedang menunggu review dari tim Etherno.',
+                'message' => trim($matches[2]),
+                'message_subject' => 'Alasan reschedule dari customer',
+            ];
+        }
+
+        if (preg_match('/^Force majeure diajukan petugas\.\s+Usulan reschedule ke\s+(.+?)\s*:\s*(.+)$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Tim Etherno mengajukan force majeure dengan usulan pemindahan jadwal acara ke ' . trim($matches[1]) . '.',
+                'message' => trim($matches[2]),
+                'message_subject' => 'Alasan force majeure dari petugas',
+            ];
+        }
+
+        if (preg_match('/^Force majeure diajukan petugas\.\s+Opsi refund:\s*(.+)$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Tim Etherno mengajukan force majeure dengan opsi refund untuk booking ini.',
+                'message' => trim($matches[1]),
+                'message_subject' => 'Alasan force majeure dari petugas',
+            ];
+        }
+
+        if (preg_match('/^Customer tidak setuju force majeure\s+(.+?)\.\s+Booking kembali ke Confirmed:\s*(.+)$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Customer tidak menyetujui usulan force majeure ' . trim($matches[1]) . '. Booking dikembalikan ke status Confirmed.',
+                'message' => trim($matches[2]),
+                'message_subject' => 'Alasan penolakan dari customer',
+            ];
+        }
+
+        if (preg_match('/^Reschedule disetujui ke\s+(.+?)\s*:\s*(.+)$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Permintaan reschedule telah disetujui. Jadwal acara diperbarui ke ' . trim($matches[1]) . '.',
+                'message' => trim($matches[2]),
+                'message_subject' => $isStaff ? 'Catatan persetujuan dari petugas' : $messageSubject,
+            ];
+        }
+
+        if (preg_match('/^Reschedule disetujui ke\s+(.+?)\.?$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Permintaan reschedule telah disetujui. Jadwal acara diperbarui ke ' . rtrim(trim($matches[1]), '.') . '.',
+                'message' => '',
+                'message_subject' => $messageSubject,
+            ];
+        }
+
+        if (preg_match('/^Reschedule ke\s+(.+?)\s+ditolak:\s*(.+)$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Permintaan reschedule ke ' . trim($matches[1]) . ' ditolak setelah peninjauan ketersediaan jadwal.',
+                'message' => trim($matches[2]),
+                'message_subject' => 'Alasan penolakan dari petugas',
+            ];
+        }
+
+        if (preg_match('/^Customer setuju force majeure reschedule\.\s+Tanggal acara dipindah ke\s+(.+?)\.?$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Customer menyetujui force majeure reschedule. Jadwal acara resmi dipindahkan.',
+                'message' => 'Tanggal acara dipindah ke ' . rtrim(trim($matches[1]), '.'),
+                'message_subject' => 'Konfirmasi dari customer',
+            ];
+        }
+
+        if (preg_match('/^Customer setuju force majeure refund\.\s+(.+)$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Customer menyetujui usulan force majeure refund. Proses refund dapat dilanjutkan oleh tim Etherno.',
+                'message' => trim($matches[1]),
+                'message_subject' => 'Konfirmasi dari customer',
+            ];
+        }
+
+        if (preg_match('/^Booking disetujui\.\s+(.+)$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Pengajuan booking telah disetujui oleh tim Etherno dan proses administrasi berikutnya sudah dimulai.',
+                'message' => trim($matches[1]),
+                'message_subject' => 'Informasi lanjutan dari petugas',
+            ];
+        }
+
+        if (preg_match('/^DP verified\s*-\s*(.+)$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Pembayaran DP telah diverifikasi oleh tim Etherno.',
+                'message' => trim($matches[1]),
+                'message_subject' => 'Informasi lanjutan dari petugas',
+            ];
+        }
+
+        if (preg_match('/^Pelunasan terverifikasi\s*-\s*(.+)$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Pembayaran pelunasan telah diverifikasi dan booking sudah masuk tahap akhir.',
+                'message' => trim($matches[1]),
+                'message_subject' => 'Informasi lanjutan dari petugas',
+            ];
+        }
+
+        if (preg_match('/^Bukti pembayaran di-approve\s*\((.+?)\)\s*$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Bukti pembayaran telah diverifikasi dan disetujui oleh tim Etherno.',
+                'message' => trim($matches[1]),
+                'message_subject' => 'Referensi verifikasi dari petugas',
+            ];
+        }
+
+        if (preg_match('/^Bukti pembayaran ditolak\s*\((.+?)\)\s*$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Bukti pembayaran ditolak setelah proses verifikasi oleh tim Etherno.',
+                'message' => trim($matches[1]),
+                'message_subject' => 'Informasi penolakan dari petugas',
+            ];
+        }
+
+        if (preg_match('/^Bukti refund diupload\.\s+(.+)$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Bukti refund telah diunggah dan proses refund dinyatakan selesai.',
+                'message' => trim($matches[1]),
+                'message_subject' => 'Informasi refund dari petugas',
+            ];
+        }
+
+        if (preg_match('/^Installment pelunasan dibuat\.\s+(.+)$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Tagihan pelunasan telah dibuat dan siap ditindaklanjuti oleh customer.',
+                'message' => trim($matches[1]),
+                'message_subject' => 'Rincian tagihan dari petugas',
+            ];
+        }
+
+        if (preg_match('/^DP installment dibuat\.\s+(.+)$/iu', $description, $matches) === 1) {
+            return [
+                'info' => 'Tagihan DP telah dibuat dan customer dapat melanjutkan pembayaran.',
+                'message' => trim($matches[1]),
+                'message_subject' => 'Rincian tagihan dari petugas',
+            ];
+        }
+
+        if (preg_match('/^(.+?):\s*(.+)$/u', $description, $matches) === 1) {
+            return [
+                'info' => trim($matches[1]),
+                'message' => trim($matches[2]),
+                'message_subject' => $messageSubject,
+            ];
+        }
+
+        return [
+            'info' => $description,
+            'message' => '',
+            'message_subject' => $messageSubject,
+        ];
     }
 
     private function hydrateBookingForSubmissionProof(Booking $booking): Booking
