@@ -26,6 +26,7 @@
 
     <!-- Style Css -->
     <link href="{{ asset('assets/css/styles.min.css') }}" rel="stylesheet" >
+    <link href="{{ asset('assets/css/admin-custom.css') }}" rel="stylesheet" >
 
     <!-- Icons Css -->
     <link href="{{ asset('assets/css/icons.css') }}" rel="stylesheet" >

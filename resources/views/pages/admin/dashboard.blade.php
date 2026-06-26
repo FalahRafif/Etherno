@@ -320,7 +320,7 @@
 
 .ops-dashboard-severity-critical { border-left-color: #e6533c; }
 .ops-dashboard-severity-high { border-left-color: #f59e0b; }
-.ops-dashboard-severity-medium { border-left-color: #38cab3; }
+.ops-dashboard-severity-medium { border-left-color: rgb(var(--primary-rgb)); }
 .ops-dashboard-severity-normal { border-left-color: #94a3b8; }
 
 .ops-dashboard-severity-label {

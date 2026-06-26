@@ -333,7 +333,7 @@
         background: #f1f5f9;
     }
     .calendar-legend-full {
-        background: #38cab3;
+        background: rgb(var(--primary-rgb));
     }
     .booking-calendar .fc .calendar-submission-date {
         border-color: #e2e8f0 !important;
@@ -453,13 +453,13 @@
         font-weight: 600;
     }
     .booking-calendar .fc .fc-button-primary {
-        background-color: #38cab3;
-        border-color: #38cab3;
+        background-color: rgb(var(--primary-rgb));
+        border-color: rgb(var(--primary-rgb));
     }
     .booking-calendar .fc .fc-button-primary:hover,
     .booking-calendar .fc .fc-button-primary:focus {
-        background-color: #2fb29e;
-        border-color: #2fb29e;
+        background-color: rgba(var(--primary-rgb), 0.88);
+        border-color: rgba(var(--primary-rgb), 0.88);
     }
     .booking-calendar .fc .fc-event {
         cursor: pointer;
