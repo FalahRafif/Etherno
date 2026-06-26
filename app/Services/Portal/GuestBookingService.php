@@ -467,6 +467,28 @@ class GuestBookingService
             })
             ->all();
 
+        $forceMajeureReason = trim((string) ($booking->force_majeure_reason ?? ''));
+        if ($forceMajeureReason === '' && $statusCode === 'BS_FORCE_MAJEURE') {
+            $rescheduleReason = trim((string) ($booking->reschedule_reason ?? ''));
+            if (str_starts_with($rescheduleReason, 'Force Majeure:')) {
+                $forceMajeureReason = trim(substr($rescheduleReason, strlen('Force Majeure:')));
+            }
+        }
+
+        $forceMajeureType = '';
+        $forceMajeureDate = null;
+        if ($statusCode === 'BS_FORCE_MAJEURE') {
+            if ($booking->force_majeure_date instanceof Carbon) {
+                $forceMajeureType = 'reschedule';
+                $forceMajeureDate = $booking->force_majeure_date;
+            } elseif ($booking->reschedule_date instanceof Carbon && str_starts_with(trim((string) ($booking->reschedule_reason ?? '')), 'Force Majeure:')) {
+                $forceMajeureType = 'reschedule';
+                $forceMajeureDate = $booking->reschedule_date;
+            } elseif ($forceMajeureReason !== '') {
+                $forceMajeureType = 'refund';
+            }
+        }
+
         return [
             'booking_uuid' => trim((string) ($booking->uuid ?? '')),
             'booking_case_id' => $this->buildBookingCaseId($booking),
@@ -489,6 +511,12 @@ class GuestBookingService
                 'session' => trim((string) ($booking->eventSession?->description ?? '')) ?: '-',
                 'detail' => $eventDetail !== '' ? $eventDetail : '-',
                 'submitted_at' => $submittedAt,
+            ],
+            'force_majeure' => [
+                'reason' => $forceMajeureReason,
+                'date_raw' => $forceMajeureDate instanceof Carbon ? $forceMajeureDate->toDateString() : '',
+                'date_label' => $forceMajeureDate instanceof Carbon ? $forceMajeureDate->translatedFormat('d F Y') : '-',
+                'type' => $forceMajeureType,
             ],
             'package' => [
                 'name' => trim((string) ($booking->package?->name ?? '')) ?: '-',
@@ -1309,6 +1337,10 @@ class GuestBookingService
             'event_session',
             'event_detail',
             'google_maps_pin',
+            'reschedule_date',
+            'reschedule_reason',
+            'force_majeure_date',
+            'force_majeure_reason',
             'created_at',
         ]);
 
@@ -1351,6 +1383,10 @@ class GuestBookingService
 
         if ($statusCode === 'BS_APPROVED_WAITING_FINAL_PAYMENT') {
             $templates['final_paid'] = 'Halo tim Etherno, saya ' . $customerName . ' dengan Case ID ' . $caseId . '. Saya sudah melakukan pembayaran pelunasan. Mohon diproses verifikasinya. Terima kasih.';
+        }
+
+        if ($statusCode === 'BS_FORCE_MAJEURE') {
+            $templates['force_majeure'] = 'Halo tim Etherno, saya ' . $customerName . ' dengan Case ID ' . $caseId . '. Saya sudah membaca informasi force majeure pada booking saya dan ingin melanjutkan komunikasi melalui WhatsApp. Terima kasih.';
         }
 
         return $templates;
@@ -1416,6 +1452,11 @@ class GuestBookingService
 
         if (in_array($statusCode, ['BS_CONFIRMED', 'BS_APPROVED_WAITING_FINAL_PAYMENT'], true)) {
             $actions[] = 'reschedule_request';
+        }
+
+        if ($statusCode === 'BS_FORCE_MAJEURE') {
+            $actions[] = 'force_majeure_info';
+            $actions[] = 'force_majeure_contact';
         }
 
         return $actions;

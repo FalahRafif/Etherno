@@ -61,7 +61,7 @@ class BookingListService
             $packageName = trim((string) ($booking->package?->name ?? '-'));
             $locationName = trim((string) ($booking->location?->name ?? '-'));
             $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
-            $statusBadge = $this->resolveStatusBadge($statusCode);
+            $statusBadge = $this->resolveStatusBadge($statusCode, $booking);
             $locationDetails = $this->resolveLocationDetails($booking->location);
             $mapsPin = trim((string) ($booking->google_maps_pin ?? ''));
             $mapsUrl = $this->buildMapsUrl($mapsPin);
@@ -152,7 +152,7 @@ class BookingListService
             $name = trim(implode(' ', array_filter([$customer->first_name, $customer->last_name])));
             $latestBooking = $customer->bookings->first();
             $statusCode = strtoupper(trim((string) ($latestBooking?->status?->code ?? '')));
-            $statusBadge = $statusCode !== '' ? $this->resolveStatusBadge($statusCode) : ['type' => 'badge', 'tone' => 'light', 'label' => '-'];
+            $statusBadge = $statusCode !== '' ? $this->resolveStatusBadge($statusCode, $latestBooking) : ['type' => 'badge', 'tone' => 'light', 'label' => '-'];
             $latestCaseId = $latestBooking ? $this->buildCaseId($latestBooking) : '';
 
             return [
@@ -560,7 +560,7 @@ class BookingListService
                 ],
                 $customerName !== '' ? $customerName : '-',
                 $booking->event_date?->format('Y-m-d') ?? '-',
-                $this->resolveStatusBadge($statusCode),
+                $this->resolveStatusBadge($statusCode, $booking),
                 $this->resolvePaymentBadge($statusCode),
                 ['type' => 'link', 'label' => $actionLabel, 'url' => panel_route('admin.bookings.detail', ['booking' => $caseId])],
             ];
@@ -630,10 +630,14 @@ class BookingListService
     /**
      * @return array{type:string,tone:string,label:string}
      */
-    private function resolveStatusBadge(string $statusCode): array
+    private function resolveStatusBadge(string $statusCode, ?Booking $booking = null): array
     {
         $statusCode = strtoupper($statusCode);
         $label = $statusCode !== '' ? strtolower(str_replace('BS_', '', $statusCode)) : 'unknown';
+
+        if ($statusCode === 'BS_FORCE_MAJEURE' && $booking instanceof Booking) {
+            $label = !empty($booking->force_majeure_date) ? 'force majeure - reschedule' : 'force majeure - refund';
+        }
 
         $tone = match ($statusCode) {
             'BS_WAITING_APPROVAL' => 'warning',

@@ -278,6 +278,8 @@
             var isApprovedWaitingFinal = statusCode === "BS_APPROVED_WAITING_FINAL_PAYMENT";
             var isConfirmed = statusCode === "BS_CONFIRMED";
             var isReschedule = statusCode === "BS_RESCHEDULE";
+            var isForceMajeure = statusCode === "BS_FORCE_MAJEURE";
+            var isRefund = statusCode === "BS_REFUND";
 
             var hasDpInstallment = billing && Array.isArray(billing.installments) && billing.installments.some(function (i) {
                 return String(i.type_code || "") === "INS_DP";
@@ -385,8 +387,56 @@
                 wrap.appendChild(rescheduleInfoDiv);
             }
 
+            if (isForceMajeure) {
+                var forceMajeureData = currentPayload && currentPayload.force_majeure ? currentPayload.force_majeure : {};
+                var fmReason = String(forceMajeureData.reason || "").trim();
+                var fmType = String(forceMajeureData.type || "").trim();
+                var fmDateLabel = String(forceMajeureData.date_label || "").trim();
+                var fmTitle = fmType === "reschedule" ? "Force Majeure - Usulan Reschedule" : "Force Majeure - Usulan Refund";
+                var fmCopy = fmType === "reschedule"
+                    ? "Tim Etherno mengajukan perubahan jadwal karena kondisi force majeure. Usulan tanggal baru: " + (fmDateLabel || "-") + "."
+                    : "Tim Etherno mengajukan proses refund karena kondisi force majeure pada jadwal Anda.";
+                if (fmReason) {
+                    fmCopy += " Alasan: " + fmReason;
+                }
+
+                var forceMajeureInfoDiv = document.createElement("div");
+                forceMajeureInfoDiv.className = "estimate-box mb-3";
+                forceMajeureInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-alert-line me-1"></i><strong></strong></p><p class="estimate-note mb-0"></p>';
+                forceMajeureInfoDiv.querySelector("strong").textContent = fmTitle;
+                forceMajeureInfoDiv.querySelector(".estimate-note.mb-0").textContent = fmCopy;
+                wrap.appendChild(forceMajeureInfoDiv);
+
+                if (waPhone && waTemplates && waTemplates.force_majeure) {
+                    var waBtnFm = document.createElement("a");
+                    waBtnFm.className = "cta cta-outline mb-2";
+                    waBtnFm.href = buildWhatsappUrl(waPhone, waTemplates.force_majeure);
+                    waBtnFm.target = "_blank";
+                    waBtnFm.rel = "noopener";
+                    waBtnFm.innerHTML = '<i class="ri-whatsapp-line me-1"></i> Diskusikan Force Majeure via WhatsApp';
+                    wrap.appendChild(waBtnFm);
+                }
+            }
+
+            if (isRefund) {
+                var refundInfoDiv = document.createElement("div");
+                refundInfoDiv.className = "estimate-box mb-3";
+                refundInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-refund-2-line me-1"></i><strong>Refund Sedang / Sudah Diproses</strong></p><p class="estimate-note mb-0">Booking Anda masuk ke tahap refund. Jika bukti refund sudah diproses oleh tim Etherno, dana akan dikembalikan sesuai nominal refund yang telah disetujui. Untuk memastikan progres terakhir, silakan hubungi tim kami melalui WhatsApp.</p>';
+                wrap.appendChild(refundInfoDiv);
+
+                if (waPhone && waTemplates && waTemplates.support) {
+                    var waBtnRefund = document.createElement("a");
+                    waBtnRefund.className = "cta cta-outline mb-2";
+                    waBtnRefund.href = buildWhatsappUrl(waPhone, waTemplates.support);
+                    waBtnRefund.target = "_blank";
+                    waBtnRefund.rel = "noopener";
+                    waBtnRefund.innerHTML = '<i class="ri-whatsapp-line me-1"></i> Konfirmasi Refund via WhatsApp';
+                    wrap.appendChild(waBtnRefund);
+                }
+            }
+
             if (!Array.isArray(actions) || actions.length === 0) {
-                if (!isWaitingApproval && !(isApprovedWaitingDp && !hasDpInstallment) && !(isApprovedWaitingFinal && !hasFinalInstallment) && !isConfirmed && !isReschedule) {
+                if (!isWaitingApproval && !(isApprovedWaitingDp && !hasDpInstallment) && !(isApprovedWaitingFinal && !hasFinalInstallment) && !isConfirmed && !isReschedule && !isForceMajeure && !isRefund) {
                     var empty = document.createElement("p");
                     empty.className = "booking-disclaimer";
                     empty.textContent = "Tidak ada aksi yang tersedia saat ini.";
@@ -793,11 +843,26 @@
             }
 
             if (code === "BS_FORCE_MAJEURE") {
-                subtitleText += ". Terjadi force majeure pada booking Anda. Tim Etherno sedang menangani situasi ini.";
+                var forceMajeureData = payload.force_majeure || {};
+                var fmReason = String(forceMajeureData.reason || "").trim();
+                var fmType = String(forceMajeureData.type || "").trim();
+                var fmDateLabel = String(forceMajeureData.date_label || "").trim();
+                if (fmType === "reschedule") {
+                    subtitleText += ". Tim Etherno mengajukan force majeure dengan usulan reschedule ke " + (fmDateLabel || "tanggal baru") + ".";
+                } else {
+                    subtitleText += ". Tim Etherno mengajukan force majeure dengan opsi refund untuk booking Anda.";
+                }
+                if (fmReason) {
+                    subtitleText += " Alasan: " + fmReason;
+                }
             }
 
             if (code === "BS_COMPLETE") {
                 subtitleText += ". Acara telah selesai. Terima kasih telah mempercayakan moment spesial Anda kepada Etherno.";
+            }
+
+            if (code === "BS_REFUND") {
+                subtitleText += ". Booking Anda berada pada tahap refund. Silakan cek tab Tagihan & Pembayaran atau hubungi tim Etherno melalui WhatsApp untuk memastikan progres pengembalian dana.";
             }
             if (statusStateSubtitle) statusStateSubtitle.textContent = subtitleText;
 
