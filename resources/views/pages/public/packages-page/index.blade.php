@@ -8,16 +8,16 @@
 
   $packageGroups = [
       [
-          'title' => 'Wedding',
+          'title' => 'Paket Wedding',
           'description' => 'Semua paket wedding aktif yang tersedia saat ini.',
           'packages' => $weddingCollection,
-          'empty_message' => 'Belum ada paket wedding aktif.',
+          'empty_message' => 'Belum ada paket wedding aktif saat ini. Hubungi kami untuk rekomendasi.',
       ],
       [
-          'title' => 'Non Wedding',
+          'title' => 'Paket Non Wedding',
           'description' => 'Semua paket non wedding aktif yang tersedia saat ini.',
           'packages' => $nonWeddingCollection,
-          'empty_message' => 'Belum ada paket non wedding aktif.',
+          'empty_message' => 'Belum ada paket non wedding aktif saat ini. Hubungi kami untuk rekomendasi.',
       ],
   ];
 @endphp
@@ -26,7 +26,7 @@
   <div class="section-heading">
     <p class="eyebrow">Semua Produk</p>
     <h2>Daftar lengkap paket Etherno</h2>
-    <p class="section-lead">Saat ini tersedia {{ $totalPackages }} paket aktif yang dapat dipilih customer untuk kebutuhan wedding maupun non wedding.</p>
+    <p class="section-lead">Saat ini tersedia {{ $totalPackages }} paket aktif untuk kebutuhan wedding maupun non wedding.</p>
   </div>
 
   @foreach ($packageGroups as $group)
@@ -40,17 +40,35 @@
         @forelse (($group['packages'] ?? collect()) as $package)
           @php
             $benefits = $package->benefits->pluck('name')->filter()->values();
+            $thumbnailUrl = null;
+            if ($package->thumbnailAttachment) {
+                $thumbnailUrl = \Illuminate\Support\Facades\URL::signedRoute(
+                    'api.public.attachments.package-thumbnail',
+                    ['attachmentUuid' => $package->thumbnailAttachment->uuid],
+                    now()->addMinutes((int) config('app.attachments.temp_url_ttl_minutes', 30))
+                );
+            }
+            $packageTag = match (true) {
+                $loop->first => 'Best Seller',
+                $loop->index === 1 => 'Paling Direkomendasikan',
+                default => 'Value Terbaik',
+            };
           @endphp
           <article class="package {{ $loop->index === 1 ? 'package-featured' : 'package-soft' }}">
-            <p class="package-tag">{{ $loop->first ? 'Paling dipilih' : 'Pilihan ' . strtolower($group['title']) }}</p>
+            @if ($thumbnailUrl)
+              <figure class="package-image">
+                <img src="{{ $thumbnailUrl }}" alt="{{ $package->name }}" loading="lazy">
+              </figure>
+            @endif
+            <p class="package-tag">{{ $packageTag }}</p>
             <h3>{{ $package->name }}</h3>
             <div class="price">Rp {{ number_format((float) $package->price, 0, ',', '.') }}</div>
-            <p class="package-copy">{{ $package->description ?: 'Deskripsi paket belum ditambahkan.' }}</p>
+            <p class="package-copy">{{ $package->description ?: 'Ideal untuk Anda yang ingin hasil dokumentasi rapi, emosional, dan siap dibagikan.' }}</p>
             <ul class="package-list">
               @forelse ($benefits as $benefit)
                 <li>{{ $benefit }}</li>
               @empty
-                <li>Benefit paket belum diisi.</li>
+                <li>Benefit detail sedang diperbarui, konsultasi cepat tersedia via WhatsApp.</li>
               @endforelse
             </ul>
           </article>
