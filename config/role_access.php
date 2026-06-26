@@ -29,13 +29,18 @@ return [
                 'section' => 'Main',
                 'items' => [
                     [
+                        'label' => 'Beranda',
+                        'route' => 'home',
+                        'fragment' => 'hero',
+                    ],
+                    [
                         'label' => 'Tentang Kami',
                         'route' => 'about.etherno',
                     ],
                     [
                         'label' => 'Portofolio',
                         'route' => 'home',
-                        'fragment' => 'portfolio',
+                        'fragment' => 'wedding-stories',
                     ],
                     [
                         'label' => 'Paket',
@@ -57,7 +62,7 @@ return [
                             ],
                             [
                                 'label' => 'Kebijakan Booking',
-                                'route' => 'booking.cancellation.policy',
+                                'route' => 'booking.policy',
                             ],
                             [
                                 'label' => 'Detail Booking Anda',

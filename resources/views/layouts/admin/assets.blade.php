@@ -13,7 +13,7 @@
 	<meta name="keywords" content="admin,admin dashboard,admin panel,admin template,bootstrap,clean,dashboard,flat,jquery,modern,responsive,premium admin templates,responsive admin,ui,ui kit.">
     
     <!-- Favicon -->
-    <link rel="icon" href="{{ asset('assets/images/brand-logos/favicon.ico') }}" type="image/x-icon">
+    <link rel="icon" href="{{ asset('assets/etherno/public/icon_web_browser_black.png') }}" type="image/png">
     
     <!-- Choices JS -->
     <script src="{{ asset('assets/libs/choices.js/public/assets/scripts/choices.min.js') }}"></script>
@@ -26,6 +26,7 @@
 
     <!-- Style Css -->
     <link href="{{ asset('assets/css/styles.min.css') }}" rel="stylesheet" >
+    <link href="{{ asset('assets/css/admin-custom.css') }}" rel="stylesheet" >
 
     <!-- Icons Css -->
     <link href="{{ asset('assets/css/icons.css') }}" rel="stylesheet" >

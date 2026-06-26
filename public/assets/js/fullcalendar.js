@@ -173,8 +173,36 @@
             eventDidMount: function (info) {
                 var statusLabel = String(info.event.extendedProps && info.event.extendedProps.status_label ? info.event.extendedProps.status_label : "").trim();
                 var sessionLabel = String(info.event.extendedProps && info.event.extendedProps.session_label ? info.event.extendedProps.session_label : "").trim();
+                var dateSourceLabel = String(info.event.extendedProps && info.event.extendedProps.date_source_label ? info.event.extendedProps.date_source_label : "").trim();
+                var dateSource = String(info.event.extendedProps && info.event.extendedProps.date_source ? info.event.extendedProps.date_source : "").trim();
+                var statusColor = String(info.event.extendedProps && info.event.extendedProps.status_color ? info.event.extendedProps.status_color : "").trim();
 
-                var hint = [statusLabel, sessionLabel].filter(function (segment) {
+                if (statusColor !== "") {
+                    info.el.style.setProperty("--calendar-status-color", statusColor);
+                }
+
+                if (dateSource === "created_at" && statusColor !== "") {
+                    var eventMain = info.el.querySelector(".fc-event-main");
+                    var isDarkMode = document.documentElement.getAttribute("data-theme-mode") === "dark";
+                    var neutralBackground = isDarkMode ? "#2f3446" : "#f1f5f9";
+                    var neutralBorder = isDarkMode ? "rgba(255,255,255,0.12)" : "#e2e8f0";
+                    var neutralText = isDarkMode ? "#e5e7eb" : "#334155";
+                    var markerBackground = "linear-gradient(90deg, " + statusColor + " 0, " + statusColor + " 7px, " + neutralBackground + " 7px, " + neutralBackground + " 100%)";
+
+                    info.el.style.background = markerBackground;
+                    info.el.style.backgroundColor = neutralBackground;
+                    info.el.style.borderColor = neutralBorder;
+                    info.el.style.color = neutralText;
+                    info.el.style.paddingLeft = "0.45rem";
+
+                    if (eventMain) {
+                        eventMain.style.background = "transparent";
+                        eventMain.style.color = neutralText;
+                        eventMain.style.paddingLeft = "0.25rem";
+                    }
+                }
+
+                var hint = [statusLabel, sessionLabel, dateSourceLabel].filter(function (segment) {
                     return segment !== "" && segment !== "-";
                 }).join(" | ");
 

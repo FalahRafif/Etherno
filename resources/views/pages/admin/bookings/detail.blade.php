@@ -206,14 +206,22 @@
                                     <td class="text-muted ps-0">Sesi</td>
                                     <td class="fw-semibold">{{ $booking->eventSession?->description ?? '-' }}</td>
                                 </tr>
-                                @if($booking->reschedule_date)
+                                @if($booking->reschedule_date && ($statusCode !== 'BS_FORCE_MAJEURE' || str_starts_with(trim((string) ($booking->reschedule_reason ?? '')), 'Force Majeure:')))
                                     <tr>
                                         <td class="text-muted ps-0">Tanggal Reschedule</td>
-                                        <td class="fw-semibold text-warning">{{ $booking->reschedule_date?->format('Y-m-d') ?? '-' }}</td>
+                                        <td>
+                                            <span class="badge bg-warning-transparent text-warning fs-12 px-3 py-2 fw-semibold">
+                                                <i class="ri-calendar-event-line me-1"></i>{{ $booking->reschedule_date?->format('Y-m-d') ?? '-' }}
+                                            </span>
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td class="text-muted ps-0">Alasan Reschedule</td>
-                                        <td class="booking-detail-preline">{{ $booking->reschedule_reason ?? '-' }}</td>
+                                        <td>
+                                            <div class="alert alert-warning-transparent mb-0 py-2 px-3 booking-detail-preline fw-medium">
+                                                <i class="ri-information-line me-1"></i>{{ $booking->reschedule_reason ?? '-' }}
+                                            </div>
+                                        </td>
                                     </tr>
                                 @endif
                                 @forelse($locationChain as $loc)
@@ -691,9 +699,19 @@
                                 <i class="ri-alert-line me-1"></i> Force Majeure
                             </button>
                         @endif
-                        @if(in_array('confirm_fm_reschedule', $availableActions))
-                            <button type="button" class="btn btn-success" id="btn_confirm_fm_reschedule" data-booking-id="{{ $booking->id }}" data-url="{{ route('api.admin.bookings.confirm-fm-reschedule', $booking->id) }}">
-                                <i class="ri-calendar-check-line me-1"></i> Konfirmasi Reschedule Selesai
+                        @if(in_array('approve_fm_reschedule', $availableActions))
+                            <button type="button" class="btn btn-success" id="btn_approve_fm_reschedule" data-booking-id="{{ $booking->id }}" data-url="{{ route('api.admin.bookings.approve-fm-reschedule', $booking->id) }}">
+                                <i class="ri-user-smile-line me-1"></i> Customer Setuju Force Majeure
+                            </button>
+                        @endif
+                        @if(in_array('approve_fm_refund', $availableActions))
+                            <button type="button" class="btn btn-success" id="btn_approve_fm_refund" data-booking-id="{{ $booking->id }}" data-url="{{ route('api.admin.bookings.approve-fm-refund', $booking->id) }}">
+                                <i class="ri-user-smile-line me-1"></i> Customer Setuju Force Majeure
+                            </button>
+                        @endif
+                        @if(in_array('reject_force_majeure', $availableActions))
+                            <button type="button" class="btn btn-outline-danger" id="btn_reject_force_majeure" data-booking-id="{{ $booking->id }}" data-url="{{ route('api.admin.bookings.reject-force-majeure', $booking->id) }}">
+                                <i class="ri-user-unfollow-line me-1"></i> Customer Tidak Setuju Force Majeure
                             </button>
                         @endif
                         @if(in_array('upload_refund_proof', $availableActions))
@@ -1030,7 +1048,7 @@
                     </div>
                     <div class="mb-0" id="fm_new_date_wrap">
                         <label class="form-label">Tanggal Baru</label>
-                        <input type="date" name="new_date" class="form-control" id="fm_new_date" min="{{ now()->format('Y-m-d') }}" value="{{ $booking->event_date?->format('Y-m-d') ?? '' }}">
+                        <input type="date" name="new_date" class="form-control" id="fm_new_date" min="{{ now()->addDay()->format('Y-m-d') }}" value="{{ $booking->event_date?->format('Y-m-d') ?? '' }}">
                     </div>
                     <div class="alert alert-danger py-2 px-3 mt-3 mb-0 d-none" id="force_majeure_error_box"></div>
                 </div>
@@ -1336,12 +1354,15 @@ document.addEventListener('DOMContentLoaded', function() {
     var completeBtn = document.getElementById('btn_complete_booking');
     var approveRescheduleBtn = document.getElementById('btn_approve_reschedule');
     var rejectRescheduleBtn = document.getElementById('btn_reject_reschedule');
-    var confirmFmRescheduleBtn = document.getElementById('btn_confirm_fm_reschedule');
+    var approveFmRescheduleBtn = document.getElementById('btn_approve_fm_reschedule');
+    var approveFmRefundBtn = document.getElementById('btn_approve_fm_refund');
+    var rejectForceMajeureBtn = document.getElementById('btn_reject_force_majeure');
     handleAction(verifyDpBtn, 'Verifikasi DP', 'Pastikan pembayaran DP sudah diterima. Status akan berubah ke Waiting Final Payment.');
     handleAction(verifyFinalBtn, 'Verifikasi Pelunasan', 'Pastikan semua pembayaran sudah diterima. Status akan berubah ke Confirmed.');
     handleAction(completeBtn, 'Selesaikan Booking', 'Ini menandakan acara sudah dilaksanakan.');
     handleAction(approveRescheduleBtn, 'Approve Reschedule', 'Tanggal acara akan dipindahkan ke tanggal reschedule yang diajukan customer.');
-    handleAction(confirmFmRescheduleBtn, 'Konfirmasi Reschedule Force Majeure', 'Tanggal acara sudah dipindahkan. Booking akan kembali ke Confirmed.');
+    handleAction(approveFmRescheduleBtn, 'Customer Setuju Force Majeure', 'Konfirmasi ini akan mengembalikan booking ke Confirmed dan memindahkan tanggal acara ke tanggal reschedule force majeure.');
+    handleAction(approveFmRefundBtn, 'Customer Setuju Force Majeure', 'Konfirmasi ini menandakan customer setuju untuk proses refund force majeure. Setelah itu bukti refund bisa diunggah.');
 
     function bindGenerateButton(selector, typeCode, confirmTitle, confirmText) {
         var btns = document.querySelectorAll(selector);
@@ -1416,6 +1437,49 @@ document.addEventListener('DOMContentLoaded', function() {
                     swalError(error.message || 'Terjadi kesalahan. Silakan coba lagi.');
                     rejectRescheduleBtn.disabled = false;
                     rejectRescheduleBtn.innerHTML = '<i class="ri-calendar-close-line me-1"></i> Reject Reschedule';
+                });
+            });
+        });
+    }
+    if (rejectForceMajeureBtn) {
+        rejectForceMajeureBtn.addEventListener('click', function() {
+            swalPrompt('Customer Tidak Setuju Force Majeure', 'Masukkan catatan penolakan customer').then(function(result) {
+                if (!result.isConfirmed) return;
+                var reason = String(result.value || '').trim();
+                if (!reason) {
+                    swalError('Catatan penolakan wajib diisi.');
+                    return;
+                }
+                rejectForceMajeureBtn.disabled = true;
+                rejectForceMajeureBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memproses...';
+                fetch(rejectForceMajeureBtn.dataset.url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ reason: reason })
+                })
+                .then(function(res) {
+                    if (!res.ok) {
+                        return safeParseJson(res).then(function(data) {
+                            throw new Error(data.message || 'Terjadi kesalahan.');
+                        });
+                    }
+                    return safeParseJson(res);
+                })
+                .then(function(data) {
+                    return swalSuccess(data.message || 'Force majeure ditolak customer.').then(function() {
+                        window.location.reload();
+                    });
+                })
+                .catch(function(err) {
+                    swalError(err.message || 'Terjadi kesalahan. Silakan coba lagi.');
+                    rejectForceMajeureBtn.disabled = false;
+                    rejectForceMajeureBtn.innerHTML = '<i class="ri-user-unfollow-line me-1"></i> Customer Tidak Setuju Force Majeure';
                 });
             });
         });

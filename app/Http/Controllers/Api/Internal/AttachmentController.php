@@ -50,4 +50,18 @@ class AttachmentController extends Controller
 
         return $this->attachmentSecurityService->buildInlineImageResponse($attachment);
     }
+
+    public function showPaymentReceipt(Request $request, string $attachmentUuid): Response
+    {
+        if (!$request->hasValidSignature()) {
+            abort(403);
+        }
+
+        $attachment = Attachment::query()
+            ->where('uuid', $attachmentUuid)
+            ->whereHas('payments')
+            ->firstOrFail();
+
+        return $this->attachmentSecurityService->buildInlineImageResponse($attachment);
+    }
 }

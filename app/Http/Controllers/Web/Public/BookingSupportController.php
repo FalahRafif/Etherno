@@ -34,9 +34,9 @@ class BookingSupportController extends Controller
         return $this->guestPageService->render('booking.reschedule');
     }
 
-    public function cancellationPolicy(): View
+    public function bookingPolicy(): View
     {
-        return $this->guestPageService->render('booking.cancellation.policy');
+        return $this->guestPageService->render('booking.policy');
     }
 
     public function downloadSubmissionProof(string $bookingUuid): BinaryFileResponse
