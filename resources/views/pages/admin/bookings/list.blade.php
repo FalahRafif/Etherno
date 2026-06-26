@@ -77,6 +77,10 @@
                     <option value="all" {{ ($filters['date_range'] ?? '') === 'all' || ($filters['date_range'] ?? '') === '' ? 'selected' : '' }}>Semua</option>
                     <option value="week" {{ ($filters['date_range'] ?? '') === 'week' ? 'selected' : '' }}>Mingguan</option>
                     <option value="month" {{ ($filters['date_range'] ?? '') === 'month' ? 'selected' : '' }}>Bulanan</option>
+                    <option value="last_month" {{ ($filters['date_range'] ?? '') === 'last_month' ? 'selected' : '' }}>Bulan Kemarin</option>
+                    <option value="last_3_months" {{ ($filters['date_range'] ?? '') === 'last_3_months' ? 'selected' : '' }}>3 Bulan Lalu</option>
+                    <option value="year" {{ ($filters['date_range'] ?? '') === 'year' ? 'selected' : '' }}>Tahun Ini</option>
+                    <option value="last_year" {{ ($filters['date_range'] ?? '') === 'last_year' ? 'selected' : '' }}>Tahun Kemarin</option>
                     <option value="custom" {{ ($filters['date_range'] ?? '') === 'custom' ? 'selected' : '' }}>Custom Range</option>
                 </select>
             </div>

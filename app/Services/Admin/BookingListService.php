@@ -359,6 +359,34 @@ class BookingListService
             return;
         }
 
+        if ($range === 'last_month') {
+            $start = Carbon::now()->subMonthNoOverflow()->startOfMonth();
+            $end = Carbon::now()->subMonthNoOverflow()->endOfMonth();
+            $query->whereBetween('created_at', [$start->startOfDay(), $end->endOfDay()]);
+            return;
+        }
+
+        if ($range === 'last_3_months') {
+            $start = Carbon::now()->subMonthsNoOverflow(3)->startOfMonth();
+            $end = Carbon::now()->endOfMonth();
+            $query->whereBetween('created_at', [$start->startOfDay(), $end->endOfDay()]);
+            return;
+        }
+
+        if ($range === 'year') {
+            $start = Carbon::now()->startOfYear();
+            $end = Carbon::now()->endOfYear();
+            $query->whereBetween('created_at', [$start->startOfDay(), $end->endOfDay()]);
+            return;
+        }
+
+        if ($range === 'last_year') {
+            $start = Carbon::now()->subYearNoOverflow()->startOfYear();
+            $end = Carbon::now()->subYearNoOverflow()->endOfYear();
+            $query->whereBetween('created_at', [$start->startOfDay(), $end->endOfDay()]);
+            return;
+        }
+
         if ($range === 'custom') {
             $start = trim((string) ($filters['date_start'] ?? ''));
             $end = trim((string) ($filters['date_end'] ?? ''));
@@ -479,10 +507,6 @@ class BookingListService
         $inactive = $this->countByStatusCodes($baseQuery, ['BS_CANCEL', 'BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_REFUND', 'BS_REJECTED']);
 
         return [
-            ['label' => 'Total Booking', 'value' => $total, 'hint' => 'Semua status', 'tone' => 'primary'],
-            ['label' => 'Menunggu Review', 'value' => $waitingApproval, 'hint' => 'Pengajuan baru yang belum diproses', 'tone' => 'warning'],
-            ['label' => 'Booking Aktif', 'value' => $active, 'hint' => 'Masih berjalan hingga selesai acara', 'tone' => 'success'],
-            ['label' => 'Tidak Aktif', 'value' => $inactive, 'hint' => 'Batal, expired, refund, atau ditolak', 'tone' => 'danger'],
         ];
     }
 
