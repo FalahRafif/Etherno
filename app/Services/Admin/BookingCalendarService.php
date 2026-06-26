@@ -30,6 +30,21 @@ class BookingCalendarService
     ];
 
     /**
+     * Status berikut sudah cukup kuat untuk diposisikan pada tanggal acara.
+     * Status lain masih ditampilkan pada tanggal pengajuan agar petugas melihat antrian masuknya.
+     *
+     * @var array<int, string>
+     */
+    private const EVENT_DATE_STATUS_CODES = [
+        'BS_APPROVED_WAITING_FINAL_PAYMENT',
+        'BS_CONFIRMED',
+        'BS_COMPLETE',
+        'BS_FORCE_MAJEURE',
+        'BS_RESCHEDULE',
+        'BS_REFUND',
+    ];
+
+    /**
      * @var array<int, string>
      */
     private const CLOSED_STATUS_CODES = [
@@ -56,10 +71,9 @@ class BookingCalendarService
         $resolvedFilters = $this->resolveFilters($filters);
 
         $baseQuery = $this->bookingRepository
-            ->query(true)
-            ->whereNotNull('event_date');
+            ->query(true);
 
-        $this->applyCustomDateRangeFilter($baseQuery, $resolvedFilters);
+        $this->applyCalendarDateRangeFilter($baseQuery, $resolvedFilters['date_start'], $resolvedFilters['date_end']);
 
         $statusOptions = $this->getStatusOptions();
         $totalCount = (clone $baseQuery)->count();
@@ -69,8 +83,6 @@ class BookingCalendarService
             'filters' => $resolvedFilters,
             'statusFilters' => $statusFilters,
             'scheduleSummary' => $this->buildScheduleSummary($baseQuery),
-            'workflowFilters' => $this->buildWorkflowFilters($baseQuery, $resolvedFilters),
-            'stats' => $this->buildStats($baseQuery),
             'upcomingBookings' => $this->buildUpcomingBookings($baseQuery),
             'agendaReadiness' => $this->buildAgendaReadiness($baseQuery),
         ];
@@ -93,20 +105,16 @@ class BookingCalendarService
                 'eventSession:id,code,description',
                 'location:id,name',
             ])
-            ->whereNotNull('event_date');
+            ->where(function (Builder $builder): void {
+                $builder->whereNotNull('event_date')->orWhereNotNull('created_at');
+            });
 
         $this->applyStatusFilter($query, $resolvedFilters['status']);
-        $this->applyWorkflowFilter($query, $resolvedFilters['workflow']);
-
         if ($resolvedFilters['view_start'] !== '') {
-            $query->whereDate('event_date', '>=', $resolvedFilters['view_start']);
+            $this->applyCalendarDateRangeFilter($query, $resolvedFilters['view_start'], $resolvedFilters['view_end']);
         }
 
-        if ($resolvedFilters['view_end'] !== '') {
-            $query->whereDate('event_date', '<=', $resolvedFilters['view_end']);
-        }
-
-        $this->applyCustomDateRangeFilter($query, $resolvedFilters);
+        $this->applyCalendarDateRangeFilter($query, $resolvedFilters['date_start'], $resolvedFilters['date_end']);
 
         $bookings = $query
             ->orderBy('event_date')
@@ -141,7 +149,8 @@ class BookingCalendarService
             $readiness = $this->resolveBookingReadiness($booking, $statusCode);
             $riskLevel = $this->resolveBookingRiskLevel($booking, $statusCode);
             $color = $this->resolveRiskColor($riskLevel, $statusCode);
-            $eventDate = $booking->event_date?->toDateString() ?? '';
+            $displayDate = $this->resolveCalendarDisplayDate($booking, $statusCode);
+            $dateSource = $this->resolveCalendarDateSource($statusCode);
             $eventSessionLabel = trim((string) ($booking->eventSession?->description ?? '-'));
             $packageName = trim((string) ($booking->package?->name ?? '-'));
             $locationName = trim((string) ($booking->location?->name ?? '-'));
@@ -149,11 +158,12 @@ class BookingCalendarService
             return [
                 'id' => (string) $booking->getKey(),
                 'title' => sprintf('%s • %s • %s', $eventSessionLabel !== '' ? $eventSessionLabel : '-', $caseId, $readiness['label']),
-                'start' => $eventDate,
+                'start' => $displayDate,
                 'allDay' => true,
-                'backgroundColor' => $color,
+                'backgroundColor' => $dateSource === 'event_date' ? $color : '#f1f5f9',
                 'borderColor' => $color,
-                'textColor' => '#ffffff',
+                'textColor' => $dateSource === 'event_date' ? '#ffffff' : '#334155',
+                'classNames' => [$dateSource === 'event_date' ? 'calendar-event-date' : 'calendar-submission-date'],
                 'extendedProps' => [
                     'case_id' => $caseId,
                     'status_code' => $statusCode,
@@ -162,7 +172,11 @@ class BookingCalendarService
                     'package_name' => $packageName !== '' ? $packageName : '-',
                     'location_name' => $locationName !== '' ? $locationName : '-',
                     'customer_name' => $customerName,
+                    'date_source' => $dateSource,
+                    'date_source_label' => $dateSource === 'event_date' ? 'Tanggal acara' : 'Tanggal pengajuan',
+                    'status_color' => $color,
                     'event_date_label' => $booking->event_date?->format('d M Y') ?? '-',
+                    'display_date_label' => $displayDate !== '' ? Carbon::parse($displayDate)->format('d M Y') : '-',
                     'readiness_label' => $readiness['label'],
                     'readiness_tone' => $readiness['tone'],
                     'risk_level' => $riskLevel,
@@ -181,7 +195,6 @@ class BookingCalendarService
     {
         return [
             'status' => strtoupper(trim((string) ($filters['status'] ?? ''))),
-            'workflow' => strtolower(trim((string) ($filters['workflow'] ?? ''))),
             'date_start' => $this->normalizeDateString((string) ($filters['date_start'] ?? '')),
             'date_end' => $this->normalizeDateString((string) ($filters['date_end'] ?? '')),
         ];
@@ -220,6 +233,51 @@ class BookingCalendarService
         }
     }
 
+    private function applyCalendarDateRangeFilter(Builder $query, string $dateStart, string $dateEnd): void
+    {
+        $dateStart = trim($dateStart);
+        $dateEnd = trim($dateEnd);
+
+        if ($dateStart === '' && $dateEnd === '') {
+            return;
+        }
+
+        $query->where(function (Builder $outer) use ($dateStart, $dateEnd): void {
+            $outer->where(function (Builder $eventDateQuery) use ($dateStart, $dateEnd): void {
+                $eventDateQuery->whereHas('status', function (Builder $statusQuery): void {
+                    $statusQuery
+                        ->where('group_id', self::STATUS_GROUP)
+                        ->whereIn('code', self::EVENT_DATE_STATUS_CODES);
+                });
+
+                $this->applyDateColumnRange($eventDateQuery, 'event_date', $dateStart, $dateEnd);
+            })->orWhere(function (Builder $createdDateQuery) use ($dateStart, $dateEnd): void {
+                $createdDateQuery->whereHas('status', function (Builder $statusQuery): void {
+                    $statusQuery
+                        ->where('group_id', self::STATUS_GROUP)
+                        ->whereNotIn('code', self::EVENT_DATE_STATUS_CODES);
+                });
+
+                $this->applyDateColumnRange($createdDateQuery, 'created_at', $dateStart, $dateEnd);
+            });
+        });
+    }
+
+    private function applyDateColumnRange(Builder $query, string $column, string $dateStart, string $dateEnd): void
+    {
+        if ($dateStart !== '' && $dateEnd !== '') {
+            $query->whereBetween($column, [Carbon::parse($dateStart)->startOfDay(), Carbon::parse($dateEnd)->endOfDay()]);
+            return;
+        }
+
+        if ($dateStart !== '') {
+            $query->whereDate($column, '>=', $dateStart);
+            return;
+        }
+
+        $query->whereDate($column, '<=', $dateEnd);
+    }
+
     private function applyStatusFilter(Builder $query, string $statusCode): void
     {
         $normalizedCode = strtoupper(trim($statusCode));
@@ -234,42 +292,6 @@ class BookingCalendarService
             });
     }
 
-    private function applyWorkflowFilter(Builder $query, string $workflow): void
-    {
-        $workflow = strtolower(trim($workflow));
-        if ($workflow === '') {
-            return;
-        }
-
-        match ($workflow) {
-            'needs_action' => $query->whereHas('status', function (Builder $builder): void {
-                $builder->where('group_id', self::STATUS_GROUP)->whereIn('code', [
-                    'BS_WAITING_APPROVAL',
-                    'BS_APPROVED_WAITING_DP',
-                    'BS_APPROVED_WAITING_FINAL_PAYMENT',
-                    'BS_RESCHEDULE',
-                    'BS_FORCE_MAJEURE',
-                    'BS_REFUND',
-                ]);
-            }),
-            'today' => $query->whereDate('event_date', Carbon::today()->toDateString()),
-            'tomorrow' => $query->whereDate('event_date', Carbon::tomorrow()->toDateString()),
-            'unpaid' => $query->whereHas('status', function (Builder $builder): void {
-                $builder->where('group_id', self::STATUS_GROUP)->whereIn('code', [
-                    'BS_APPROVED_WAITING_DP',
-                    'BS_APPROVED_WAITING_FINAL_PAYMENT',
-                ]);
-            }),
-            'review' => $query->whereHas('status', function (Builder $builder): void {
-                $builder->where('group_id', self::STATUS_GROUP)->whereIn('code', ['BS_WAITING_APPROVAL', 'BS_RESCHEDULE']);
-            }),
-            'risk' => $query->whereHas('status', function (Builder $builder): void {
-                $builder->where('group_id', self::STATUS_GROUP)->whereIn('code', ['BS_FORCE_MAJEURE', 'BS_REFUND']);
-            }),
-            default => null,
-        };
-    }
-
     /**
      * @return array<string, mixed>
      */
@@ -277,15 +299,18 @@ class BookingCalendarService
     {
         $weekStart = Carbon::now()->startOfWeek()->toDateString();
         $weekEnd = Carbon::now()->endOfWeek()->toDateString();
-        $weekQuery = (clone $baseQuery)->whereBetween('event_date', [$weekStart, $weekEnd]);
+        $weekQuery = clone $baseQuery;
+        $this->applyCalendarDateRangeFilter($weekQuery, $weekStart, $weekEnd);
         $weekTotal = (clone $weekQuery)->count();
         $unpaid = $this->countByStatusCodes($weekQuery, ['BS_APPROVED_WAITING_DP', 'BS_APPROVED_WAITING_FINAL_PAYMENT']);
         $needsAction = $this->countByStatusCodes($weekQuery, ['BS_WAITING_APPROVAL', 'BS_RESCHEDULE', 'BS_FORCE_MAJEURE', 'BS_REFUND']);
-        $today = (clone $baseQuery)->whereDate('event_date', Carbon::today()->toDateString())->count();
+        $todayQuery = clone $baseQuery;
+        $this->applyCalendarDateRangeFilter($todayQuery, Carbon::today()->toDateString(), Carbon::today()->toDateString());
+        $today = $todayQuery->count();
 
         return [
             'headline' => 'Minggu ini ada ' . $weekTotal . ' booking. ' . $unpaid . ' belum lunas, ' . $needsAction . ' perlu dicek.',
-            'subline' => 'Gunakan filter cepat untuk melihat jadwal dan booking yang perlu diproses.',
+            'subline' => 'Gunakan filter status dan tanggal untuk mengecek data kalender.',
             'metrics' => [
                 ['label' => 'Booking Minggu Ini', 'value' => $weekTotal, 'tone' => 'primary'],
                 ['label' => 'Perlu Dicek', 'value' => $needsAction, 'tone' => $needsAction > 0 ? 'warning' : 'success'],
@@ -293,37 +318,6 @@ class BookingCalendarService
                 ['label' => 'Agenda Hari Ini', 'value' => $today, 'tone' => 'info'],
             ],
         ];
-    }
-
-    /**
-     * @param  array<string, string>  $filters
-     * @return array<int, array<string, mixed>>
-     */
-    private function buildWorkflowFilters(Builder $baseQuery, array $filters): array
-    {
-        $current = strtolower(trim((string) ($filters['workflow'] ?? '')));
-        $definitions = [
-            ['key' => '', 'label' => 'Semua', 'hint' => 'Semua agenda'],
-            ['key' => 'needs_action', 'label' => 'Perlu Dicek', 'hint' => 'Review, payment, refund, FM'],
-            ['key' => 'today', 'label' => 'Hari Ini', 'hint' => 'Event hari ini'],
-            ['key' => 'tomorrow', 'label' => 'Besok / H-1', 'hint' => 'Agenda besok'],
-            ['key' => 'unpaid', 'label' => 'Belum Lunas', 'hint' => 'DP atau pelunasan'],
-            ['key' => 'review', 'label' => 'Menunggu Review', 'hint' => 'Booking/reschedule'],
-            ['key' => 'risk', 'label' => 'FM / Refund', 'hint' => 'Risiko operasional'],
-        ];
-
-        return array_map(function (array $definition) use ($baseQuery, $current): array {
-            $query = clone $baseQuery;
-            $this->applyWorkflowFilter($query, $definition['key']);
-
-            return [
-                'key' => $definition['key'],
-                'label' => $definition['label'],
-                'hint' => $definition['hint'],
-                'count' => $query->count(),
-                'is_active' => $current === $definition['key'],
-            ];
-        }, $definitions);
     }
 
     /**
@@ -356,6 +350,21 @@ class BookingCalendarService
                 'url' => panel_route('admin.bookings.detail', ['booking' => $caseId]),
             ];
         })->values()->all();
+    }
+
+    private function resolveCalendarDateSource(string $statusCode): string
+    {
+        return in_array(strtoupper(trim($statusCode)), self::EVENT_DATE_STATUS_CODES, true) ? 'event_date' : 'created_at';
+    }
+
+    private function resolveCalendarDisplayDate(Booking $booking, string $statusCode): string
+    {
+        $source = $this->resolveCalendarDateSource($statusCode);
+        if ($source === 'event_date' && $booking->event_date) {
+            return $booking->event_date->toDateString();
+        }
+
+        return $booking->created_at?->toDateString() ?? $booking->event_date?->toDateString() ?? '';
     }
 
     /**

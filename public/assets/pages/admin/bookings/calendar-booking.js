@@ -16,12 +16,10 @@
         var statusSelect = document.getElementById("calendar_status_filter");
         var dateStartInput = document.getElementById("calendar_date_start");
         var dateEndInput = document.getElementById("calendar_date_end");
-        var workflowInput = document.getElementById("calendar_workflow_filter");
         var applyButton = document.getElementById("booking_calendar_apply_filter");
         var resetButton = document.getElementById("booking_calendar_reset_filter");
         var activeFilterBadge = document.getElementById("booking_calendar_active_filter");
-        var statusPills = Array.from(document.querySelectorAll(".booking-calendar-status-pill"));
-        var workflowChips = Array.from(document.querySelectorAll(".calendar-workflow-chip"));
+        var statusPills = Array.from(document.querySelectorAll(".calendar-status-pill"));
         var previewPanel = document.getElementById("booking_calendar_preview");
         var previewClose = document.getElementById("calendar_preview_close");
         var previewDetail = document.getElementById("calendar_preview_detail");
@@ -44,21 +42,21 @@
         }
 
         function getStatusLabel() {
-            if (!statusSelect || !statusSelect.options || statusSelect.selectedIndex < 0) {
-                return "Semua Status";
+            var currentStatus = getStatusValue().toUpperCase();
+            var activePill = statusPills.find(function (pill) {
+                var code = String(pill.getAttribute("data-status-code") || "").toUpperCase();
+                return code === currentStatus || (code === "" && currentStatus === "");
+            });
+
+            if (activePill) {
+                var label = activePill.querySelector("span:first-child");
+                var rawLabel = String(label ? label.textContent : activePill.textContent || "").trim();
+                if (rawLabel !== "") {
+                    return rawLabel;
+                }
             }
 
-            var option = statusSelect.options[statusSelect.selectedIndex];
-            if (!option) {
-                return "Semua Status";
-            }
-
-            var rawLabel = String(option.textContent || "").trim();
-            if (rawLabel === "") {
-                return "Semua Status";
-            }
-
-            return rawLabel;
+            return "Semua Status";
         }
 
         function syncStatusPills() {
@@ -71,22 +69,6 @@
                 }
 
                 pill.classList.toggle("is-active", isActive);
-            });
-        }
-
-        function getWorkflowValue() {
-            if (!workflowInput) {
-                return "";
-            }
-
-            return String(workflowInput.value || "").trim();
-        }
-
-        function syncWorkflowChips() {
-            var currentWorkflow = getWorkflowValue().toLowerCase();
-            workflowChips.forEach(function (chip) {
-                var key = String(chip.getAttribute("data-workflow-key") || "").toLowerCase();
-                chip.classList.toggle("is-active", key === currentWorkflow);
             });
         }
 
@@ -108,22 +90,20 @@
                 rangeLabel = "Sampai " + endDate;
             }
 
-            var workflowLabel = "Semua Filter";
-            workflowChips.forEach(function (chip) {
-                var key = String(chip.getAttribute("data-workflow-key") || "").toLowerCase();
-                if (key === getWorkflowValue().toLowerCase()) {
-                    var label = chip.querySelector("span");
-                    workflowLabel = label ? String(label.textContent || "").trim() : workflowLabel;
-                }
-            });
+            var advancedParts = [];
+            if (getStatusValue() !== "") {
+                advancedParts.push(statusLabel);
+            }
+            if (startDate !== "" || endDate !== "") {
+                advancedParts.push(rangeLabel);
+            }
 
-            activeFilterBadge.textContent = workflowLabel + " | " + statusLabel + " | " + rangeLabel;
+            activeFilterBadge.textContent = advancedParts.length > 0 ? advancedParts.join(" | ") : "Semua Status";
         }
 
         function getFilters() {
             return {
                 status: getStatusValue(),
-                workflow: getWorkflowValue(),
                 date_start: dateStartInput ? String(dateStartInput.value || "").trim() : "",
                 date_end: dateEndInput ? String(dateEndInput.value || "").trim() : ""
             };
@@ -140,6 +120,7 @@
             setText("calendar_preview_customer", props.customer_name || "-");
             setText("calendar_preview_status", props.status_label || "-");
             setText("calendar_preview_readiness", props.readiness_label || "-");
+            setText("calendar_preview_source", props.date_source_label || "-");
             setText("calendar_preview_schedule", [props.event_date_label, props.session_label].filter(Boolean).join(" | "));
             setText("calendar_preview_package", props.package_name || "-");
             setText("calendar_preview_location", props.location_name || "-");
@@ -206,12 +187,7 @@
                 if (dateEndInput) {
                     dateEndInput.value = "";
                 }
-                if (workflowInput) {
-                    workflowInput.value = "";
-                }
-
                 syncStatusPills();
-                syncWorkflowChips();
                 updateActiveFilterBadge();
                 closePreview();
                 calendarApi.refetch();
@@ -232,26 +208,11 @@
             });
         });
 
-        workflowChips.forEach(function (chip) {
-            chip.addEventListener("click", function () {
-                if (!workflowInput) {
-                    return;
-                }
-
-                workflowInput.value = String(chip.getAttribute("data-workflow-key") || "").trim();
-                syncWorkflowChips();
-                updateActiveFilterBadge();
-                closePreview();
-                calendarApi.refetch();
-            });
-        });
-
         if (previewClose) {
             previewClose.addEventListener("click", closePreview);
         }
 
         syncStatusPills();
-        syncWorkflowChips();
         updateActiveFilterBadge();
     });
 })();

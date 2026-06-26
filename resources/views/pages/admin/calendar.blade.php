@@ -12,13 +12,10 @@
 
     $filters = $filters ?? ['status' => '', 'date_start' => '', 'date_end' => ''];
     $statusFilters = $statusFilters ?? [];
-    $workflowFilters = $workflowFilters ?? [];
     $scheduleSummary = $scheduleSummary ?? [];
     $agendaReadiness = $agendaReadiness ?? ($upcomingBookings ?? []);
-    $stats = $stats ?? [];
     $upcomingBookings = $upcomingBookings ?? [];
     $currentStatus = strtoupper(trim((string) ($filters['status'] ?? '')));
-    $currentWorkflow = strtolower(trim((string) ($filters['workflow'] ?? '')));
 
     $statusToneClass = [
         'primary' => 'bg-primary-transparent text-primary',
@@ -36,15 +33,13 @@
     'actions' => $actions,
 ])
 
-@include('pages.admin.partials.stats-grid', ['stats' => $stats])
-
 <section class="calendar-workspace-summary mb-3">
     <div class="row g-3 align-items-stretch">
         <div class="col-12 col-xl-7">
             <div class="calendar-workspace-hero h-100">
                 <span>Kalender Booking</span>
                 <h2>{{ $scheduleSummary['headline'] ?? 'Pantau jadwal booking.' }}</h2>
-                <p>{{ $scheduleSummary['subline'] ?? 'Gunakan filter cepat untuk mengecek jadwal dan booking yang perlu diproses.' }}</p>
+                <p>{{ $scheduleSummary['subline'] ?? 'Gunakan filter status dan tanggal untuk mengecek data kalender.' }}</p>
             </div>
         </div>
         <div class="col-12 col-xl-5">
@@ -64,77 +59,99 @@
     </div>
 </section>
 
-<div class="calendar-workflow-bar mb-3" id="booking_calendar_workflow_filters">
-    @foreach($workflowFilters as $workflowFilter)
-        @php
-            $workflowKey = strtolower((string) ($workflowFilter['key'] ?? ''));
-            $isWorkflowActive = (bool) ($workflowFilter['is_active'] ?? false);
-        @endphp
-        <button type="button" class="calendar-workflow-chip {{ $isWorkflowActive ? 'is-active' : '' }}" data-workflow-key="{{ $workflowKey }}">
-            <span>{{ $workflowFilter['label'] ?? '-' }}</span>
-            <strong>{{ $workflowFilter['count'] ?? 0 }}</strong>
-            <small>{{ $workflowFilter['hint'] ?? '' }}</small>
-        </button>
-    @endforeach
-</div>
-
-<div class="row g-3">
-    <div class="col-12 col-xxl-3">
-        <div class="card custom-card mb-3">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Filter Kalender</h5>
-            </div>
-            <div class="card-body">
-                <form id="booking_calendar_filter_form" data-events-url="{{ panel_route('admin.calendar.events', [], false) }}">
-                    <input type="hidden" id="calendar_workflow_filter" name="workflow" value="{{ $currentWorkflow }}">
-
-                    <div class="mb-3">
-                        <label class="form-label" for="calendar_status_filter">Status Booking</label>
-                        <select id="calendar_status_filter" name="status" class="form-select">
-                            @foreach($statusFilters as $statusFilter)
-                                <option value="{{ $statusFilter['code'] }}" @selected($currentStatus === strtoupper((string) $statusFilter['code']))>
-                                    {{ $statusFilter['label'] }} ({{ $statusFilter['count'] }})
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label" for="calendar_date_start">Tanggal Mulai</label>
-                        <input type="date" id="calendar_date_start" name="date_start" class="form-control" value="{{ $filters['date_start'] ?? '' }}">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label" for="calendar_date_end">Tanggal Akhir</label>
-                        <input type="date" id="calendar_date_end" name="date_end" class="form-control" value="{{ $filters['date_end'] ?? '' }}">
-                    </div>
-
-                    <div class="d-grid gap-2">
-                        <button type="button" id="booking_calendar_apply_filter" class="btn btn-primary">Terapkan Filter</button>
-                        <button type="button" id="booking_calendar_reset_filter" class="btn btn-light">Reset Filter</button>
-                    </div>
-                </form>
-
-                <div class="booking-calendar-status-pills mt-3" id="booking_calendar_status_pills">
-                    @foreach($statusFilters as $statusFilter)
-                        @php
-                            $statusCode = strtoupper((string) ($statusFilter['code'] ?? ''));
-                            $isActive = (bool) ($statusFilter['is_active'] ?? false);
-                            $tone = (string) ($statusFilter['tone'] ?? 'secondary');
-                            $toneClass = $statusToneClass[$tone] ?? $statusToneClass['secondary'];
-                        @endphp
-                        <button
-                            type="button"
-                            class="btn btn-sm {{ $toneClass }} booking-calendar-status-pill {{ $isActive ? 'is-active' : '' }}"
-                            data-status-code="{{ $statusCode }}"
-                        >
-                            {{ $statusFilter['label'] }}
-                        </button>
-                    @endforeach
+<div class="card custom-card mb-3">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h5 class="card-title mb-0">Filter Kalender</h5>
+        <span id="booking_calendar_active_filter" class="badge bg-primary-transparent text-primary">Semua Status</span>
+    </div>
+    <div class="card-body">
+        <div class="calendar-date-info mb-3">
+            <span class="calendar-date-info-icon">i</span>
+            <div>
+                <strong>Catatan tanggal kalender</strong>
+                <p class="mb-2">Warna label menunjukkan sumber tanggal yang dipakai:</p>
+                <div class="calendar-date-info-legend">
+                    <span><i class="calendar-legend-line"></i> Label Warna Abu-abu + garis warna: Booking di ajukan dan belum disetujui dan belum ada pembayaran</span>
+                    <span><i class="calendar-legend-full"></i> Label Warna penuh status: Booking yang sudah disetujui dan memiliki pembayaran</span>
                 </div>
             </div>
         </div>
+        <form id="booking_calendar_filter_form" data-events-url="{{ panel_route('admin.calendar.events', [], false) }}">
+            <input type="hidden" id="calendar_status_filter" name="status" value="{{ $currentStatus }}">
 
+            <div class="calendar-status-strip mb-3" id="booking_calendar_status_pills">
+                @foreach($statusFilters as $statusFilter)
+                    @php
+                        $statusCode = strtoupper((string) ($statusFilter['code'] ?? ''));
+                        $isActive = (bool) ($statusFilter['is_active'] ?? false);
+                        $tone = (string) ($statusFilter['tone'] ?? 'secondary');
+                        $tone = in_array($tone, ['primary', 'secondary', 'success', 'warning', 'danger', 'info', 'light', 'dark'], true) ? $tone : 'primary';
+                        $countToneClass = $isActive ? 'bg-white text-' . ($tone === 'light' ? 'dark' : $tone) : ($statusToneClass[$tone] ?? $statusToneClass['secondary']);
+                    @endphp
+                    <button type="button" class="calendar-status-pill {{ $isActive ? 'is-active btn-' . $tone : 'btn-outline-' . $tone }}" data-status-code="{{ $statusCode }}">
+                        <span>{{ $statusFilter['label'] }}</span>
+                        <span class="badge {{ $countToneClass }}">{{ $statusFilter['count'] }}</span>
+                    </button>
+                @endforeach
+            </div>
+
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-4 col-xl-3">
+                    <label class="form-label" for="calendar_date_start">Tanggal Mulai</label>
+                    <input type="date" id="calendar_date_start" name="date_start" class="form-control" value="{{ $filters['date_start'] ?? '' }}">
+                </div>
+                <div class="col-12 col-md-4 col-xl-3">
+                    <label class="form-label" for="calendar_date_end">Tanggal Akhir</label>
+                    <input type="date" id="calendar_date_end" name="date_end" class="form-control" value="{{ $filters['date_end'] ?? '' }}">
+                </div>
+                <div class="col-12 col-md-4 col-xl-3 d-flex gap-2">
+                    <button type="button" id="booking_calendar_apply_filter" class="btn btn-primary w-100">Terapkan Filter</button>
+                    <button type="button" id="booking_calendar_reset_filter" class="btn btn-light w-100">Reset</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-12 col-xxl-9">
+        <div class="card custom-card mb-0">
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h5 class="card-title mb-0">Visualisasi Kalender Booking</h5>
+            </div>
+            <div class="card-body position-relative">
+                <div id="booking_calendar_loading" class="booking-calendar-loading d-none">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></div>
+                    <span>Memuat data booking...</span>
+                </div>
+
+                <div id="booking_calendar" class="booking-calendar"></div>
+                <aside id="booking_calendar_preview" class="calendar-preview-panel d-none" aria-live="polite">
+                    <div class="calendar-preview-header">
+                        <div>
+                            <span id="calendar_preview_risk" class="badge bg-primary-transparent text-primary">Preview</span>
+                            <h6 id="calendar_preview_case" class="mb-0 mt-2">-</h6>
+                        </div>
+                        <button type="button" id="calendar_preview_close" class="btn btn-sm btn-light">Tutup</button>
+                    </div>
+                    <div class="calendar-preview-body">
+                        <p class="calendar-preview-customer" id="calendar_preview_customer">-</p>
+                        <dl>
+                            <div><dt>Status</dt><dd id="calendar_preview_status">-</dd></div>
+                            <div><dt>Kesiapan</dt><dd id="calendar_preview_readiness">-</dd></div>
+                            <div><dt>Tampil di</dt><dd id="calendar_preview_source">-</dd></div>
+                            <div><dt>Jadwal</dt><dd id="calendar_preview_schedule">-</dd></div>
+                            <div><dt>Paket</dt><dd id="calendar_preview_package">-</dd></div>
+                            <div><dt>Lokasi</dt><dd id="calendar_preview_location">-</dd></div>
+                        </dl>
+                        <a href="#" id="calendar_preview_detail" class="btn btn-primary w-100">Buka Detail</a>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xxl-3">
         <div class="card custom-card mb-0">
             <div class="card-header">
                 <h5 class="card-title mb-0">Booking Terdekat</h5>
@@ -163,43 +180,6 @@
                         <li class="text-muted small">Belum ada booking terdekat pada filter saat ini.</li>
                     @endforelse
                 </ul>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-12 col-xxl-9">
-        <div class="card custom-card mb-0">
-            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <h5 class="card-title mb-0">Visualisasi Kalender Booking</h5>
-                <span id="booking_calendar_active_filter" class="badge bg-primary-transparent text-primary">Semua Status</span>
-            </div>
-            <div class="card-body position-relative">
-                <div id="booking_calendar_loading" class="booking-calendar-loading d-none">
-                    <div class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></div>
-                    <span>Memuat data booking...</span>
-                </div>
-
-                <div id="booking_calendar" class="booking-calendar"></div>
-                <aside id="booking_calendar_preview" class="calendar-preview-panel d-none" aria-live="polite">
-                    <div class="calendar-preview-header">
-                        <div>
-                            <span id="calendar_preview_risk" class="badge bg-primary-transparent text-primary">Preview</span>
-                            <h6 id="calendar_preview_case" class="mb-0 mt-2">-</h6>
-                        </div>
-                        <button type="button" id="calendar_preview_close" class="btn btn-sm btn-light">Tutup</button>
-                    </div>
-                    <div class="calendar-preview-body">
-                        <p class="calendar-preview-customer" id="calendar_preview_customer">-</p>
-                        <dl>
-                            <div><dt>Status</dt><dd id="calendar_preview_status">-</dd></div>
-                            <div><dt>Kesiapan</dt><dd id="calendar_preview_readiness">-</dd></div>
-                            <div><dt>Jadwal</dt><dd id="calendar_preview_schedule">-</dd></div>
-                            <div><dt>Paket</dt><dd id="calendar_preview_package">-</dd></div>
-                            <div><dt>Lokasi</dt><dd id="calendar_preview_location">-</dd></div>
-                        </dl>
-                        <a href="#" id="calendar_preview_detail" class="btn btn-primary w-100">Buka Detail</a>
-                    </div>
-                </aside>
             </div>
         </div>
     </div>
@@ -260,43 +240,113 @@
         font-size: 1.8rem;
         line-height: 1;
     }
-    .calendar-workflow-bar {
+    .calendar-filter-section {
+        padding: 1rem;
+        border: 1px solid rgba(30, 41, 59, 0.08);
+        border-radius: 1.15rem;
+        background: #fff;
+    }
+    .calendar-filter-section-header {
+        margin-bottom: 0.85rem;
+    }
+    .calendar-status-strip {
         display: flex;
         gap: 0.75rem;
         overflow-x: auto;
         padding-bottom: 0.35rem;
         scrollbar-width: thin;
     }
-    .calendar-workflow-chip {
-        min-width: 190px;
-        flex: 0 0 auto;
-        padding: 0.9rem 1rem;
-        border: 1px solid #e6e9f2;
+    .calendar-status-pill {
+        min-width: 220px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.95rem 1rem;
+        border: 1px solid currentColor;
         border-radius: 1rem;
-        background: #fff;
-        color: #1f2937;
-        text-align: left;
+        background: transparent;
+        white-space: nowrap;
+        flex: 0 0 auto;
+        font-weight: 700;
     }
-    .calendar-workflow-chip span,
-    .calendar-workflow-chip strong,
-    .calendar-workflow-chip small {
-        display: block;
+    .calendar-status-pill span:first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
-    .calendar-workflow-chip span {
+    .calendar-status-pill .badge {
+        flex-shrink: 0;
+        font-size: 0.85rem;
+    }
+    .calendar-status-pill.is-active {
+        background: rgb(var(--primary-rgb));
+        border-color: rgb(var(--primary-rgb));
+        color: #fff;
+    }
+    .calendar-status-pill:hover {
+        filter: brightness(0.98);
+    }
+    .calendar-date-info {
+        display: flex;
+        gap: 0.75rem;
+        padding: 0.85rem 1rem;
+        border: 1px solid rgba(var(--primary-rgb), 0.18);
+        border-radius: 0.95rem;
+        background: rgba(var(--primary-rgb), 0.07);
+        color: #475569;
+    }
+    .calendar-date-info-icon {
+        display: inline-flex;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: rgb(var(--primary-rgb));
+        color: #fff;
         font-weight: 800;
     }
-    .calendar-workflow-chip strong {
-        margin: 0.35rem 0;
-        font-size: 1.6rem;
-        line-height: 1;
+    .calendar-date-info strong {
+        display: block;
+        color: #1f2937;
     }
-    .calendar-workflow-chip small {
-        color: #64748b;
+    .calendar-date-info-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem 1rem;
+        font-size: 0.82rem;
     }
-    .calendar-workflow-chip.is-active {
-        border-color: rgba(var(--primary-rgb), 0.45);
-        background: rgba(var(--primary-rgb), 0.12);
-        color: rgb(var(--primary-rgb));
+    .calendar-date-info-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .calendar-date-info-legend i {
+        display: inline-block;
+        width: 28px;
+        height: 14px;
+        border-radius: 0.35rem;
+    }
+    .calendar-legend-line {
+        box-shadow: inset 6px 0 0 #f59e0b;
+        background: #f1f5f9;
+    }
+    .calendar-legend-full {
+        background: #38cab3;
+    }
+    .booking-calendar .fc .calendar-submission-date {
+        border-color: #e2e8f0 !important;
+        box-shadow: inset 6px 0 0 var(--calendar-status-color, #f59e0b) !important;
+        padding-left: 0.45rem !important;
+        opacity: 0.92;
+    }
+    .booking-calendar .fc .calendar-submission-date .fc-event-main {
+        color: #334155 !important;
+        padding-left: 0.25rem;
+    }
+    .booking-calendar .fc .calendar-event-date {
+        border-left: 0 !important;
     }
     .booking-calendar {
         min-height: 680px;
@@ -315,18 +365,6 @@
         padding: 0.35rem 0.65rem;
         font-size: 0.8rem;
         color: #4d5875;
-    }
-    .booking-calendar-status-pills {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.45rem;
-    }
-    .booking-calendar-status-pill {
-        border: 1px solid transparent;
-    }
-    .booking-calendar-status-pill.is-active {
-        border-color: rgba(0, 0, 0, 0.22);
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
     }
     .booking-calendar-upcoming {
         display: flex;
@@ -435,7 +473,9 @@
     }
     html[data-theme-mode="dark"] .calendar-workspace-hero,
     html[data-theme-mode="dark"] .calendar-workspace-metrics,
-    html[data-theme-mode="dark"] .calendar-workflow-chip,
+    html[data-theme-mode="dark"] .calendar-filter-section,
+    html[data-theme-mode="dark"] .calendar-status-pill,
+    html[data-theme-mode="dark"] .calendar-date-info,
     html[data-theme-mode="dark"] .booking-calendar-upcoming-item,
     html[data-theme-mode="dark"] .calendar-preview-panel,
     html[data-theme-mode="dark"] .calendar-preview-header {
@@ -445,7 +485,7 @@
         background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.2), rgba(20, 24, 39, 0.94));
     }
     html[data-theme-mode="dark"] .calendar-workspace-metrics,
-    html[data-theme-mode="dark"] .calendar-workflow-chip,
+    html[data-theme-mode="dark"] .calendar-filter-section,
     html[data-theme-mode="dark"] .booking-calendar-upcoming-item,
     html[data-theme-mode="dark"] .calendar-preview-panel {
         background: rgba(255, 255, 255, 0.03);
@@ -453,14 +493,28 @@
     html[data-theme-mode="dark"] .calendar-workspace-metric {
         background: rgba(255, 255, 255, 0.04);
     }
+    html[data-theme-mode="dark"] .calendar-date-info {
+        background: rgba(var(--primary-rgb), 0.12);
+        color: #cbd5e1;
+    }
+    html[data-theme-mode="dark"] .calendar-legend-line {
+        background: rgba(255, 255, 255, 0.08);
+    }
+    html[data-theme-mode="dark"] .booking-calendar .fc .calendar-submission-date {
+        background: rgba(255, 255, 255, 0.08) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #e5e7eb !important;
+    }
+    html[data-theme-mode="dark"] .booking-calendar .fc .calendar-submission-date .fc-event-main {
+        color: #e5e7eb !important;
+    }
     html[data-theme-mode="dark"] .calendar-workspace-hero h2,
     html[data-theme-mode="dark"] .calendar-workspace-metric strong,
-    html[data-theme-mode="dark"] .calendar-workflow-chip,
+    html[data-theme-mode="dark"] .calendar-date-info strong,
     html[data-theme-mode="dark"] .calendar-preview-body dd {
         color: #f8fafc;
     }
     html[data-theme-mode="dark"] .calendar-workspace-hero p,
-    html[data-theme-mode="dark"] .calendar-workflow-chip small,
     html[data-theme-mode="dark"] .calendar-preview-customer,
     html[data-theme-mode="dark"] .calendar-preview-body dt {
         color: #cbd5e1;
@@ -486,8 +540,8 @@
         .calendar-workspace-metrics {
             grid-template-columns: 1fr;
         }
-        .calendar-workflow-chip {
-            min-width: 240px;
+        .calendar-status-pill {
+            min-width: 260px;
         }
     }
 </style>
