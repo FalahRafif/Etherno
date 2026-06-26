@@ -411,6 +411,14 @@
       </span>
     </label>
 
+    <label class="booking-confirm-checkbox" for="booking_policy_checkbox">
+      <input type="checkbox" id="booking_policy_checkbox">
+      <span class="booking-confirm-checkbox-text">
+        <span class="booking-confirm-checkbox-main">Saya sudah membaca dan menyetujui <a href="{{ route('booking.policy') }}" target="_blank" rel="noopener">Kebijakan Booking</a>.</span>
+        <span class="booking-confirm-checkbox-note">Mencakup aturan DP, reschedule, cancellation, dan force majeure</span>
+      </span>
+    </label>
+
     <div class="booking-confirm-actions">
       <button class="cta cta-outline booking-confirm-cancel" type="button" data-booking-confirm-close>Periksa Ulang</button>
       <button class="cta booking-confirm-submit" id="booking_confirm_submit" type="button" disabled>

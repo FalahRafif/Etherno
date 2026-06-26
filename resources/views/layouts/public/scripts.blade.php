@@ -356,6 +356,84 @@
       window.addEventListener('scroll', toggleScrollTopButton, { passive: true });
       toggleScrollTopButton();
     }
+
+    const navLinks = document.querySelectorAll('.header-menu .nav a[href]');
+    const easeOutCubic = function (progress) {
+      return 1 - Math.pow(1 - progress, 3);
+    };
+
+    const smoothScrollTo = function (targetElement) {
+      const startPosition = window.pageYOffset || document.documentElement.scrollTop || 0;
+      const targetPosition = targetElement.getBoundingClientRect().top + startPosition - 88;
+      const distance = targetPosition - startPosition;
+      const duration = 700;
+      const startTime = performance.now();
+
+      const step = function (currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = easeOutCubic(progress);
+        const nextPosition = startPosition + distance * eased;
+
+        window.scrollTo(0, nextPosition);
+
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        }
+      };
+
+      requestAnimationFrame(step);
+    };
+
+    const isSamePage = function (linkUrl) {
+      try {
+        const parsed = new URL(linkUrl, window.location.origin);
+        const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+        const linkPath = parsed.pathname.replace(/\/+$/, '') || '/';
+        return parsed.host === window.location.host && linkPath === currentPath;
+      } catch (e) {
+        return false;
+      }
+    };
+
+    navLinks.forEach(function (link) {
+      link.addEventListener('click', function (event) {
+        const href = link.getAttribute('href') || '';
+        if (href.indexOf('#') === -1) return;
+
+        if (!isSamePage(href)) return;
+
+        let fragment = '';
+        try {
+          fragment = new URL(href, window.location.origin).hash.replace('#', '');
+        } catch (e) {
+          return;
+        }
+        if (!fragment) return;
+
+        const targetElement = document.getElementById(fragment);
+        if (!targetElement) return;
+
+        event.preventDefault();
+        smoothScrollTo(targetElement);
+
+        if (window.history.replaceState) {
+          window.history.replaceState(null, '', '#' + fragment);
+        }
+      });
+    });
+
+    const initialHash = window.location.hash.replace('#', '');
+    if (initialHash) {
+      const hashTarget = document.getElementById(initialHash);
+      if (hashTarget) {
+        window.addEventListener('load', function () {
+          setTimeout(function () {
+            smoothScrollTo(hashTarget);
+          }, 100);
+        });
+      }
+    }
   });
 </script>
 </body>

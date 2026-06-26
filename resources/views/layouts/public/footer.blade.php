@@ -63,7 +63,7 @@
                     <nav class="footer-nav" aria-label="Footer booking">
                         <a href="{{ route('booking.page') }}">Pesan Sekarang</a>
                         <a href="{{ route('booking.status') }}">Cek Status Booking</a>
-                        <a href="{{ route('booking.cancellation.policy') }}">Kebijakan Pembatalan</a>
+                        <a href="{{ route('booking.policy') }}">Kebijakan Pembatalan</a>
                         <a href="{{ route('booking.reschedule') }}">Reschedule</a>
                     </nav>
 

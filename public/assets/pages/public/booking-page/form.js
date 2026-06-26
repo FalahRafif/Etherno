@@ -629,6 +629,7 @@
             var modal = document.getElementById("booking_confirmation_modal");
             var confirmSubmitButton = document.getElementById("booking_confirm_submit");
             var confirmCheckbox = document.getElementById("booking_confirm_checkbox");
+            var policyCheckbox = document.getElementById("booking_policy_checkbox");
             if (!modal || !confirmSubmitButton || !confirmCheckbox) {
                 return;
             }
@@ -715,10 +716,19 @@
                 setSummaryValue("confirm_event_detail", getValue("booking_detail"));
             }
 
+            function updateSubmitState() {
+                var dataConfirmed = confirmCheckbox.checked;
+                var policyConfirmed = !policyCheckbox || policyCheckbox.checked;
+                confirmSubmitButton.disabled = !(dataConfirmed && policyConfirmed);
+            }
+
             function openModal() {
                 modal.hidden = false;
                 document.body.classList.add("booking-confirm-open");
                 confirmCheckbox.checked = false;
+                if (policyCheckbox) {
+                    policyCheckbox.checked = false;
+                }
                 confirmSubmitButton.disabled = true;
                 lastFocusedElement = document.activeElement;
                 confirmCheckbox.focus();
@@ -738,12 +748,16 @@
                 });
             });
 
-            confirmCheckbox.addEventListener("change", function () {
-                confirmSubmitButton.disabled = !confirmCheckbox.checked;
-            });
+            confirmCheckbox.addEventListener("change", updateSubmitState);
+            if (policyCheckbox) {
+                policyCheckbox.addEventListener("change", updateSubmitState);
+            }
 
             confirmSubmitButton.addEventListener("click", function () {
                 if (!confirmCheckbox.checked) {
+                    return;
+                }
+                if (policyCheckbox && !policyCheckbox.checked) {
                     return;
                 }
 

@@ -99,10 +99,16 @@ Catatan kompatibilitas: `paymet_date_rule` memakai typo existing. Jangan rename 
 
 ### 6. Expiration, Reschedule, Cancellation, Force Majeure
 
+<!-- Updated: Force majeure flow sekarang dual-option (reschedule/refund) dengan persetujuan customer -->
+
 - Jika DP belum dibayar maksimal 3 hari setelah approval, booking menjadi expired dan slot kembali tersedia.
 - Reschedule maksimal 14 hari sebelum acara dan bergantung ketersediaan jadwal.
 - Cancellation setelah DP berarti DP hangus/non-refundable.
-- Force majeure diproses manual. Jika fotografer berhalangan, Etherno menyediakan pengganti. Jika kondisi ekstrem, refund dapat dilakukan setelah dikurangi biaya operasional.
+- Force majeure diproses manual dengan dua opsi:
+  - **Reschedule**: Petugas mengajukan tanggal baru. Customer harus menyetujui. Jika disetujui, tanggal acara dipindah dan status kembali ke Confirmed. Jika ditolak, booking kembali ke Confirmed dengan tanggal lama.
+  - **Refund**: Petugas mengajukan opsi refund (untuk kondisi ekstrem). Customer harus menyetujui. Jika disetujui, proses refund dilanjutkan dengan upload bukti refund. Jika ditolak, booking kembali ke Confirmed dan installment refund dihapus.
+- Force majeure hanya bisa diajukan dari status `BS_CONFIRMED`.
+- Reschedule minimal H+1 dari hari ini (baik customer maupun petugas).
 
 ## Current Technical Architecture
 
@@ -188,8 +194,11 @@ Endpoint admin booking management API (middleware `web` + `auth`, shared oleh Ad
 - Complete booking: `POST /api/admin/bookings/{booking}/complete` (name `api.admin.bookings.complete`).
 - Approve reschedule: `POST /api/admin/bookings/{booking}/approve-reschedule` (name `api.admin.bookings.approve-reschedule`).
 - Reject reschedule: `POST /api/admin/bookings/{booking}/reject-reschedule` (name `api.admin.bookings.reject-reschedule`).
-- Confirm force majeure reschedule: `POST /api/admin/bookings/{booking}/confirm-fm-reschedule` (name `api.admin.bookings.confirm-fm-reschedule`).
-- Force majeure: `POST /api/admin/bookings/{booking}/force-majeure` (name `api.admin.bookings.force-majeure`).
+- Force majeure (reschedule): `POST /api/admin/bookings/{booking}/force-majeure` (name `api.admin.bookings.force-majeure`) — body `{ type: 'reschedule', new_date, reason }`.
+- Force majeure (refund): `POST /api/admin/bookings/{booking}/force-majeure` (name `api.admin.bookings.force-majeure`) — body `{ type: 'refund', reason }`.
+- Approve force majeure reschedule: `POST /api/admin/bookings/{booking}/approve-fm-reschedule` (name `api.admin.bookings.approve-fm-reschedule`).
+- Approve force majeure refund: `POST /api/admin/bookings/{booking}/approve-fm-refund` (name `api.admin.bookings.approve-fm-refund`).
+- Reject force majeure: `POST /api/admin/bookings/{booking}/reject-force-majeure` (name `api.admin.bookings.reject-force-majeure`) — body `{ reason }`.
 - Upload refund proof: `POST /api/admin/bookings/{booking}/upload-refund-proof` (name `api.admin.bookings.upload-refund-proof`).
 - Store billing detail: `POST /api/admin/bookings/{booking}/billing-details` (name `api.admin.bookings.billing-details.store`).
 - Generate installment: `POST /api/admin/bookings/{booking}/installments` (name `api.admin.bookings.installments.store`). Body `{ installment_type_code: 'INS_DP' }` untuk generate DP otomatis, `{ installment_type_code: 'INS_FINAL' }` untuk generate pelunasan otomatis, atau `{ installment_type_code: 'INS_PARTIAL', amount, due_date }` untuk installment manual.
@@ -208,7 +217,7 @@ Endpoint secure preview attachment internal:
 
 <!-- Updated: Tambah route about.etherno, booking.flow redirect, booking.proof.download -->
 
-Public route memakai nama seperti `home`, `packages.page`, `about.etherno`, `booking.page`, `booking.flow` (redirect ke `/booking`), `booking.success`, `booking.status`, `booking.payment.dp`, `booking.payment.final`, `booking.reschedule`, `booking.cancellation.policy`, `booking.proof.download` (signed URL untuk download PDF bukti pengajuan booking).
+Public route memakai nama seperti `home`, `packages.page`, `about.etherno`, `booking.page`, `booking.flow` (redirect ke `/booking`), `booking.success`, `booking.status`, `booking.reschedule`, `booking.policy` (sebelumnya `booking.cancellation.policy`), `booking.proof.download` (signed URL untuk download PDF bukti pengajuan booking).
 
 Admin route memakai prefix URL `/admin`, name prefix `admin.`, middleware `auth` dan `role:Admin`.
 
@@ -478,11 +487,14 @@ BS_RESCHEDULE
 
 BS_CONFIRMED
   ├→ complete       → BS_COMPLETE
-  └→ force-majeure  → BS_FORCE_MAJEURE (reschedule atau refund)
+  ├→ force-majeure (reschedule) → BS_FORCE_MAJEURE (dengan force_majeure_date + reschedule_date)
+  └→ force-majeure (refund)     → BS_FORCE_MAJEURE (dengan force_majeure_reason, installment INS_REFUND dibuat)
 
 BS_FORCE_MAJEURE
-  ├→ confirm-fm-reschedule → BS_CONFIRMED (reschedule diterapkan, tanggal acara sudah dipindah)
-  └→ upload-refund-proof → BS_REFUND
+  ├→ approve-fm-reschedule → BS_CONFIRMED (tanggal acara dipindah ke force_majeure_date)
+  ├→ approve-fm-refund     → (status tetap, menunggu upload refund proof)
+  ├→ reject-force-majeure  → BS_CONFIRMED (force majeure ditolak, data FM/reschedule dibersihkan, installment refund dihapus jika ada)
+  └→ upload-refund-proof   → BS_REFUND
 ```
 
 Available actions per status difilter oleh `BookingDetailService::resolveAvailableActions()`. Method ini juga memeriksa apakah installment DP/final sudah ada — jika `INS_DP` sudah dibuat, aksi `generate_dp` disembunyikan dari UI (begitu juga `generate_final` jika `INS_FINAL` sudah ada).
@@ -515,8 +527,43 @@ Validasi `BookingInstallmentStoreRequest`: `amount` dan `due_date` hanya require
 #### Public Booking Controllers
 
 - `app/Http/Controllers/Api/Public/BookingController.php`: API endpoint untuk guest (store booking, availability, estimate, status lookup, upload payment proof). Menggunakan `GuestBookingService`.
-- `app/Http/Controllers/Web/Public/BookingSupportController.php`: Web controller untuk render halaman support booking (success, status, payment info, reschedule, cancellation policy, download submission proof). Menggunakan `GuestPageService` dan `GuestBookingService`.
+- `app/Http/Controllers/Web/Public/BookingSupportController.php`: Web controller untuk render halaman support booking (success, status, payment info, reschedule, booking policy, download submission proof). Menggunakan `GuestPageService` dan `GuestBookingService`.
 - `app/Http/Controllers/Web/Public/LandingPageController.php`: Web controller untuk landing page, packages page, booking form, dan about page. Menggunakan `GuestPageService`, `GuestPackageService`, dan `GuestBookingService`.
+
+#### Public Status Page (`/booking/status`)
+
+<!-- Updated: Section baru — dokumentasi fitur halaman cek status booking public -->
+
+Halaman `/booking/status` adalah portal customer untuk melacak booking mereka. Customer memasukkan Case ID + 4 digit terakhir nomor WhatsApp untuk verifikasi.
+
+Fitur utama:
+
+- **Tab Informasi Detail**: Case ID, nama customer, nomor WA (masked), tanggal acara, sesi, paket, tipe paket, harga paket, lokasi acara, detail acara, pin Google Maps.
+- **Tab Tagihan & Pembayaran** (3 subtab):
+  - **Detail Tagihan**: Status billing, total tagihan, total dibayar, sisa pembayaran, komponen biaya (base + add-on).
+  - **History Pembayaran**: Tabel akumulasi semua installment + payments dengan footer summary (Total Akumulasi, Total Pembayaran, Sisa Tagihan, Total Refund). Lampiran bukti pembayaran dapat di-preview via signed URL.
+  - ~~History Status~~ (dipindah ke tab utama).
+- **Tab History Status**: Timeline visual dengan marker, card informasi status, dan box pesan/alasan. History difilter untuk menyembunyikan entri teknis (pembuatan installment, billing init, dll). Hanya history yang relevan untuk customer yang ditampilkan.
+- **Tab Aksi**: Refresh data, aksi yang tersedia (upload DP, upload pelunasan, ajukan reschedule), tombol WhatsApp support, download bukti pengajuan PDF.
+
+Payload history public dipisah menjadi `info` (deskripsi status yang informatif) dan `message` (pesan/alasan dari customer atau petugas), dengan `message_subject` yang jelas menyatakan siapa pengirimnya.
+
+#### Admin/Petugas Booking Detail (`/admin/bookings/{caseId}` atau `/petugas/bookings/{caseId}`)
+
+<!-- Updated: Section baru — dokumentasi fitur halaman detail booking internal -->
+
+Halaman detail booking admin/petugas menampilkan:
+
+- Stats grid dengan status hint dinamis (force majeure membedakan reschedule vs refund).
+- Badge status dinamis untuk force majeure (`force majeure - reschedule` atau `force majeure - refund`).
+- Highlight reschedule: badge warning untuk tanggal reschedule, alert warning untuk alasan.
+- Tombol aksi kontekstual berdasarkan `resolveAvailableActions()`:
+  - Force majeure reschedule: `approve_fm_reschedule`, `reject_force_majeure`.
+  - Force majeure refund (sebelum customer setuju): `approve_fm_refund`, `reject_force_majeure`.
+  - Force majeure refund (setelah customer setuju): `upload_refund_proof`, `reject_force_majeure`.
+- Modal force majeure dengan min date H+1, pilihan reschedule/refund.
+- SweetAlert2 (CDN) untuk semua alert/confirm.
+- Semua link/form internal memakai `panel_route()` agar otomatis mengikuti role session (Admin/Petugas).
 
 ## Data Model Overview
 

@@ -15,4 +15,4 @@ Route::get('/booking/proof/{bookingUuid}', [BookingSupportController::class, 'do
     ->name('booking.proof.download');
 Route::get('/booking/status', [BookingSupportController::class, 'status'])->name('booking.status');
 Route::get('/booking/reschedule', [BookingSupportController::class, 'reschedule'])->name('booking.reschedule');
-Route::get('/booking/cancellation-policy', [BookingSupportController::class, 'cancellationPolicy'])->name('booking.cancellation.policy');
+Route::get('/booking/kebijakan', [BookingSupportController::class, 'bookingPolicy'])->name('booking.policy');
