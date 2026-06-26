@@ -68,8 +68,11 @@ class BookingCalendarService
         return [
             'filters' => $resolvedFilters,
             'statusFilters' => $statusFilters,
+            'scheduleSummary' => $this->buildScheduleSummary($baseQuery),
+            'workflowFilters' => $this->buildWorkflowFilters($baseQuery, $resolvedFilters),
             'stats' => $this->buildStats($baseQuery),
             'upcomingBookings' => $this->buildUpcomingBookings($baseQuery),
+            'agendaReadiness' => $this->buildAgendaReadiness($baseQuery),
         ];
     }
 
@@ -93,6 +96,7 @@ class BookingCalendarService
             ->whereNotNull('event_date');
 
         $this->applyStatusFilter($query, $resolvedFilters['status']);
+        $this->applyWorkflowFilter($query, $resolvedFilters['workflow']);
 
         if ($resolvedFilters['view_start'] !== '') {
             $query->whereDate('event_date', '>=', $resolvedFilters['view_start']);
@@ -117,6 +121,7 @@ class BookingCalendarService
                 'location_id',
                 'event_date',
                 'event_session',
+                'force_majeure_date',
                 'created_at',
             ]);
 
@@ -133,7 +138,9 @@ class BookingCalendarService
                 $statusCode,
                 (string) ($booking->status?->description ?? '')
             );
-            $color = $this->resolveStatusColor($statusCode);
+            $readiness = $this->resolveBookingReadiness($booking, $statusCode);
+            $riskLevel = $this->resolveBookingRiskLevel($booking, $statusCode);
+            $color = $this->resolveRiskColor($riskLevel, $statusCode);
             $eventDate = $booking->event_date?->toDateString() ?? '';
             $eventSessionLabel = trim((string) ($booking->eventSession?->description ?? '-'));
             $packageName = trim((string) ($booking->package?->name ?? '-'));
@@ -141,7 +148,7 @@ class BookingCalendarService
 
             return [
                 'id' => (string) $booking->getKey(),
-                'title' => sprintf('%s • %s', $caseId, $customerName),
+                'title' => sprintf('%s • %s • %s', $eventSessionLabel !== '' ? $eventSessionLabel : '-', $caseId, $readiness['label']),
                 'start' => $eventDate,
                 'allDay' => true,
                 'backgroundColor' => $color,
@@ -154,6 +161,12 @@ class BookingCalendarService
                     'session_label' => $eventSessionLabel !== '' ? $eventSessionLabel : '-',
                     'package_name' => $packageName !== '' ? $packageName : '-',
                     'location_name' => $locationName !== '' ? $locationName : '-',
+                    'customer_name' => $customerName,
+                    'event_date_label' => $booking->event_date?->format('d M Y') ?? '-',
+                    'readiness_label' => $readiness['label'],
+                    'readiness_tone' => $readiness['tone'],
+                    'risk_level' => $riskLevel,
+                    'next_action_label' => $readiness['action_label'],
                     'detail_url' => panel_route('admin.bookings.detail', ['booking' => $caseId]),
                 ],
             ];
@@ -168,6 +181,7 @@ class BookingCalendarService
     {
         return [
             'status' => strtoupper(trim((string) ($filters['status'] ?? ''))),
+            'workflow' => strtolower(trim((string) ($filters['workflow'] ?? ''))),
             'date_start' => $this->normalizeDateString((string) ($filters['date_start'] ?? '')),
             'date_end' => $this->normalizeDateString((string) ($filters['date_end'] ?? '')),
         ];
@@ -217,7 +231,131 @@ class BookingCalendarService
             $builder
                 ->where('group_id', self::STATUS_GROUP)
                 ->where('code', $normalizedCode);
-        });
+            });
+    }
+
+    private function applyWorkflowFilter(Builder $query, string $workflow): void
+    {
+        $workflow = strtolower(trim($workflow));
+        if ($workflow === '') {
+            return;
+        }
+
+        match ($workflow) {
+            'needs_action' => $query->whereHas('status', function (Builder $builder): void {
+                $builder->where('group_id', self::STATUS_GROUP)->whereIn('code', [
+                    'BS_WAITING_APPROVAL',
+                    'BS_APPROVED_WAITING_DP',
+                    'BS_APPROVED_WAITING_FINAL_PAYMENT',
+                    'BS_RESCHEDULE',
+                    'BS_FORCE_MAJEURE',
+                    'BS_REFUND',
+                ]);
+            }),
+            'today' => $query->whereDate('event_date', Carbon::today()->toDateString()),
+            'tomorrow' => $query->whereDate('event_date', Carbon::tomorrow()->toDateString()),
+            'unpaid' => $query->whereHas('status', function (Builder $builder): void {
+                $builder->where('group_id', self::STATUS_GROUP)->whereIn('code', [
+                    'BS_APPROVED_WAITING_DP',
+                    'BS_APPROVED_WAITING_FINAL_PAYMENT',
+                ]);
+            }),
+            'review' => $query->whereHas('status', function (Builder $builder): void {
+                $builder->where('group_id', self::STATUS_GROUP)->whereIn('code', ['BS_WAITING_APPROVAL', 'BS_RESCHEDULE']);
+            }),
+            'risk' => $query->whereHas('status', function (Builder $builder): void {
+                $builder->where('group_id', self::STATUS_GROUP)->whereIn('code', ['BS_FORCE_MAJEURE', 'BS_REFUND']);
+            }),
+            default => null,
+        };
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildScheduleSummary(Builder $baseQuery): array
+    {
+        $weekStart = Carbon::now()->startOfWeek()->toDateString();
+        $weekEnd = Carbon::now()->endOfWeek()->toDateString();
+        $weekQuery = (clone $baseQuery)->whereBetween('event_date', [$weekStart, $weekEnd]);
+        $weekTotal = (clone $weekQuery)->count();
+        $unpaid = $this->countByStatusCodes($weekQuery, ['BS_APPROVED_WAITING_DP', 'BS_APPROVED_WAITING_FINAL_PAYMENT']);
+        $needsAction = $this->countByStatusCodes($weekQuery, ['BS_WAITING_APPROVAL', 'BS_RESCHEDULE', 'BS_FORCE_MAJEURE', 'BS_REFUND']);
+        $today = (clone $baseQuery)->whereDate('event_date', Carbon::today()->toDateString())->count();
+
+        return [
+            'headline' => 'Minggu ini ada ' . $weekTotal . ' booking. ' . $unpaid . ' belum lunas, ' . $needsAction . ' perlu dicek.',
+            'subline' => 'Gunakan filter cepat untuk melihat jadwal dan booking yang perlu diproses.',
+            'metrics' => [
+                ['label' => 'Booking Minggu Ini', 'value' => $weekTotal, 'tone' => 'primary'],
+                ['label' => 'Perlu Dicek', 'value' => $needsAction, 'tone' => $needsAction > 0 ? 'warning' : 'success'],
+                ['label' => 'Belum Lunas', 'value' => $unpaid, 'tone' => $unpaid > 0 ? 'danger' : 'success'],
+                ['label' => 'Agenda Hari Ini', 'value' => $today, 'tone' => 'info'],
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, string>  $filters
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildWorkflowFilters(Builder $baseQuery, array $filters): array
+    {
+        $current = strtolower(trim((string) ($filters['workflow'] ?? '')));
+        $definitions = [
+            ['key' => '', 'label' => 'Semua', 'hint' => 'Semua agenda'],
+            ['key' => 'needs_action', 'label' => 'Perlu Dicek', 'hint' => 'Review, payment, refund, FM'],
+            ['key' => 'today', 'label' => 'Hari Ini', 'hint' => 'Event hari ini'],
+            ['key' => 'tomorrow', 'label' => 'Besok / H-1', 'hint' => 'Agenda besok'],
+            ['key' => 'unpaid', 'label' => 'Belum Lunas', 'hint' => 'DP atau pelunasan'],
+            ['key' => 'review', 'label' => 'Menunggu Review', 'hint' => 'Booking/reschedule'],
+            ['key' => 'risk', 'label' => 'FM / Refund', 'hint' => 'Risiko operasional'],
+        ];
+
+        return array_map(function (array $definition) use ($baseQuery, $current): array {
+            $query = clone $baseQuery;
+            $this->applyWorkflowFilter($query, $definition['key']);
+
+            return [
+                'key' => $definition['key'],
+                'label' => $definition['label'],
+                'hint' => $definition['hint'],
+                'count' => $query->count(),
+                'is_active' => $current === $definition['key'],
+            ];
+        }, $definitions);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildAgendaReadiness(Builder $baseQuery): array
+    {
+        $rows = (clone $baseQuery)
+            ->with(['customer:id,first_name,last_name', 'status:id,code,description', 'eventSession:id,description'])
+            ->whereDate('event_date', '>=', Carbon::today()->toDateString())
+            ->orderBy('event_date')
+            ->orderBy('event_session')
+            ->limit(8)
+            ->get(['id', 'case_id', 'event_date', 'event_session', 'force_majeure_date', 'status_id', 'customer_id', 'created_at']);
+
+        return $rows->map(function (Booking $booking): array {
+            $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+            $readiness = $this->resolveBookingReadiness($booking, $statusCode);
+            $caseId = $this->buildCaseId($booking);
+            $customerName = trim(implode(' ', array_filter([$booking->customer?->first_name, $booking->customer?->last_name])));
+
+            return [
+                'case_id' => $caseId,
+                'customer' => $customerName !== '' ? $customerName : '-',
+                'date' => $booking->event_date?->format('d M Y') ?? '-',
+                'session' => trim((string) ($booking->eventSession?->description ?? '-')),
+                'readiness_label' => $readiness['label'],
+                'tone' => $readiness['tone'],
+                'action_label' => $readiness['action_label'],
+                'url' => panel_route('admin.bookings.detail', ['booking' => $caseId]),
+            ];
+        })->values()->all();
     }
 
     /**
@@ -414,6 +552,55 @@ class BookingCalendarService
             'BS_CONFIRMED', 'BS_COMPLETE' => 'success',
             'BS_CANCEL', 'BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_REFUND' => 'danger',
             default => 'secondary',
+        };
+    }
+
+    /**
+     * @return array{label:string,tone:string,action_label:string}
+     */
+    private function resolveBookingReadiness(Booking $booking, string $statusCode): array
+    {
+        return match ($statusCode) {
+            'BS_CONFIRMED' => ['label' => 'Siap Jalan', 'tone' => 'success', 'action_label' => 'Buka Detail'],
+            'BS_APPROVED_WAITING_DP' => ['label' => 'Menunggu DP', 'tone' => 'warning', 'action_label' => 'Cek DP'],
+            'BS_APPROVED_WAITING_FINAL_PAYMENT' => ['label' => 'Belum Lunas', 'tone' => 'danger', 'action_label' => 'Tinjau Pelunasan'],
+            'BS_WAITING_APPROVAL' => ['label' => 'Butuh Review', 'tone' => 'warning', 'action_label' => 'Review'],
+            'BS_RESCHEDULE' => ['label' => 'Review Reschedule', 'tone' => 'warning', 'action_label' => 'Review'],
+            'BS_FORCE_MAJEURE' => ['label' => !empty($booking->force_majeure_date) ? 'FM Reschedule' : 'FM Refund', 'tone' => 'danger', 'action_label' => 'Follow-up FM'],
+            'BS_REFUND' => ['label' => 'Refund Diproses', 'tone' => 'danger', 'action_label' => 'Cek Refund'],
+            'BS_COMPLETE' => ['label' => 'Selesai', 'tone' => 'success', 'action_label' => 'Detail'],
+            default => ['label' => 'Perlu Dicek', 'tone' => 'secondary', 'action_label' => 'Detail'],
+        };
+    }
+
+    private function resolveBookingRiskLevel(Booking $booking, string $statusCode): string
+    {
+        if (in_array($statusCode, ['BS_FORCE_MAJEURE', 'BS_REFUND'], true)) {
+            return 'critical';
+        }
+
+        if ($statusCode === 'BS_APPROVED_WAITING_FINAL_PAYMENT' && $booking->event_date && $booking->event_date->lte(Carbon::tomorrow()->endOfDay())) {
+            return 'critical';
+        }
+
+        if (in_array($statusCode, ['BS_WAITING_APPROVAL', 'BS_RESCHEDULE', 'BS_APPROVED_WAITING_DP', 'BS_APPROVED_WAITING_FINAL_PAYMENT'], true)) {
+            return 'high';
+        }
+
+        if ($statusCode === 'BS_CONFIRMED') {
+            return 'ready';
+        }
+
+        return 'normal';
+    }
+
+    private function resolveRiskColor(string $riskLevel, string $statusCode): string
+    {
+        return match ($riskLevel) {
+            'critical' => '#e6533c',
+            'high' => '#f59e0b',
+            'ready' => '#22c55e',
+            default => $this->resolveStatusColor($statusCode),
         };
     }
 

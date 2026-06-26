@@ -6,6 +6,7 @@ use App\Models\Billing;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Location;
+use App\Models\Payment;
 use App\Repositories\Contracts\BookingRepositoryInterface;
 use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\Contracts\ReferenceRepositoryInterface;
@@ -116,9 +117,17 @@ class BookingListService
     public function getDashboardPayload(): array
     {
         $baseQuery = $this->bookingRepository->query(true);
+        $actionCenter = $this->buildActionCenter();
+        $alertCenter = $this->buildAlertCenter($baseQuery);
+        $todayTimeline = $this->buildTodayTimeline();
+        $upcomingReadiness = $this->buildUpcomingReadiness();
 
         return [
-            'stats' => $this->buildDashboardStats($baseQuery),
+            'operationalSummary' => $this->buildOperationalSummary($actionCenter, $alertCenter, $todayTimeline),
+            'actionCenter' => $actionCenter,
+            'alertCenter' => $alertCenter,
+            'todayTimeline' => $todayTimeline,
+            'upcomingReadiness' => $upcomingReadiness,
             'columns' => ['Kode', 'Customer', 'Tanggal Acara', 'Status Booking', 'Status Payment', 'Tindak Lanjut'],
             'rows' => $this->buildDashboardQueue(),
             'sideCards' => $this->buildDashboardSideCards($baseQuery),
@@ -491,6 +500,288 @@ class BookingListService
             ->count();
     }
 
+    /**
+     * @param  array<int, array<string, mixed>>  $actionCenter
+     * @param  array<int, array<string, mixed>>  $alertCenter
+     * @param  array<int, array<string, mixed>>  $todayTimeline
+     * @return array<string, mixed>
+     */
+    private function buildOperationalSummary(array $actionCenter, array $alertCenter, array $todayTimeline): array
+    {
+        $criticalCount = count(array_filter($actionCenter, static fn (array $item): bool => ($item['severity'] ?? '') === 'critical'));
+        $highCount = count(array_filter($actionCenter, static fn (array $item): bool => ($item['severity'] ?? '') === 'high'));
+        $taskCount = count($actionCenter);
+        $alertCount = count($alertCenter);
+        $timelineCount = count($todayTimeline);
+
+        $parts = [];
+        if ($criticalCount > 0) {
+            $parts[] = $criticalCount . ' harus dicek dulu';
+        }
+        if ($highCount > 0) {
+            $parts[] = $highCount . ' perlu diproses';
+        }
+        if ($alertCount > 0) {
+            $parts[] = $alertCount . ' catatan';
+        }
+        if ($timelineCount > 0) {
+            $parts[] = $timelineCount . ' agenda hari ini';
+        }
+
+        $headline = $taskCount > 0
+            ? $taskCount . ' booking perlu dicek hari ini.'
+            : 'Belum ada booking yang perlu dicek segera.';
+
+        return [
+            'eyebrow' => 'Ringkasan Hari Ini',
+            'headline' => $headline,
+            'subline' => !empty($parts)
+                ? implode(', ', $parts) . '.'
+                : 'Cek kalender untuk melihat jadwal acara terdekat.',
+            'primary_action' => [
+                'label' => $taskCount > 0 ? 'Cek Booking' : 'Lihat Kalender',
+                'url' => $taskCount > 0 ? '#dashboard_action_center' : panel_route('admin.calendar'),
+            ],
+            'secondary_actions' => [
+                ['label' => 'Booking Menunggu Review', 'url' => panel_route('admin.bookings.list', ['status' => 'BS_WAITING_APPROVAL'])],
+                ['label' => 'Kalender & Slot', 'url' => panel_route('admin.calendar')],
+            ],
+            'metrics' => [
+                ['label' => 'Perlu Dicek', 'value' => $taskCount, 'tone' => $taskCount > 0 ? 'warning' : 'success'],
+                ['label' => 'Mendesak', 'value' => $criticalCount, 'tone' => $criticalCount > 0 ? 'danger' : 'success'],
+                ['label' => 'Catatan', 'value' => $alertCount, 'tone' => $alertCount > 0 ? 'danger' : 'success'],
+                ['label' => 'Agenda Hari Ini', 'value' => $timelineCount, 'tone' => 'info'],
+            ],
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildActionCenter(): array
+    {
+        $items = [];
+
+        $reviewBookings = $this->dashboardBookingsByStatus(['BS_WAITING_APPROVAL'], 4);
+        foreach ($reviewBookings as $booking) {
+            $items[] = $this->makeBookingActionItem(
+                $booking,
+                'high',
+                'Review booking baru',
+                'Pengajuan baru belum diproses.',
+                $this->relativeCreatedLabel($booking),
+                'Review Booking',
+                'review'
+            );
+        }
+
+        $paymentBookings = $this->dashboardBookingsByStatus(['BS_APPROVED_WAITING_DP', 'BS_APPROVED_WAITING_FINAL_PAYMENT'], 4);
+        foreach ($paymentBookings as $booking) {
+            $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+            $isFinal = $statusCode === 'BS_APPROVED_WAITING_FINAL_PAYMENT';
+            $items[] = $this->makeBookingActionItem(
+                $booking,
+                $isFinal && $booking->event_date && $booking->event_date->lte(Carbon::tomorrow()->endOfDay()) ? 'critical' : 'medium',
+                $isFinal ? 'Cek pelunasan' : 'Cek pembayaran DP',
+                $isFinal ? 'Pelunasan belum selesai.' : 'DP belum dibayar atau belum diverifikasi.',
+                $booking->event_date ? 'Acara ' . $booking->event_date->format('d M Y') : 'Tanggal acara belum tersedia',
+                $isFinal ? 'Tinjau Pelunasan' : 'Cek DP',
+                $isFinal ? 'payment-final' : 'payment-dp'
+            );
+        }
+
+        $specialBookings = $this->dashboardBookingsByStatus(['BS_RESCHEDULE', 'BS_FORCE_MAJEURE', 'BS_REFUND'], 5);
+        foreach ($specialBookings as $booking) {
+            $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+            $items[] = $this->makeBookingActionItem(
+                $booking,
+                in_array($statusCode, ['BS_FORCE_MAJEURE', 'BS_REFUND'], true) ? 'critical' : 'high',
+                $this->resolveActionTitle($statusCode, $booking),
+                $this->resolveActionReason($statusCode, $booking),
+                $booking->event_date ? 'Acara ' . $booking->event_date->format('d M Y') : 'Butuh follow-up',
+                $this->resolveActionLabel($statusCode),
+                strtolower(str_replace('BS_', '', $statusCode))
+            );
+        }
+
+        usort($items, function (array $a, array $b): int {
+            $rank = ['critical' => 0, 'high' => 1, 'medium' => 2, 'normal' => 3];
+            return ($rank[$a['severity']] ?? 9) <=> ($rank[$b['severity']] ?? 9)
+                ?: strcmp((string) ($a['sort_date'] ?? ''), (string) ($b['sort_date'] ?? ''));
+        });
+
+        return array_slice($items, 0, 10);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildAlertCenter(Builder $baseQuery): array
+    {
+        $alerts = [];
+        $today = Carbon::today();
+        $tomorrow = Carbon::tomorrow();
+
+        $finalDue = $this->countByStatusCodes(
+            (clone $baseQuery)->whereNotNull('event_date')->whereDate('event_date', '<=', $tomorrow->toDateString()),
+            ['BS_APPROVED_WAITING_FINAL_PAYMENT']
+        );
+        if ($finalDue > 0) {
+            $alerts[] = [
+                'severity' => 'danger',
+                'title' => 'Pelunasan H-1/Hari Ini',
+                'description' => $finalDue . ' booking belum lunas mendekati tanggal acara.',
+                'action_label' => 'Lihat Booking',
+                'url' => panel_route('admin.bookings.list', ['status' => 'BS_APPROVED_WAITING_FINAL_PAYMENT']),
+            ];
+        }
+
+        $pendingPayments = Payment::query()
+            ->where('delete_status', false)
+            ->whereHas('status', function (Builder $query): void {
+                $query->where('group_id', 'payment_status')->where('code', 'PYS_PEDING');
+            })
+            ->count();
+        if ($pendingPayments > 0) {
+            $alerts[] = [
+                'severity' => 'warning',
+                'title' => 'Bukti Pembayaran Pending',
+                'description' => $pendingPayments . ' pembayaran menunggu verifikasi.',
+                'action_label' => 'Cek Pembayaran',
+                'url' => panel_route('admin.bookings.list'),
+            ];
+        }
+
+        $reviewAging = $this->countByStatusCodes(
+            (clone $baseQuery)->where('created_at', '<=', Carbon::now()->subHours(6)),
+            ['BS_WAITING_APPROVAL']
+        );
+        if ($reviewAging > 0) {
+            $alerts[] = [
+                'severity' => 'warning',
+                'title' => 'Review Tertahan',
+                'description' => $reviewAging . ' booking menunggu review lebih dari 6 jam.',
+                'action_label' => 'Review Sekarang',
+                'url' => panel_route('admin.bookings.list', ['status' => 'BS_WAITING_APPROVAL']),
+            ];
+        }
+
+        $forceMajeure = $this->countByStatusCodes($baseQuery, ['BS_FORCE_MAJEURE']);
+        if ($forceMajeure > 0) {
+            $alerts[] = [
+                'severity' => 'danger',
+                'title' => 'Force Majeure Aktif',
+                'description' => $forceMajeure . ' booking sedang force majeure.',
+                'action_label' => 'Lihat FM',
+                'url' => panel_route('admin.bookings.list', ['status' => 'BS_FORCE_MAJEURE']),
+            ];
+        }
+
+        $todayEvents = $this->countByStatusCodes(
+            (clone $baseQuery)->whereDate('event_date', $today->toDateString()),
+            ['BS_CONFIRMED', 'BS_APPROVED_WAITING_FINAL_PAYMENT']
+        );
+        if ($todayEvents > 0) {
+            $alerts[] = [
+                'severity' => 'info',
+                'title' => 'Agenda Acara Hari Ini',
+                'description' => $todayEvents . ' booking dijadwalkan hari ini.',
+                'action_label' => 'Buka Kalender',
+                'url' => panel_route('admin.calendar', ['date_start' => $today->toDateString(), 'date_end' => $today->toDateString()]),
+            ];
+        }
+
+        return array_slice($alerts, 0, 5);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildTodayTimeline(): array
+    {
+        $today = Carbon::today();
+        $items = [];
+
+        $events = $this->bookingRepository
+            ->query(true)
+            ->with(['customer:id,first_name,last_name', 'status:id,code,description', 'eventSession:id,description'])
+            ->whereDate('event_date', $today->toDateString())
+            ->whereHas('status', function (Builder $query): void {
+                $query->where('group_id', self::STATUS_GROUP)->whereIn('code', ['BS_CONFIRMED', 'BS_APPROVED_WAITING_FINAL_PAYMENT']);
+            })
+            ->orderBy('event_session')
+            ->limit(6)
+            ->get();
+
+        foreach ($events as $booking) {
+            $items[] = [
+                'tone' => 'success',
+                'time_label' => trim((string) ($booking->eventSession?->description ?? 'Hari ini')),
+                'title' => 'Acara terjadwal',
+                'description' => $this->buildCaseId($booking) . ' - ' . $this->resolveCustomerName($booking),
+                'meta' => $this->resolveReadableStatusBadgeLabel(strtoupper(trim((string) ($booking->status?->code ?? ''))), $booking),
+                'url' => panel_route('admin.bookings.detail', ['booking' => $this->buildCaseId($booking)]),
+            ];
+        }
+
+        $reviews = $this->dashboardBookingsByStatus(['BS_WAITING_APPROVAL'], 3);
+        foreach ($reviews as $booking) {
+            $items[] = [
+                'tone' => 'warning',
+                'time_label' => $this->relativeCreatedLabel($booking),
+                'title' => 'Review booking baru',
+                'description' => $this->buildCaseId($booking) . ' - ' . $this->resolveCustomerName($booking),
+                'meta' => 'Menunggu keputusan petugas',
+                'url' => panel_route('admin.bookings.detail', ['booking' => $this->buildCaseId($booking)]),
+            ];
+        }
+
+        return array_slice($items, 0, 8);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildUpcomingReadiness(): array
+    {
+        $rows = $this->bookingRepository
+            ->query(true)
+            ->with(['customer:id,first_name,last_name', 'status:id,code,description', 'eventSession:id,description'])
+            ->whereNotNull('event_date')
+            ->whereDate('event_date', '>=', Carbon::today()->toDateString())
+            ->whereDate('event_date', '<=', Carbon::today()->addDays(7)->toDateString())
+            ->whereHas('status', function (Builder $query): void {
+                $query->where('group_id', self::STATUS_GROUP)->whereIn('code', [
+                    'BS_APPROVED_WAITING_FINAL_PAYMENT',
+                    'BS_CONFIRMED',
+                    'BS_RESCHEDULE',
+                    'BS_FORCE_MAJEURE',
+                ]);
+            })
+            ->orderBy('event_date')
+            ->orderBy('event_session')
+            ->limit(8)
+            ->get();
+
+        return $rows->map(function (Booking $booking): array {
+            $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+            $readiness = $this->resolveReadiness($booking, $statusCode);
+            $caseId = $this->buildCaseId($booking);
+
+            return [
+                'case_id' => $caseId,
+                'customer' => $this->resolveCustomerName($booking),
+                'date_label' => $this->relativeEventDateLabel($booking),
+                'session' => trim((string) ($booking->eventSession?->description ?? '-')),
+                'status_label' => $this->resolveReadableStatusBadgeLabel($statusCode, $booking),
+                'readiness_label' => $readiness['label'],
+                'tone' => $readiness['tone'],
+                'action_label' => $readiness['action_label'],
+                'url' => panel_route('admin.bookings.detail', ['booking' => $caseId]),
+            ];
+        })->values()->all();
+    }
+
     private function buildDashboardStats(Builder $baseQuery): array
     {
         $waitingApproval = $this->countByStatusCodes($baseQuery, ['BS_WAITING_APPROVAL']);
@@ -525,6 +816,143 @@ class BookingListService
             ['label' => 'Selesai Bulan Ini', 'value' => (string) $completedThisMonth, 'hint' => 'Acara yang sudah dilaksanakan', 'tone' => 'primary'],
             ['label' => 'Pendapatan Bulan Ini', 'value' => 'Rp ' . number_format((float) $revenue, 0, ',', '.'), 'hint' => 'Total pembayaran yang sudah masuk', 'tone' => 'secondary'],
         ];
+    }
+
+    /**
+     * @param  array<int, string>  $statusCodes
+     */
+    private function dashboardBookingsByStatus(array $statusCodes, int $limit)
+    {
+        return $this->bookingRepository
+            ->query(true)
+            ->with(['customer:id,first_name,last_name', 'status:id,code,description', 'eventSession:id,description'])
+            ->whereHas('status', function (Builder $query) use ($statusCodes): void {
+                $query->where('group_id', self::STATUS_GROUP)->whereIn('code', $statusCodes);
+            })
+            ->orderBy('created_at')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function makeBookingActionItem(Booking $booking, string $severity, string $title, string $reason, string $dueLabel, string $actionLabel, string $type): array
+    {
+        $caseId = $this->buildCaseId($booking);
+        $statusCode = strtoupper(trim((string) ($booking->status?->code ?? '')));
+
+        return [
+            'type' => $type,
+            'severity' => $severity,
+            'severity_label' => $this->resolveSeverityLabel($severity),
+            'case_id' => $caseId,
+            'customer' => $this->resolveCustomerName($booking),
+            'title' => $title,
+            'reason' => $reason,
+            'due_label' => $dueLabel,
+            'status_label' => $this->resolveReadableStatusBadgeLabel($statusCode, $booking),
+            'action_label' => $actionLabel,
+            'detail_url' => panel_route('admin.bookings.detail', ['booking' => $caseId]),
+            'list_url' => $statusCode !== '' ? panel_route('admin.bookings.list', ['status' => $statusCode]) : panel_route('admin.bookings.list'),
+            'sort_date' => $booking->event_date?->toDateString() ?? $booking->created_at?->toDateTimeString() ?? '',
+        ];
+    }
+
+    private function resolveCustomerName(Booking $booking): string
+    {
+        $customerName = trim(implode(' ', array_filter([
+            $booking->customer?->first_name,
+            $booking->customer?->last_name,
+        ])));
+
+        return $customerName !== '' ? $customerName : '-';
+    }
+
+    private function resolveSeverityLabel(string $severity): string
+    {
+        return match ($severity) {
+            'critical' => 'Mendesak',
+            'high' => 'Perlu Dicek',
+            'medium' => 'Segera',
+            default => 'Normal',
+        };
+    }
+
+    private function resolveActionTitle(string $statusCode, Booking $booking): string
+    {
+        return match ($statusCode) {
+            'BS_RESCHEDULE' => 'Review reschedule',
+            'BS_FORCE_MAJEURE' => !empty($booking->force_majeure_date) ? 'Follow-up force majeure reschedule' : 'Follow-up force majeure refund',
+            'BS_REFUND' => 'Pantau proses refund',
+            default => 'Tinjau booking',
+        };
+    }
+
+    private function resolveActionReason(string $statusCode, Booking $booking): string
+    {
+        return match ($statusCode) {
+            'BS_RESCHEDULE' => 'Ada permintaan perubahan tanggal.',
+            'BS_FORCE_MAJEURE' => !empty($booking->force_majeure_date)
+                ? 'Ada usulan tanggal baru karena force majeure.'
+                : 'Ada pengajuan refund karena force majeure.',
+            'BS_REFUND' => 'Refund sedang diproses.',
+            default => 'Booking memerlukan tindak lanjut.',
+        };
+    }
+
+    private function resolveActionLabel(string $statusCode): string
+    {
+        return match ($statusCode) {
+            'BS_RESCHEDULE' => 'Review Reschedule',
+            'BS_FORCE_MAJEURE' => 'Follow-up FM',
+            'BS_REFUND' => 'Cek Refund',
+            default => 'Buka Detail',
+        };
+    }
+
+    private function relativeCreatedLabel(Booking $booking): string
+    {
+        if (!$booking->created_at) {
+            return 'Baru masuk';
+        }
+
+        if ($booking->created_at->isToday()) {
+            return 'Masuk ' . $booking->created_at->diffForHumans();
+        }
+
+        return 'Masuk ' . $booking->created_at->format('d M Y');
+    }
+
+    private function relativeEventDateLabel(Booking $booking): string
+    {
+        if (!$booking->event_date) {
+            return 'Tanggal belum tersedia';
+        }
+
+        if ($booking->event_date->isToday()) {
+            return 'Hari ini';
+        }
+
+        if ($booking->event_date->isTomorrow()) {
+            return 'Besok';
+        }
+
+        return $booking->event_date->format('d M Y');
+    }
+
+    /**
+     * @return array{label:string,tone:string,action_label:string}
+     */
+    private function resolveReadiness(Booking $booking, string $statusCode): array
+    {
+        return match ($statusCode) {
+            'BS_CONFIRMED' => ['label' => 'Siap Jalan', 'tone' => 'success', 'action_label' => 'Detail'],
+            'BS_APPROVED_WAITING_FINAL_PAYMENT' => ['label' => 'Belum Lunas', 'tone' => 'danger', 'action_label' => 'Tinjau Pelunasan'],
+            'BS_RESCHEDULE' => ['label' => 'Butuh Review', 'tone' => 'warning', 'action_label' => 'Review'],
+            'BS_FORCE_MAJEURE' => ['label' => !empty($booking->force_majeure_date) ? 'FM Reschedule' : 'FM Refund', 'tone' => 'danger', 'action_label' => 'Follow-up'],
+            default => ['label' => 'Perlu Dicek', 'tone' => 'secondary', 'action_label' => 'Detail'],
+        };
     }
 
     private function buildDashboardQueue(): array
@@ -605,7 +1033,7 @@ class BookingListService
                 'items' => !empty($upcomingItems) ? $upcomingItems : [['label' => 'Tidak ada acara terjadwal', 'value' => '']],
             ],
             [
-                'title' => 'Prioritas Operasional',
+                'title' => 'Catatan Operasional',
                 'bullets' => [
                     'Verifikasi DP maksimal di hari yang sama untuk mempercepat locking slot.',
                     'Final payment harus selesai maksimal H-1 acara.',
