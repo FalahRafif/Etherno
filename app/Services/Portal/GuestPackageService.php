@@ -52,6 +52,54 @@ class GuestPackageService
         ];
     }
 
+    /**
+     * @return array{items: array<int, mixed>, total: int, per_page: int, current_page: int, last_page: int}
+     */
+    public function getPaginatedPackages(string $type, int $page, int $perPage): array
+    {
+        $typeCode = strtolower($type) === 'non_wedding' || strtolower($type) === 'non-wedding'
+            ? self::NON_WEDDING_PACKAGE_CODE
+            : self::WEDDING_PACKAGE_CODE;
+
+        $all = $this->buildActivePackagesQuery()->get();
+        $filtered = $this->filterPackagesByType($all, $typeCode);
+        $total = $filtered->count();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = min($page, $lastPage);
+        $items = $filtered->slice(($page - 1) * $perPage, $perPage)->values();
+
+        $ttl = now()->addMinutes((int) config('app.attachments.temp_url_ttl_minutes', 30));
+
+        $mapped = $items->map(function (Package $package) use ($ttl): array {
+            $thumbnailUrl = null;
+            if ($package->thumbnailAttachment) {
+                $thumbnailUrl = \Illuminate\Support\Facades\URL::signedRoute(
+                    'api.public.attachments.package-thumbnail',
+                    ['attachmentUuid' => $package->thumbnailAttachment->uuid],
+                    $ttl
+                );
+            }
+
+            return [
+                'id' => $package->id,
+                'name' => $package->name,
+                'price' => (float) $package->price,
+                'price_formatted' => 'Rp ' . number_format((float) $package->price, 0, ',', '.'),
+                'description' => $package->description,
+                'thumbnail_url' => $thumbnailUrl,
+                'benefits' => $package->benefits->pluck('name')->filter()->values()->all(),
+            ];
+        })->values()->all();
+
+        return [
+            'items' => $mapped,
+            'total' => $total,
+            'per_page' => $perPage,
+            'current_page' => $page,
+            'last_page' => $lastPage,
+        ];
+    }
+
     private function buildActivePackagesQuery(): Builder
     {
         return $this->packageRepository

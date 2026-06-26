@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\Public\BookingController;
+use App\Http\Controllers\Api\Public\PackageController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web'])->group(function (): void {
+    Route::get('/packages', [PackageController::class, 'index'])->name('api.public.packages.index');
     Route::get('/booking/availability', [BookingController::class, 'availability'])->name('booking.availability');
     Route::get('/booking/location-options', [BookingController::class, 'locationOptions'])->name('booking.location.options');
     Route::get('/booking/estimate', [BookingController::class, 'estimate'])->name('booking.estimate');
