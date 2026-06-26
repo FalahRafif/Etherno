@@ -104,10 +104,12 @@
         function findLatestHistoryDescription(requiredText, requiredSecondText) {
             var items = currentPayload && Array.isArray(currentPayload.history) ? currentPayload.history : [];
             for (var i = items.length - 1; i >= 0; i -= 1) {
-                var description = String(items[i] && items[i].description ? items[i].description : "").trim();
-                var normalized = description.toLowerCase();
-                if (description !== "" && normalized.indexOf(requiredText) !== -1 && normalized.indexOf(requiredSecondText) !== -1) {
-                    return description;
+                var info = String(items[i] && items[i].info ? items[i].info : "").trim();
+                var message = String(items[i] && items[i].message ? items[i].message : "").trim();
+                var combined = (info + " " + message).trim();
+                var normalized = combined.toLowerCase();
+                if (combined !== "" && normalized.indexOf(requiredText) !== -1 && normalized.indexOf(requiredSecondText) !== -1) {
+                    return message !== "" ? message : info;
                 }
             }
             return "";
@@ -481,9 +483,11 @@
             var isApprovedWaitingDp = statusCode === "BS_APPROVED_WAITING_DP";
             var isApprovedWaitingFinal = statusCode === "BS_APPROVED_WAITING_FINAL_PAYMENT";
             var isConfirmed = statusCode === "BS_CONFIRMED";
+            var isComplete = statusCode === "BS_COMPLETE";
             var isReschedule = statusCode === "BS_RESCHEDULE";
             var isForceMajeure = statusCode === "BS_FORCE_MAJEURE";
             var isRefund = statusCode === "BS_REFUND";
+            var canShowRejectedRescheduleInfo = isApprovedWaitingFinal || isConfirmed || isReschedule;
 
             var hasDpInstallment = billing && Array.isArray(billing.installments) && billing.installments.some(function (i) {
                 return String(i.type_code || "") === "INS_DP";
@@ -559,7 +563,7 @@
             }
 
             var latestRejectedRescheduleReason = findLatestHistoryDescription("reschedule", "ditolak");
-            if (latestRejectedRescheduleReason) {
+            if (latestRejectedRescheduleReason && canShowRejectedRescheduleInfo) {
                 var rejectedRescheduleInfoDiv = document.createElement("div");
                 rejectedRescheduleInfoDiv.className = "estimate-box mb-3";
                 rejectedRescheduleInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-calendar-close-line me-1"></i><strong>Reschedule Ditolak</strong></p><p class="estimate-note mb-0"></p>';
@@ -639,8 +643,25 @@
                 }
             }
 
+            if (isComplete) {
+                var completeInfoDiv = document.createElement("div");
+                completeInfoDiv.className = "estimate-box mb-3";
+                completeInfoDiv.innerHTML = '<p class="estimate-note mb-1"><i class="ri-checkbox-circle-line me-1"></i><strong>Acara Telah Selesai Dilaksanakan</strong></p><p class="estimate-note mb-0">Dokumentasi untuk booking ini telah selesai dilaksanakan sesuai jadwal. Terima kasih telah mempercayakan momen spesial Anda kepada Etherno. Jika Anda masih membutuhkan bantuan lanjutan, konfirmasi file, atau tindak lanjut lainnya, silakan hubungi tim kami melalui WhatsApp.</p>';
+                wrap.appendChild(completeInfoDiv);
+
+                if (waPhone && waTemplates && waTemplates.support) {
+                    var waBtnComplete = document.createElement("a");
+                    waBtnComplete.className = "cta cta-outline mb-2";
+                    waBtnComplete.href = buildWhatsappUrl(waPhone, waTemplates.support);
+                    waBtnComplete.target = "_blank";
+                    waBtnComplete.rel = "noopener";
+                    waBtnComplete.innerHTML = '<i class="ri-whatsapp-line me-1"></i> Hubungi Tim Etherno';
+                    wrap.appendChild(waBtnComplete);
+                }
+            }
+
             if (!Array.isArray(actions) || actions.length === 0) {
-                if (!isWaitingApproval && !(isApprovedWaitingDp && !hasDpInstallment) && !(isApprovedWaitingFinal && !hasFinalInstallment) && !isConfirmed && !isReschedule && !isForceMajeure && !isRefund) {
+                if (!isWaitingApproval && !(isApprovedWaitingDp && !hasDpInstallment) && !(isApprovedWaitingFinal && !hasFinalInstallment) && !isConfirmed && !isComplete && !isReschedule && !isForceMajeure && !isRefund) {
                     var empty = document.createElement("p");
                     empty.className = "booking-disclaimer";
                     empty.textContent = "Tidak ada aksi yang tersedia saat ini.";
