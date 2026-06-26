@@ -1,12 +1,4 @@
 <footer class="public-footer" aria-label="Footer">
-
-    {{-- Wave divider --}}
-    <div class="footer-wave" aria-hidden="true">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 72" preserveAspectRatio="none">
-            <path d="M0,36 C240,72 480,0 720,36 C960,72 1200,0 1440,36 L1440,72 L0,72 Z" fill="#11110f"/>
-        </svg>
-    </div>
-
     {{-- Main footer body --}}
     <div class="footer-body">
         <div class="container">

@@ -1512,21 +1512,23 @@ body.booking-confirm-open{
 /* ── Footer ── */
 .public-footer{
   position:relative;
-  margin-top:0;
+  margin-top:56px;
   color:#f6f1e8;
-  background:transparent;
+  background:#11110f;
 }
 
 .footer-wave{
   display:block;
   line-height:0;
   overflow:hidden;
-  margin-top:56px;
+  margin:0;
+  background:#fbfaf8; /* sama dengan background page agar wave blend sempurna */
 }
 .footer-wave svg{
   display:block;
   width:100%;
   height:clamp(40px,5vw,72px);
+  vertical-align:bottom;
 }
 
 .footer-body{
@@ -1534,6 +1536,7 @@ body.booking-confirm-open{
   padding:48px 0 0;
   position:relative;
   overflow:hidden;
+  margin-top:-1px; /* tutup sub-pixel gap */
 }
 .footer-body::before{
   content:"";
