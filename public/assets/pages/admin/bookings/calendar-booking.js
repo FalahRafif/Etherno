@@ -23,6 +23,8 @@
         var previewPanel = document.getElementById("booking_calendar_preview");
         var previewClose = document.getElementById("calendar_preview_close");
         var previewDetail = document.getElementById("calendar_preview_detail");
+        var defaultDateStart = dateStartInput ? String(dateStartInput.value || "").trim() : "";
+        var defaultDateEnd = dateEndInput ? String(dateEndInput.value || "").trim() : "";
 
         function setText(id, value) {
             var element = document.getElementById(id);
@@ -182,10 +184,10 @@
                     statusSelect.value = "";
                 }
                 if (dateStartInput) {
-                    dateStartInput.value = "";
+                    dateStartInput.value = defaultDateStart;
                 }
                 if (dateEndInput) {
-                    dateEndInput.value = "";
+                    dateEndInput.value = defaultDateEnd;
                 }
                 syncStatusPills();
                 updateActiveFilterBadge();

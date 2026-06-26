@@ -82,7 +82,7 @@ class BookingCalendarService
         return [
             'filters' => $resolvedFilters,
             'statusFilters' => $statusFilters,
-            'scheduleSummary' => $this->buildScheduleSummary($baseQuery),
+            'scheduleSummary' => $this->buildScheduleSummary($baseQuery, $resolvedFilters),
             'upcomingBookings' => $this->buildUpcomingBookings($baseQuery),
             'agendaReadiness' => $this->buildAgendaReadiness($baseQuery),
         ];
@@ -193,10 +193,18 @@ class BookingCalendarService
      */
     private function resolveFilters(array $filters): array
     {
+        $dateStart = $this->normalizeDateString((string) ($filters['date_start'] ?? ''));
+        $dateEnd = $this->normalizeDateString((string) ($filters['date_end'] ?? ''));
+
+        if ($dateStart === '' && $dateEnd === '') {
+            $dateStart = Carbon::now()->startOfMonth()->toDateString();
+            $dateEnd = Carbon::now()->endOfMonth()->toDateString();
+        }
+
         return [
             'status' => strtoupper(trim((string) ($filters['status'] ?? ''))),
-            'date_start' => $this->normalizeDateString((string) ($filters['date_start'] ?? '')),
-            'date_end' => $this->normalizeDateString((string) ($filters['date_end'] ?? '')),
+            'date_start' => $dateStart,
+            'date_end' => $dateEnd,
         ];
     }
 
@@ -295,24 +303,31 @@ class BookingCalendarService
     /**
      * @return array<string, mixed>
      */
-    private function buildScheduleSummary(Builder $baseQuery): array
+    /**
+     * @param  array<string, string>  $filters
+     * @return array<string, mixed>
+     */
+    private function buildScheduleSummary(Builder $baseQuery, array $filters): array
     {
-        $weekStart = Carbon::now()->startOfWeek()->toDateString();
-        $weekEnd = Carbon::now()->endOfWeek()->toDateString();
-        $weekQuery = clone $baseQuery;
-        $this->applyCalendarDateRangeFilter($weekQuery, $weekStart, $weekEnd);
-        $weekTotal = (clone $weekQuery)->count();
-        $unpaid = $this->countByStatusCodes($weekQuery, ['BS_APPROVED_WAITING_DP', 'BS_APPROVED_WAITING_FINAL_PAYMENT']);
-        $needsAction = $this->countByStatusCodes($weekQuery, ['BS_WAITING_APPROVAL', 'BS_RESCHEDULE', 'BS_FORCE_MAJEURE', 'BS_REFUND']);
+        $total = (clone $baseQuery)->count();
+        $unpaid = $this->countByStatusCodes($baseQuery, ['BS_APPROVED_WAITING_DP', 'BS_APPROVED_WAITING_FINAL_PAYMENT']);
+        $needsAction = $this->countByStatusCodes($baseQuery, ['BS_WAITING_APPROVAL', 'BS_RESCHEDULE', 'BS_FORCE_MAJEURE', 'BS_REFUND']);
         $todayQuery = clone $baseQuery;
         $this->applyCalendarDateRangeFilter($todayQuery, Carbon::today()->toDateString(), Carbon::today()->toDateString());
         $today = $todayQuery->count();
+        $currentMonthStart = Carbon::now()->startOfMonth()->toDateString();
+        $currentMonthEnd = Carbon::now()->endOfMonth()->toDateString();
+        $isCurrentMonth = ($filters['date_start'] ?? '') === $currentMonthStart && ($filters['date_end'] ?? '') === $currentMonthEnd;
+        $scopeLabel = $isCurrentMonth ? 'Bulan ini' : 'Sesuai filter';
+        $headline = $total > 0
+            ? $scopeLabel . ' ada ' . $total . ' booking. ' . $unpaid . ' belum lunas, ' . $needsAction . ' perlu dicek.'
+            : $scopeLabel . ' belum ada booking.';
 
         return [
-            'headline' => 'Minggu ini ada ' . $weekTotal . ' booking. ' . $unpaid . ' belum lunas, ' . $needsAction . ' perlu dicek.',
-            'subline' => 'Gunakan filter status dan tanggal untuk mengecek data kalender.',
+            'headline' => $headline,
+            'subline' => 'Data kalender mengikuti filter status dan tanggal di bawah.',
             'metrics' => [
-                ['label' => 'Booking Minggu Ini', 'value' => $weekTotal, 'tone' => 'primary'],
+                ['label' => $isCurrentMonth ? 'Booking Bulan Ini' : 'Booking Terfilter', 'value' => $total, 'tone' => 'primary'],
                 ['label' => 'Perlu Dicek', 'value' => $needsAction, 'tone' => $needsAction > 0 ? 'warning' : 'success'],
                 ['label' => 'Belum Lunas', 'value' => $unpaid, 'tone' => $unpaid > 0 ? 'danger' : 'success'],
                 ['label' => 'Agenda Hari Ini', 'value' => $today, 'tone' => 'info'],

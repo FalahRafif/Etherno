@@ -29,7 +29,7 @@
 
 @include('pages.admin.partials.page-header', [
     'heading' => 'Kalender Booking',
-    'summary' => 'Visualisasi jadwal booking untuk membantu petugas melihat status booking per tanggal, lalu lanjut review ke detail booking.',
+    'summary' => 'Pantau booking berdasarkan tanggal pengajuan atau tanggal acara, lalu buka detail jika perlu diproses.',
     'actions' => $actions,
 ])
 
@@ -37,9 +37,9 @@
     <div class="row g-3 align-items-stretch">
         <div class="col-12 col-xl-7">
             <div class="calendar-workspace-hero h-100">
-                <span>Kalender Booking</span>
+                <span>Ringkasan Kalender</span>
                 <h2>{{ $scheduleSummary['headline'] ?? 'Pantau jadwal booking.' }}</h2>
-                <p>{{ $scheduleSummary['subline'] ?? 'Gunakan filter status dan tanggal untuk mengecek data kalender.' }}</p>
+                <p>{{ $scheduleSummary['subline'] ?? 'Data kalender mengikuti filter status dan tanggal di bawah.' }}</p>
             </div>
         </div>
         <div class="col-12 col-xl-5">
@@ -71,8 +71,8 @@
                 <strong>Catatan tanggal kalender</strong>
                 <p class="mb-2">Warna label menunjukkan sumber tanggal yang dipakai:</p>
                 <div class="calendar-date-info-legend">
-                    <span><i class="calendar-legend-line"></i> Label Warna Abu-abu + garis warna: Booking di ajukan dan belum disetujui dan belum ada pembayaran</span>
-                    <span><i class="calendar-legend-full"></i> Label Warna penuh status: Booking yang sudah disetujui dan memiliki pembayaran</span>
+                    <span><i class="calendar-legend-line"></i> Label Warna Abu-abu + garis warna: Booking di ajukan dan belum disetujui dan belum ada pembayaran (Data ditampilkan adalah tanggal pembuatan)</span>
+                    <span><i class="calendar-legend-full"></i> Label Warna penuh status: Booking yang sudah disetujui dan memiliki pembayaran (data ditampilkan adalah tanggal pelaksanaan acara)</span>
                 </div>
             </div>
         </div>

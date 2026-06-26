@@ -287,7 +287,7 @@ class BookingListService
         return [
             'status' => isset($filters['status']) ? trim((string) $filters['status']) : '',
             'case_id' => isset($filters['case_id']) ? trim((string) $filters['case_id']) : '',
-            'date_range' => isset($filters['date_range']) ? trim((string) $filters['date_range']) : 'week',
+            'date_range' => isset($filters['date_range']) ? trim((string) $filters['date_range']) : 'month',
             'date_start' => isset($filters['date_start']) ? trim((string) $filters['date_start']) : '',
             'date_end' => isset($filters['date_end']) ? trim((string) $filters['date_end']) : '',
         ];
