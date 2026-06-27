@@ -120,9 +120,22 @@
         @enderror
       </div>
 
-      <div class="form-field">
+      <div class="form-field booking-phone-field">
         <label class="form-label" for="booking_whatsapp">No WhatsApp</label>
-        <input class="form-input" type="tel" id="booking_whatsapp" name="booking_whatsapp" value="{{ old('booking_whatsapp') }}" placeholder="08xxxxxxxxxx" required>
+        <div class="booking-phone-input-group">
+          <select
+            class="form-input form-select booking-select2 booking-phone-country-select"
+            id="booking_phone_country"
+            name="booking_phone_country"
+            data-placeholder="Negara"
+            data-selected-country="{{ old('booking_phone_country', 'ID') }}"
+            aria-label="Negara nomor WhatsApp"
+            required>
+            <option value="">Negara</option>
+          </select>
+          <input class="form-input" type="tel" id="booking_whatsapp" name="booking_whatsapp" value="{{ old('booking_whatsapp') }}" placeholder="Masukkan nomor aktif" inputmode="tel" autocomplete="tel-national" required>
+        </div>
+        <p class="booking-disclaimer text-danger mb-0" id="booking_whatsapp_error" hidden></p>
         @error('booking_whatsapp')
           <p class="booking-disclaimer text-danger mb-0">{{ $message }}</p>
         @enderror

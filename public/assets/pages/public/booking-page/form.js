@@ -20,11 +20,35 @@
                 return;
             }
 
-            $el.select2({
+            var isPhoneCountrySelect = selectEl.id === "booking_phone_country";
+            var selectOptions = {
                 width: "100%",
-                allowClear: true,
+                allowClear: !isPhoneCountrySelect,
                 placeholder: selectEl.getAttribute("data-placeholder") || ""
-            });
+            };
+
+            if (isPhoneCountrySelect) {
+                selectOptions.dropdownAutoWidth = true;
+                selectOptions.dropdownCssClass = "booking-phone-country-dropdown";
+                selectOptions.templateSelection = function (item) {
+                    var value = String((item && item.id) || "").trim().toUpperCase();
+                    if (value === "") {
+                        return selectEl.getAttribute("data-placeholder") || "";
+                    }
+
+                    if (window.libphonenumber && typeof window.libphonenumber.getCountryCallingCode === "function") {
+                        try {
+                            return "+" + window.libphonenumber.getCountryCallingCode(value);
+                        } catch (_error) {
+                            return value;
+                        }
+                    }
+
+                    return value;
+                };
+            }
+
+            $el.select2(selectOptions);
         }
 
         function refreshSelect2(selectEl) {
@@ -625,6 +649,251 @@
             queueEstimateRender();
         }
 
+        var phoneController = null;
+
+        function setupPhoneInput() {
+            var countrySelect = document.getElementById("booking_phone_country");
+            var phoneInput = document.getElementById("booking_whatsapp");
+
+            if (!countrySelect || !phoneInput) {
+                return null;
+            }
+
+            var phoneLib = window.libphonenumber || null;
+            var displayNames = typeof Intl !== "undefined" && typeof Intl.DisplayNames === "function"
+                ? new Intl.DisplayNames(["id"], { type: "region" })
+                : null;
+            var fallbackCountries = ["ID", "MY", "SG", "TH", "PH", "AU", "NZ", "US", "GB"];
+
+            function getCountries() {
+                if (phoneLib && typeof phoneLib.getCountries === "function") {
+                    return phoneLib.getCountries().slice();
+                }
+
+                return fallbackCountries.slice();
+            }
+
+            function getCountryCallingCode(country) {
+                if (!country || !phoneLib || typeof phoneLib.getCountryCallingCode !== "function") {
+                    return "";
+                }
+
+                try {
+                    return String(phoneLib.getCountryCallingCode(country));
+                } catch (_error) {
+                    return "";
+                }
+            }
+
+            function getMaxNationalDigits() {
+                var callingCode = getCountryCallingCode(getSelectedCountry());
+                var maxDigits = 15 - String(callingCode || "").length;
+
+                return Math.max(6, Math.min(maxDigits || 15, 15));
+            }
+
+            function formatDigitsFallback(digits) {
+                var normalizedDigits = String(digits || "");
+                if (normalizedDigits.length <= 4) {
+                    return normalizedDigits;
+                }
+
+                if (getSelectedCountry() === "ID") {
+                    return [
+                        normalizedDigits.slice(0, 3),
+                        normalizedDigits.slice(3, 7),
+                        normalizedDigits.slice(7, 11),
+                        normalizedDigits.slice(11)
+                    ].filter(function (group) {
+                        return group !== "";
+                    }).join(" ");
+                }
+
+                var groups = [normalizedDigits.slice(0, 4)];
+                for (var index = 4; index < normalizedDigits.length; index += 4) {
+                    groups.push(normalizedDigits.slice(index, index + 4));
+                }
+
+                return groups.join(" ");
+            }
+
+            function getCountryLabel(country) {
+                var normalizedCountry = String(country || "").trim().toUpperCase();
+                var countryName = displayNames ? (displayNames.of(normalizedCountry) || normalizedCountry) : normalizedCountry;
+                var callingCode = getCountryCallingCode(normalizedCountry);
+
+                return callingCode !== "" ? countryName + " (+" + callingCode + ")" : countryName;
+            }
+
+            function inferCountryFromPhone(value) {
+                var normalizedValue = String(value || "").trim();
+                if (normalizedValue === "" || !phoneLib || typeof phoneLib.parsePhoneNumberFromString !== "function") {
+                    return "";
+                }
+
+                try {
+                    var parsed = phoneLib.parsePhoneNumberFromString(normalizedValue);
+                    if (parsed && parsed.country) {
+                        return String(parsed.country).toUpperCase();
+                    }
+                } catch (_error) {
+                    return "";
+                }
+
+                return "";
+            }
+
+            function getSelectedCountry() {
+                return String(countrySelect.value || countrySelect.getAttribute("data-selected-country") || "ID").trim().toUpperCase() || "ID";
+            }
+
+            function formatDisplayValue(rawValue) {
+                var normalizedValue = String(rawValue || "").trim();
+                if (normalizedValue === "") {
+                    return "";
+                }
+
+                var digitsOnly = normalizedValue.replace(/\D+/g, "").slice(0, getMaxNationalDigits());
+                if (digitsOnly === "") {
+                    return "";
+                }
+
+                if (phoneLib && typeof phoneLib.AsYouType === "function") {
+                    try {
+                        var formatter = new phoneLib.AsYouType(getSelectedCountry());
+                        var formattedValue = formatter.input(digitsOnly);
+                        return formattedValue !== digitsOnly ? formattedValue : formatDigitsFallback(digitsOnly);
+                    } catch (_error) {
+                        return formatDigitsFallback(digitsOnly);
+                    }
+                }
+
+                return formatDigitsFallback(digitsOnly);
+            }
+
+            function parseInternationalValue(rawValue) {
+                var normalizedValue = String(rawValue || "").trim();
+                if (normalizedValue === "") {
+                    return "";
+                }
+
+                if (!phoneLib || typeof phoneLib.parsePhoneNumberFromString !== "function") {
+                    return normalizedValue.replace(/\s+/g, "");
+                }
+
+                try {
+                    var parsed = phoneLib.parsePhoneNumberFromString(normalizedValue, getSelectedCountry());
+                    if (parsed && typeof parsed.isValid === "function" && parsed.isValid() && parsed.number) {
+                        return String(parsed.number);
+                    }
+                } catch (_error) {
+                    return "";
+                }
+
+                return "";
+            }
+
+            function setPhoneError(message) {
+                var errorNode = document.getElementById("booking_whatsapp_error");
+                if (!errorNode) {
+                    return;
+                }
+
+                var normalizedMessage = String(message || "").trim();
+                errorNode.textContent = normalizedMessage;
+                errorNode.hidden = normalizedMessage === "";
+            }
+
+            function populateCountryOptions() {
+                var countries = getCountries().map(function (country) {
+                    return String(country || "").trim().toUpperCase();
+                }).filter(function (country) {
+                    return country !== "";
+                });
+
+                countries.sort(function (left, right) {
+                    return getCountryLabel(left).localeCompare(getCountryLabel(right), "id");
+                });
+
+                countrySelect.innerHTML = "";
+
+                var placeholderOption = document.createElement("option");
+                placeholderOption.value = "";
+                placeholderOption.textContent = "Pilih negara";
+                countrySelect.appendChild(placeholderOption);
+
+                countries.forEach(function (country) {
+                    var option = document.createElement("option");
+                    option.value = country;
+                    option.textContent = getCountryLabel(country);
+                    countrySelect.appendChild(option);
+                });
+
+                var selectedCountry = String(countrySelect.getAttribute("data-selected-country") || "").trim().toUpperCase();
+                if (selectedCountry === "") {
+                    selectedCountry = inferCountryFromPhone(phoneInput.value) || "ID";
+                }
+                if (!countries.includes(selectedCountry)) {
+                    selectedCountry = countries.includes("ID") ? "ID" : (countries[0] || "");
+                }
+
+                countrySelect.value = selectedCountry;
+                countrySelect.disabled = countries.length === 0;
+            }
+
+            function syncDisplayValue() {
+                phoneInput.value = formatDisplayValue(phoneInput.value);
+                phoneInput.maxLength = getMaxNationalDigits() + 4;
+                setPhoneError("");
+            }
+
+            populateCountryOptions();
+            syncDisplayValue();
+
+            countrySelect.addEventListener("change", syncDisplayValue);
+            phoneInput.addEventListener("input", syncDisplayValue);
+            phoneInput.addEventListener("blur", syncDisplayValue);
+
+            return {
+                syncDisplayValue: syncDisplayValue,
+                getSummaryText: function () {
+                    var internationalValue = parseInternationalValue(phoneInput.value);
+                    if (internationalValue !== "") {
+                        if (phoneLib && typeof phoneLib.parsePhoneNumberFromString === "function") {
+                            try {
+                                var parsed = phoneLib.parsePhoneNumberFromString(internationalValue);
+                                if (parsed && typeof parsed.formatInternational === "function") {
+                                    return parsed.formatInternational();
+                                }
+                            } catch (_error) {
+                                return internationalValue;
+                            }
+                        }
+
+                        return internationalValue;
+                    }
+
+                    var displayValue = String(phoneInput.value || "").trim();
+                    if (displayValue === "") {
+                        return "-";
+                    }
+
+                    return getCountryLabel(getSelectedCountry()) + " · " + displayValue;
+                },
+                prepareForSubmit: function () {
+                    var internationalValue = parseInternationalValue(phoneInput.value);
+                    if (internationalValue === "") {
+                        setPhoneError("Masukkan nomor WhatsApp yang valid sesuai negara yang dipilih.");
+                        return false;
+                    }
+
+                    phoneInput.value = internationalValue;
+                    setPhoneError("");
+                    return true;
+                }
+            };
+        }
+
         function setupBookingSubmitConfirmation() {
             var modal = document.getElementById("booking_confirmation_modal");
             var confirmSubmitButton = document.getElementById("booking_confirm_submit");
@@ -705,9 +974,10 @@
                 var pinLabel = latitude !== "" && longitude !== ""
                     ? latitude + ", " + longitude
                     : "";
+                var phoneLabel = phoneController ? phoneController.getSummaryText() : getValue("booking_whatsapp");
 
                 setSummaryValue("confirm_name", getValue("booking_name"));
-                setSummaryValue("confirm_whatsapp", getValue("booking_whatsapp"));
+                setSummaryValue("confirm_whatsapp", phoneLabel);
                 setSummaryValue("confirm_schedule", joinNonEmpty([dateLabel, sessionLabel], " - "));
                 setSummaryValue("confirm_package", joinNonEmpty([packageTypeLabel, packageLabel], " - "));
                 setSummaryValue("confirm_location", joinNonEmpty([provinceLabel, cityLabel, districtLabel, villageLabel], ", "));
@@ -761,6 +1031,10 @@
                     return;
                 }
 
+                if (phoneController && !phoneController.prepareForSubmit()) {
+                    return;
+                }
+
                 isConfirmedSubmit = true;
                 closeModal();
                 form.submit();
@@ -774,6 +1048,10 @@
                 event.preventDefault();
                 if (typeof form.reportValidity === "function" && !form.reportValidity()) {
                     return;
+                }
+
+                if (phoneController) {
+                    phoneController.syncDisplayValue();
                 }
 
                 populateSummary();
@@ -863,6 +1141,7 @@
             });
         }
 
+        phoneController = setupPhoneInput();
         initSelect2Group(".booking-select2");
         setupPackageFilter();
         setupLocationCascade();

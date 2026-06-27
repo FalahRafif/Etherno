@@ -1,6 +1,7 @@
 @if(request()->routeIs('booking.page'))
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://unpkg.com/libphonenumber-js@1.12.10/bundle/libphonenumber-js.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 @php
   $bookingFormScriptPath = public_path('assets/pages/public/booking-page/form.js');

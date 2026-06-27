@@ -1232,7 +1232,7 @@ class BookingDetailService
     private function detailRelations(): array
     {
         return [
-            'customer:id,first_name,last_name,phone_number,email',
+            'customer:id,first_name,last_name,phone_number,phone_country_code,email',
             'package:id,name,price,address,description,package_type,thumbnail_attachment_id',
             'package.packageType:id,code,description',
             'package.benefits:id,package_id,name,description',
@@ -1562,23 +1562,78 @@ class BookingDetailService
 
     private function buildTimeline(Booking $booking): array
     {
-        $history = $booking->history->sortBy('created_at');
+        $history = $booking->history->sortByDesc('created_at');
 
         return $history->map(function ($item) {
             $code = strtoupper(trim((string) ($item->status?->code ?? '')));
             $historyDescription = trim((string) data_get($item, 'description', ''));
             $statusDescription = trim((string) ($item->status?->description ?? ''));
+            $description = $historyDescription !== ''
+                ? $historyDescription
+                : ($statusDescription !== '' ? $statusDescription : $this->resolvePaymentHint($code));
 
             return [
                 'label' => $this->resolveStatusLabel($code),
-                'description' => $historyDescription !== ''
-                    ? $historyDescription
-                    : ($statusDescription !== '' ? $statusDescription : $this->resolvePaymentHint($code)),
+                'description' => $description,
+                'action' => $this->resolveTimelineAction($code, $description),
+                'message' => $this->resolveTimelineMessage($description),
+                'reason' => $this->resolveTimelineReason($description),
                 'operator' => trim((string) ($item->operator?->name ?? '-')),
                 'date' => $item->created_at?->format('Y-m-d H:i') ?? '-',
                 'code' => $code,
             ];
         })->values()->all();
+    }
+
+    private function resolveTimelineAction(string $statusCode, string $description): string
+    {
+        $normalizedDescription = strtolower($description);
+
+        return match (true) {
+            str_contains($normalizedDescription, 'booking disetujui') => 'Approve Request Booking',
+            str_contains($normalizedDescription, 'booking ditolak') || $statusCode === 'BS_REJECTED' => 'Reject Request Booking',
+            str_contains($normalizedDescription, 'billing diinisialisasi') => 'Inisialisasi Billing',
+            str_contains($normalizedDescription, 'dp installment dibuat') => 'Generate Tagihan DP',
+            str_contains($normalizedDescription, 'installment pelunasan dibuat') => 'Generate Tagihan Pelunasan',
+            str_contains($normalizedDescription, 'dp verified') => 'Verifikasi Pembayaran DP',
+            str_contains($normalizedDescription, 'pelunasan terverifikasi') => 'Verifikasi Pelunasan',
+            str_contains($normalizedDescription, 'bukti pembayaran di-approve') => 'Approve Bukti Pembayaran',
+            str_contains($normalizedDescription, 'bukti pembayaran ditolak') => 'Reject Bukti Pembayaran',
+            str_contains($normalizedDescription, 'booking selesai') => 'Selesaikan Booking',
+            str_contains($normalizedDescription, 'force majeure diajukan') => 'Ajukan Force Majeure',
+            str_contains($normalizedDescription, 'customer setuju force majeure') => 'Customer Setuju Force Majeure',
+            str_contains($normalizedDescription, 'customer tidak setuju force majeure') => 'Customer Tidak Setuju Force Majeure',
+            str_contains($normalizedDescription, 'reschedule disetujui') => 'Approve Reschedule',
+            str_contains($normalizedDescription, 'reschedule ke') && str_contains($normalizedDescription, 'ditolak') => 'Reject Reschedule',
+            str_contains($normalizedDescription, 'bukti refund diupload') => 'Upload Bukti Refund',
+            default => $this->resolveStatusLabel($statusCode),
+        };
+    }
+
+    private function resolveTimelineMessage(string $description): string
+    {
+        $normalizedDescription = trim($description);
+
+        return $normalizedDescription !== '' ? $normalizedDescription : '-';
+    }
+
+    private function resolveTimelineReason(string $description): string
+    {
+        $normalizedDescription = trim($description);
+        if ($normalizedDescription === '') {
+            return '-';
+        }
+
+        foreach (['Alasan:', 'ditolak:', 'Booking kembali ke Confirmed:', ':'] as $delimiter) {
+            $position = stripos($normalizedDescription, $delimiter);
+            if ($position !== false) {
+                $reason = trim(substr($normalizedDescription, $position + strlen($delimiter)));
+
+                return $reason !== '' ? $reason : '-';
+            }
+        }
+
+        return '-';
     }
 
     private function buildBillingPayload(Booking $booking): ?array
