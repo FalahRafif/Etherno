@@ -16,21 +16,24 @@
     <p class="section-lead">Beberapa hasil visual Etherno untuk membantu Anda merasakan tone dokumentasi, komposisi, dan cerita yang akan dibangun di hari acara.</p>
   </div>
 
-  @if ($portfolioImages->isNotEmpty())
-    <div class="portfolio-slider" aria-label="Portfolio dokumentasi Etherno">
-      <div class="portfolio-track">
-        @foreach ($portfolioImages as $imagePath)
-          <figure class="portfolio-slide">
-            <img src="{{ asset($imagePath) }}" alt="Portfolio dokumentasi Etherno {{ $loop->iteration }}" loading="lazy">
-          </figure>
-        @endforeach
+  <div class="portfolio-category-list" aria-label="Kategori portfolio">
+    <span>Wedding</span>
+    <span>Engagement</span>
+    <span>Traditional</span>
+    <span>Indoor</span>
+    <span>Outdoor</span>
+  </div>
 
-        @foreach ($portfolioImages as $imagePath)
-          <figure class="portfolio-slide" aria-hidden="true">
-            <img src="{{ asset($imagePath) }}" alt="" loading="lazy">
-          </figure>
-        @endforeach
-      </div>
+  @if ($portfolioImages->isNotEmpty())
+    <div class="portfolio-masonry" aria-label="Portfolio dokumentasi Etherno">
+      @foreach ($portfolioImages->take(8) as $imagePath)
+        <figure class="portfolio-masonry-item {{ $loop->first ? 'is-featured' : '' }} {{ $loop->iteration === 4 ? 'is-tall' : '' }}">
+          <img src="{{ asset($imagePath) }}" alt="Portfolio dokumentasi Etherno {{ $loop->iteration }}" loading="lazy">
+        </figure>
+      @endforeach
+    </div>
+    <div class="portfolio-more">
+      <a class="cta cta-outline" href="{{ route('portfolio.page') }}">Lihat Semua Portfolio</a>
     </div>
   @endif
 </section>

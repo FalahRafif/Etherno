@@ -42,10 +42,11 @@
                 );
             }
             $packageTag = match (true) {
-                $loop->first => 'Best Seller',
-                $loop->index === 1 => 'Paling Direkomendasikan',
-                default => 'Value Terbaik',
+                $loop->first => 'Most Popular',
+                $loop->index === 1 => 'Best Value',
+                default => 'Premium Choice',
             };
+            $packageHighlights = ['Durasi fleksibel', 'Photographer profesional', 'Edited file pilihan', 'Konsultasi timeline'];
           @endphp
           <article class="package {{ $loop->index === 1 ? 'package-featured' : 'package-soft' }}">
             @if ($thumbnailUrl)
@@ -53,11 +54,15 @@
                 <img src="{{ $thumbnailUrl }}" alt="{{ $package->name }}" loading="lazy">
               </figure>
             @endif
-            {{-- <p class="package-tag">{{ $packageTag }}</p> --}}
-            <p class="package-tag">pilihan paket</p>
+            <p class="package-tag">{{ $packageTag }}</p>
             <h3>{{ $package->name }}</h3>
             <div class="price">Rp {{ number_format((float) $package->price, 0, ',', '.') }}</div>
             <p class="package-copy">{{ $package->description ?: 'Ideal untuk Anda yang ingin hasil dokumentasi rapi, emosional, dan siap dibagikan.' }}</p>
+            <ul class="package-list package-highlight-list">
+              @foreach ($packageHighlights as $highlight)
+                <li>{{ $highlight }}</li>
+              @endforeach
+            </ul>
             <ul class="package-list">
               @forelse ($benefits as $benefit)
                 <li>{{ $benefit }}</li>
@@ -65,6 +70,7 @@
                 <li>Benefit detail sedang diperbarui, konsultasi cepat tersedia via WhatsApp.</li>
               @endforelse
             </ul>
+            <a class="cta package-card-cta" href="{{ route('booking.page', ['package' => $package->id]) }}">Pilih Paket Ini</a>
           </article>
         @empty
           <article class="package-empty">
