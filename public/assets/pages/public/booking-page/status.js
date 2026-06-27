@@ -799,7 +799,7 @@
                         if (isPastDeadline) {
                             noteEl.innerHTML = '<i class="ri-error-warning-line me-1"></i><strong>Batas Reschedule Terlewati:</strong> Pengajuan reschedule seharusnya diajukan paling lambat <strong>' + deadlineStr + '</strong> (H-' + maxDays + ' sebelum acara). Hubungi tim Etherno via WhatsApp untuk bantuan.';
                         } else {
-                            noteEl.innerHTML = '<i class="ri-calendar-event-line me-1"></i><strong>Batas Pengajuan:</strong> Reschedule harus diajukan paling lambat <strong>' + deadlineStr + '</strong> (H-' + maxDays + ' sebelum acara). Pilih tanggal baru di luar tanggal masa lalu.';
+                            noteEl.innerHTML = '<i class="ri-calendar-event-line me-1"></i><strong>Batas Pengajuan:</strong> Reschedule harus diajukan paling lambat <strong>' + deadlineStr + '</strong> (H-' + maxDays + ' sebelum acara).';
                         }
                     }
                     deadlineInfo.hidden = false;

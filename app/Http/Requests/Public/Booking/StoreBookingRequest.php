@@ -20,6 +20,7 @@ class StoreBookingRequest extends FormRequest
         return [
             'booking_name' => ['required', 'string', 'max:255'],
             'booking_whatsapp' => ['required', 'string', 'max:30'],
+            'booking_phone_country' => ['nullable', 'string', 'size:2'],
             'booking_date' => ['required', 'date', 'after:today'],
             'booking_package_type' => [
                 'required',
@@ -111,6 +112,7 @@ class StoreBookingRequest extends FormRequest
         $pinLatitude = trim((string) $this->input('booking_pin_lat'));
         $pinLongitude = trim((string) $this->input('booking_pin_lng'));
         $eventDetail = trim((string) $this->input('booking_detail'));
+        $phoneCountryCode = strtoupper(preg_replace('/[^A-Z]/', '', trim((string) $this->input('booking_phone_country', 'ID')))) ?: 'ID';
         $pinDetail = sprintf('Patokan pin lokasi: %s', $pinAddress);
         $combinedEventDetail = $eventDetail !== ''
             ? $eventDetail."\n\n".$pinDetail
@@ -119,6 +121,7 @@ class StoreBookingRequest extends FormRequest
         return [
             'name' => trim((string) $this->input('booking_name')),
             'phone_number' => trim((string) $this->input('booking_whatsapp')),
+            'phone_country_code' => $phoneCountryCode,
             'event_date' => trim((string) $this->input('booking_date')),
             'package_type_id' => (int) $this->input('booking_package_type'),
             'event_session_id' => (int) $this->input('booking_session'),

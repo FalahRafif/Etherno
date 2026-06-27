@@ -43,6 +43,34 @@
     $locationPricingInfo = $locationPricingInfo ?? ['found' => false, 'label' => '-'];
     $googleMapsUrl = $googleMapsUrl ?? '';
     $packageBenefits = $packageBenefits ?? collect();
+    $formatPhoneNumberForDisplay = static function (?string $phoneNumber, ?string $countryCode = null): string {
+        $normalizedPhone = trim((string) $phoneNumber);
+        if ($normalizedPhone === '') {
+            return '-';
+        }
+
+        $digits = preg_replace('/\D+/', '', $normalizedPhone) ?? '';
+        if ($digits === '') {
+            return $normalizedPhone;
+        }
+
+        if (strtoupper(trim((string) $countryCode)) === 'ID' && str_starts_with($digits, '62')) {
+            $nationalDigits = substr($digits, 2);
+
+            return '+62 ' . trim(implode(' ', array_filter([
+                substr($nationalDigits, 0, 3),
+                substr($nationalDigits, 3, 4),
+                substr($nationalDigits, 7, 4),
+                substr($nationalDigits, 11),
+            ], static fn (string $part): bool => $part !== '')));
+        }
+
+        if (str_starts_with($normalizedPhone, '+')) {
+            return '+' . trim(chunk_split($digits, 4, ' '));
+        }
+
+        return trim(chunk_split($digits, 4, ' '));
+    };
     $timeline = $timeline ?? [];
     $billing = $billing ?? null;
     $billingTools = $billingTools ?? [];
@@ -66,7 +94,7 @@
 @include('pages.admin.partials.stats-grid', ['stats' => $stats])
 
 <div class="row g-3">
-    <div class="col-12 col-xl-7">
+    <div class="col-12 col-xl-9 booking-detail-main-column">
         @php
             $showBillingTab = in_array($statusCode, [
                 'BS_APPROVED_WAITING_DP',
@@ -82,35 +110,39 @@
 
         <div class="card custom-card mb-3">
             <div class="card-header pb-0">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <h5 class="card-title mb-0">Informasi Booking</h5>
-                </div>
-
-                <div class="booking-detail-main-tabs-wrap mt-3">
-                    <ul class="nav nav-tabs booking-detail-main-tabs flex-nowrap" id="booking_detail_main_tabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="tab_customer_event" data-bs-toggle="tab" data-bs-target="#pane_customer_event" type="button" role="tab" aria-controls="pane_customer_event" aria-selected="true">
-                                Data Customer & Acara
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab_package_detail" data-bs-toggle="tab" data-bs-target="#pane_package_detail" type="button" role="tab" aria-controls="pane_package_detail" aria-selected="false">
-                                Detail Paket
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab_location_schedule" data-bs-toggle="tab" data-bs-target="#pane_location_schedule" type="button" role="tab" aria-controls="pane_location_schedule" aria-selected="false">
-                                Lokasi & Jadwal
-                            </button>
-                        </li>
-                        @if($showBillingTab)
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab_billing_payment" data-bs-toggle="tab" data-bs-target="#pane_billing_payment" type="button" role="tab" aria-controls="pane_billing_payment" aria-selected="false">
-                                Billing & Pembayaran
-                            </button>
-                        </li>
-                        @endif
-                    </ul>
+                <div class="booking-detail-header">
+                    <h5 class="card-title mb-0 text-primary"><i class="ri-action me-1"></i> Informasi Booking</h5>
+                    <div class="booking-detail-main-tabs-wrap mt-3">
+                        <ul class="nav nav-tabs booking-detail-main-tabs" id="booking_detail_main_tabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="tab_customer_event" data-bs-toggle="tab" data-bs-target="#pane_customer_event" type="button" role="tab" aria-controls="pane_customer_event" aria-selected="true">
+                                    Data Customer & Acara
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="tab_package_detail" data-bs-toggle="tab" data-bs-target="#pane_package_detail" type="button" role="tab" aria-controls="pane_package_detail" aria-selected="false">
+                                    Detail Paket
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="tab_location_schedule" data-bs-toggle="tab" data-bs-target="#pane_location_schedule" type="button" role="tab" aria-controls="pane_location_schedule" aria-selected="false">
+                                    Lokasi & Jadwal
+                                </button>
+                            </li>
+                            @if($showBillingTab)
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="tab_billing_payment" data-bs-toggle="tab" data-bs-target="#pane_billing_payment" type="button" role="tab" aria-controls="pane_billing_payment" aria-selected="false">
+                                    Billing & Pembayaran
+                                </button>
+                            </li>
+                            @endif
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="tab_history_status" data-bs-toggle="tab" data-bs-target="#pane_history_status" type="button" role="tab" aria-controls="pane_history_status" aria-selected="false">
+                                    History Status
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
@@ -125,7 +157,7 @@
                                 </tr>
                                 <tr>
                                     <td class="text-muted ps-0">No WhatsApp</td>
-                                    <td>{{ $booking->customer?->phone_number ?? '-' }}</td>
+                                    <td>{{ $formatPhoneNumberForDisplay($booking->customer?->phone_number, $booking->customer?->phone_country_code) }}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-muted ps-0">Jenis Acara</td>
@@ -615,11 +647,65 @@
                     @endif
                 </div>
                 @endif
+                <div class="tab-pane fade" id="pane_history_status" role="tabpanel" aria-labelledby="tab_history_status">
+                    @if(empty($timeline))
+                        <div class="alert alert-light border mb-0">Belum ada riwayat status untuk booking ini.</div>
+                    @else
+                        <div class="booking-admin-timeline">
+                            @foreach($timeline as $index => $item)
+                                @php
+                                    $isLast = $index === array_key_last($timeline);
+                                    $badgeClass = match($item['code']) {
+                                        'BS_WAITING_APPROVAL' => 'bg-warning-transparent text-warning',
+                                        'BS_APPROVED_WAITING_DP' => 'bg-info-transparent text-info',
+                                        'BS_APPROVED_WAITING_FINAL_PAYMENT' => 'bg-info-transparent text-info',
+                                        'BS_CONFIRMED', 'BS_COMPLETE' => 'bg-success-transparent text-success',
+                                        'BS_CANCEL', 'BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_REFUND', 'BS_REJECTED' => 'bg-danger-transparent text-danger',
+                                        'BS_FORCE_MAJEURE', 'BS_RESCHEDULE' => 'bg-warning-transparent text-warning',
+                                        default => 'bg-light text-muted',
+                                    };
+                                @endphp
+                                <div class="booking-admin-timeline-item {{ $isLast ? 'is-last' : '' }}">
+                                    <div class="booking-admin-timeline-marker {{ $badgeClass }}">
+                                        <i class="ri-checkbox-blank-circle-fill"></i>
+                                    </div>
+                                    <div class="booking-admin-timeline-content">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                            <div>
+                                                <span class="badge {{ $badgeClass }} mb-1">{{ $item['label'] }}</span>
+                                                <div class="small text-muted">Oleh: {{ $item['operator'] }}</div>
+                                            </div>
+                                            <div class="booking-admin-timeline-date text-muted">
+                                                <i class="ri-time-line me-1"></i>{{ $item['date'] }}
+                                            </div>
+                                        </div>
+                                        <div class="booking-admin-timeline-meta">
+                                            <div class="booking-admin-timeline-meta-row">
+                                                <span>Aksi</span>
+                                                <strong>{{ $item['action'] ?? '-' }}</strong>
+                                            </div>
+                                            <div class="booking-admin-timeline-meta-row">
+                                                <span>Message</span>
+                                                <div class="booking-detail-preline">{{ $item['message'] ?? ($item['description'] ?? '-') }}</div>
+                                            </div>
+                                            @if(($item['reason'] ?? '-') !== '-')
+                                                <div class="booking-admin-timeline-meta-row">
+                                                    <span>Alasan</span>
+                                                    <div class="booking-detail-preline">{{ $item['reason'] }}</div>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="col-12 col-xl-5">
+    <div class="col-12 col-xl-3">
         <div class="card custom-card mb-3">
             <div class="card-header bg-primary-transparent">
                 <h5 class="card-title mb-0 text-primary"><i class="ri-action me-1"></i> Aksi</h5>
@@ -723,47 +809,6 @@
                 @endif
             </div>
         </div>
-
-        <div class="card custom-card mb-3">
-            <div class="card-header pb-0">
-                <h5 class="card-title mb-0">History Status Booking</h5>
-            </div>
-            <div class="card-body tab-content pt-3" id="booking_detail_side_tabs_content">
-                <div class="tab-pane fade show active" id="pane_history_status" role="tabpanel" aria-labelledby="tab_history_status">
-                    @if(empty($timeline))
-                        <p class="text-muted mb-0">Belum ada riwayat status.</p>
-                    @else
-                        <ul class="list-unstyled mb-0">
-                            @foreach($timeline as $index => $item)
-                                @php
-                                    $isLast = $index === array_key_last($timeline);
-                                    $badgeClass = match($item['code']) {
-                                        'BS_WAITING_APPROVAL' => 'bg-warning-transparent text-warning',
-                                        'BS_APPROVED_WAITING_DP' => 'bg-info-transparent text-info',
-                                        'BS_APPROVED_WAITING_FINAL_PAYMENT' => 'bg-info-transparent text-info',
-                                        'BS_CONFIRMED', 'BS_COMPLETE' => 'bg-success-transparent text-success',
-                                        'BS_CANCEL', 'BS_EXPIRED', 'BS_EXPIRED_DP', 'BS_REFUND', 'BS_REJECTED' => 'bg-danger-transparent text-danger',
-                                        'BS_FORCE_MAJEURE', 'BS_RESCHEDULE' => 'bg-warning-transparent text-warning',
-                                        default => 'bg-light text-muted',
-                                    };
-                                @endphp
-                                <li class="d-flex align-items-start gap-3 {{ !$isLast ? 'mb-3 pb-3 border-bottom' : '' }}">
-                                    <div class="avatar avatar-sm {{ $badgeClass }} rounded">
-                                        <span class="avatar-title fs-6"><i class="ri-checkbox-blank-circle-fill"></i></span>
-                                    </div>
-                                    <div class="flex-fill">
-                                        <p class="mb-1 fw-semibold">{{ $item['label'] }}</p>
-                                        <p class="mb-1 text-muted small">{{ $item['description'] }}</p>
-                                        <small class="text-muted">Oleh: {{ $item['operator'] }} &middot; {{ $item['date'] }}</small>
-                                    </div>
-                                </li>
-                            @endforeach
-                        </ul>
-                    @endif
-                </div>
-            </div>
-        </div>
-
     </div>
 </div>
 
@@ -788,7 +833,7 @@
                     </div>
                     <div class="mb-2">
                         <label for="billing_detail_amount" class="form-label">Nominal</label>
-                        <input type="number" id="billing_detail_amount" name="amount" min="1" step="any" class="form-control" placeholder="Contoh: 500000" required>
+                        <input type="text" id="billing_detail_amount" name="amount" class="form-control" inputmode="numeric" autocomplete="off" placeholder="Contoh: Rp 500.000" required>
                     </div>
                     <div class="mb-0">
                         <label for="billing_detail_description" class="form-label">Catatan (opsional)</label>
@@ -1116,14 +1161,38 @@
 
 @push('styles')
 <style>
+    .booking-detail-main-column,
+    .custom-card,
+    .custom-card .card-header,
+    .custom-card .card-body,
+    .booking-detail-header{
+        min-width:0;
+    }
+    .booking-detail-header{
+        max-width:100%;
+        overflow:hidden;
+    }
     .booking-detail-main-tabs-wrap{
+        display:block;
         overflow-x:auto;
+        overflow-y:hidden;
+        width:100%;
+        max-width:100%;
+        min-width:0;
+        -webkit-overflow-scrolling:touch;
+        scrollbar-width:thin;
     }
     .booking-detail-main-tabs{
+        display:inline-flex;
+        width:max-content;
         min-width:max-content;
+        flex-wrap:nowrap !important;
         border-bottom:0;
         gap:.25rem;
         padding-bottom:.35rem;
+    }
+    .booking-detail-main-tabs .nav-item{
+        flex:0 0 auto;
     }
     .booking-detail-main-tabs .nav-link{
         border-radius:.5rem .5rem 0 0;
@@ -1152,6 +1221,85 @@
     .billing-subtabs .nav-link.active{
         background:rgba(var(--primary-rgb),.12);
         color:var(--primary-color);
+    }
+    .booking-admin-timeline{
+        position:relative;
+        padding-left:2.25rem;
+    }
+    .booking-admin-timeline-item{
+        position:relative;
+        padding-bottom:1rem;
+    }
+    .booking-admin-timeline-item:before{
+        content:"";
+        position:absolute;
+        left:-1.42rem;
+        top:1.7rem;
+        bottom:0;
+        width:1px;
+        background:var(--default-border);
+    }
+    .booking-admin-timeline-item.is-last{
+        padding-bottom:0;
+    }
+    .booking-admin-timeline-item.is-last:before{
+        display:none;
+    }
+    .booking-admin-timeline-marker{
+        position:absolute;
+        left:-2.25rem;
+        top:.15rem;
+        width:1.65rem;
+        height:1.65rem;
+        border-radius:50%;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        border:1px solid var(--default-border);
+        background:var(--custom-white);
+        font-size:.55rem;
+    }
+    .booking-admin-timeline-content{
+        border:1px solid var(--default-border);
+        border-radius:.65rem;
+        padding:.85rem 1rem;
+        background:var(--custom-white);
+    }
+    .booking-admin-timeline-date{
+        font-size:.78rem;
+        white-space:nowrap;
+    }
+    .booking-admin-timeline-meta{
+        display:grid;
+        gap:.45rem;
+    }
+    .booking-admin-timeline-meta-row{
+        display:grid;
+        grid-template-columns:90px minmax(0,1fr);
+        gap:.75rem;
+        color:var(--default-text-color);
+        font-size:.86rem;
+        line-height:1.6;
+    }
+    .booking-admin-timeline-meta-row span{
+        color:var(--text-muted, #8c9097);
+        font-size:.78rem;
+        font-weight:600;
+        text-transform:uppercase;
+        letter-spacing:.03em;
+    }
+    .booking-admin-timeline-meta-row strong{
+        font-weight:600;
+    }
+    @media(max-width:575.98px){
+        .booking-admin-timeline-meta-row{
+            grid-template-columns:1fr;
+            gap:.1rem;
+        }
+    }
+    html[data-theme-mode="dark"] .booking-admin-timeline-content,
+    html[data-theme-mode="dark"] .booking-admin-timeline-marker{
+        background:var(--body-bg);
     }
 </style>
 @endpush
@@ -1215,6 +1363,36 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmButtonText: 'Kirim',
             cancelButtonText: 'Batal',
         }));
+    }
+
+    function normalizeMoneyValue(value) {
+        return String(value || '').replace(/\D+/g, '');
+    }
+
+    function formatRupiah(value) {
+        var numericValue = Number(normalizeMoneyValue(value));
+        if (!Number.isFinite(numericValue) || numericValue <= 0) {
+            return '';
+        }
+
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            maximumFractionDigits: 0,
+        }).format(numericValue);
+    }
+
+    function setupMoneyInput(inputId) {
+        var input = document.getElementById(inputId);
+        if (!input) return;
+
+        function renderFormattedValue() {
+            input.value = formatRupiah(input.value);
+        }
+
+        input.addEventListener('input', renderFormattedValue);
+        input.addEventListener('blur', renderFormattedValue);
+        renderFormattedValue();
     }
 
     function handleAction(btn, confirmTitle, confirmText) {
@@ -1304,6 +1482,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 var payload = {};
                 var plainFormData = new FormData(form);
                 plainFormData.forEach(function(value, key) {
+                    if (form.id === 'form_add_billing_detail' && key === 'amount') {
+                        payload[key] = normalizeMoneyValue(value);
+                        return;
+                    }
+
                     payload[key] = typeof value === 'string' ? value.trim() : value;
                 });
                 fetchOptions.headers['Content-Type'] = 'application/json';
@@ -1341,6 +1524,7 @@ document.addEventListener('DOMContentLoaded', function() {
     handleAction(approveBtn, 'Approve Booking', 'Setujui booking ini? Billing akan diinisialisasi.');
     handleAction(rejectBtn, 'Reject Booking', 'Tolak booking ini? Aksi ini tidak bisa dibatalkan.');
     bindModalFormSubmit(addBillingDetailForm, 'btn_submit_add_billing_detail', 'billing_detail_error_box', 'Komponen billing berhasil disimpan.');
+    setupMoneyInput('billing_detail_amount');
     bindModalFormSubmit(generateInstallmentForm, 'btn_submit_generate_installment', 'installment_error_box', 'Tagihan installment berhasil dibuat.');
     bindModalFormSubmit(uploadDpForm, 'btn_submit_upload_dp', 'upload_dp_error_box', 'Pembayaran DP berhasil dicatat.');
     bindModalFormSubmit(uploadFinalForm, 'btn_submit_upload_final', 'upload_final_error_box', 'Pembayaran berhasil dicatat.');
