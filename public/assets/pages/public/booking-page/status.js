@@ -73,6 +73,27 @@
             return ["success", "warning", "info", "danger", "neutral"].indexOf(t) !== -1 ? t : "neutral";
         }
 
+        function formatSubmittedAtLabel(value) {
+            var text = String(value || "").trim();
+            if (text === "") return "-";
+
+            var timeSuffixMatch = text.match(/^(.+?)\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:[AP]M)?$/i);
+            if (timeSuffixMatch && String(timeSuffixMatch[1] || "").trim() !== "") {
+                return String(timeSuffixMatch[1]).trim();
+            }
+
+            var parsedDate = new Date(text);
+            if (!isNaN(parsedDate.getTime())) {
+                return parsedDate.toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric"
+                });
+            }
+
+            return text;
+        }
+
         function openVerifyModal() {
             if (!modal || !verifyInput) return;
             modal.hidden = false;
@@ -1027,7 +1048,7 @@
             }
             if (statusStateLabel) statusStateLabel.textContent = "Status: " + String(status.label || "-");
             var code = String(status.code || "");
-            var subtitleText = "Diajukan pada " + String(eventData.submitted_at || "-");
+            var subtitleText = "Diajukan pada " + formatSubmittedAtLabel(eventData.submitted_at);
 
             if (code === "BS_WAITING_APPROVAL") {
                 subtitleText += ". Pengajuan Anda sedang diverifikasi oleh tim kami. Mohon tunggu konfirmasi dari admin.";
