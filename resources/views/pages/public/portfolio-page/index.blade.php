@@ -46,4 +46,6 @@
     <a class="cta cta-outline" href="{{ route('home') }}#packages">Lihat Paket</a>
   </div>
 </section>
+
+@include('pages.public.partials.instagram-section')
 @endsection

@@ -25,10 +25,15 @@
   </div>
 
   @if ($portfolioImages->isNotEmpty())
-    <div class="portfolio-masonry" aria-label="Portfolio dokumentasi Etherno">
+    <div class="portfolio-masonry" aria-label="Portfolio dokumentasi Etherno" data-mobile-auto-scroll>
       @foreach ($portfolioImages->take(8) as $imagePath)
         <figure class="portfolio-masonry-item {{ $loop->first ? 'is-featured' : '' }} {{ $loop->iteration === 4 ? 'is-tall' : '' }}">
           <img src="{{ asset($imagePath) }}" alt="Portfolio dokumentasi Etherno {{ $loop->iteration }}" loading="lazy">
+        </figure>
+      @endforeach
+      @foreach ($portfolioImages->take(8) as $imagePath)
+        <figure class="portfolio-masonry-item is-clone" aria-hidden="true">
+          <img src="{{ asset($imagePath) }}" alt="" loading="lazy">
         </figure>
       @endforeach
     </div>
