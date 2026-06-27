@@ -833,7 +833,7 @@
                     </div>
                     <div class="mb-2">
                         <label for="billing_detail_amount" class="form-label">Nominal</label>
-                        <input type="number" id="billing_detail_amount" name="amount" min="1" step="any" class="form-control" placeholder="Contoh: 500000" required>
+                        <input type="text" id="billing_detail_amount" name="amount" class="form-control" inputmode="numeric" autocomplete="off" placeholder="Contoh: Rp 500.000" required>
                     </div>
                     <div class="mb-0">
                         <label for="billing_detail_description" class="form-label">Catatan (opsional)</label>
@@ -1365,6 +1365,36 @@ document.addEventListener('DOMContentLoaded', function() {
         }));
     }
 
+    function normalizeMoneyValue(value) {
+        return String(value || '').replace(/\D+/g, '');
+    }
+
+    function formatRupiah(value) {
+        var numericValue = Number(normalizeMoneyValue(value));
+        if (!Number.isFinite(numericValue) || numericValue <= 0) {
+            return '';
+        }
+
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            maximumFractionDigits: 0,
+        }).format(numericValue);
+    }
+
+    function setupMoneyInput(inputId) {
+        var input = document.getElementById(inputId);
+        if (!input) return;
+
+        function renderFormattedValue() {
+            input.value = formatRupiah(input.value);
+        }
+
+        input.addEventListener('input', renderFormattedValue);
+        input.addEventListener('blur', renderFormattedValue);
+        renderFormattedValue();
+    }
+
     function handleAction(btn, confirmTitle, confirmText) {
         if (!btn) return;
         btn.addEventListener('click', function() {
@@ -1452,6 +1482,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 var payload = {};
                 var plainFormData = new FormData(form);
                 plainFormData.forEach(function(value, key) {
+                    if (form.id === 'form_add_billing_detail' && key === 'amount') {
+                        payload[key] = normalizeMoneyValue(value);
+                        return;
+                    }
+
                     payload[key] = typeof value === 'string' ? value.trim() : value;
                 });
                 fetchOptions.headers['Content-Type'] = 'application/json';
@@ -1489,6 +1524,7 @@ document.addEventListener('DOMContentLoaded', function() {
     handleAction(approveBtn, 'Approve Booking', 'Setujui booking ini? Billing akan diinisialisasi.');
     handleAction(rejectBtn, 'Reject Booking', 'Tolak booking ini? Aksi ini tidak bisa dibatalkan.');
     bindModalFormSubmit(addBillingDetailForm, 'btn_submit_add_billing_detail', 'billing_detail_error_box', 'Komponen billing berhasil disimpan.');
+    setupMoneyInput('billing_detail_amount');
     bindModalFormSubmit(generateInstallmentForm, 'btn_submit_generate_installment', 'installment_error_box', 'Tagihan installment berhasil dibuat.');
     bindModalFormSubmit(uploadDpForm, 'btn_submit_upload_dp', 'upload_dp_error_box', 'Pembayaran DP berhasil dicatat.');
     bindModalFormSubmit(uploadFinalForm, 'btn_submit_upload_final', 'upload_final_error_box', 'Pembayaran berhasil dicatat.');
