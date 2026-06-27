@@ -254,13 +254,11 @@ class GuestBookingService
         $resolvedBooking = $this->hydrateBookingForSubmissionProof($booking);
         $relativePath = $this->resolveSubmissionProofRelativePath($resolvedBooking);
 
-        if (!Storage::disk('local')->exists($relativePath)) {
-            $payload = $this->buildSubmissionProofPayload($resolvedBooking);
-            $pdf = Pdf::setPaper('a4')
-                ->loadView('pages.public.booking-page.support.submission-proof-pdf', $payload);
+        $payload = $this->buildSubmissionProofPayload($resolvedBooking);
+        $pdf = Pdf::setPaper('a4')
+            ->loadView('pages.public.booking-page.support.submission-proof-pdf', $payload);
 
-            Storage::disk('local')->put($relativePath, $pdf->output());
-        }
+        Storage::disk('local')->put($relativePath, $pdf->output());
 
         return [
             'path' => $relativePath,
@@ -1952,7 +1950,10 @@ class GuestBookingService
                 $booking->customer?->first_name,
                 $booking->customer?->last_name,
             ]))) ?: '-',
-            'customer_phone' => trim((string) ($booking->customer?->phone_number ?? '')) ?: '-',
+            'customer_phone' => $this->formatPhoneNumberForDisplay(
+                (string) ($booking->customer?->phone_number ?? ''),
+                (string) ($booking->customer?->phone_country_code ?? '')
+            ),
             'package_name' => trim((string) ($booking->package?->name ?? '')) ?: '-',
             'package_case_id' => trim((string) ($booking->package?->case_id ?? '')) ?: '-',
             'package_type' => trim((string) ($booking->package?->packageType?->description ?? '')) ?: '-',
@@ -1964,6 +1965,37 @@ class GuestBookingService
             'pin_address' => $pinAddressPdf,
             'google_maps_pin' => trim((string) ($booking->google_maps_pin ?? '')) ?: '-',
         ];
+    }
+
+    private function formatPhoneNumberForDisplay(string $phoneNumber, string $countryCode = ''): string
+    {
+        $normalizedPhone = trim($phoneNumber);
+        if ($normalizedPhone === '') {
+            return '-';
+        }
+
+        $digits = preg_replace('/\D+/', '', $normalizedPhone) ?? '';
+        if ($digits === '') {
+            return $normalizedPhone;
+        }
+
+        $normalizedCountry = strtoupper(trim($countryCode));
+        if ($normalizedCountry === 'ID' && str_starts_with($digits, '62')) {
+            $nationalDigits = substr($digits, 2);
+
+            return '+62 ' . trim(implode(' ', array_filter([
+                substr($nationalDigits, 0, 3),
+                substr($nationalDigits, 3, 4),
+                substr($nationalDigits, 7, 4),
+                substr($nationalDigits, 11),
+            ], static fn (string $part): bool => $part !== '')));
+        }
+
+        if (str_starts_with($normalizedPhone, '+')) {
+            return '+' . trim(chunk_split($digits, 4, ' '));
+        }
+
+        return trim(chunk_split($digits, 4, ' '));
     }
 
     private function resolveLocationHierarchyLabel(?Location $location): string

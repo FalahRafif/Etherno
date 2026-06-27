@@ -698,6 +698,17 @@
                     return normalizedDigits;
                 }
 
+                if (getSelectedCountry() === "ID") {
+                    return [
+                        normalizedDigits.slice(0, 3),
+                        normalizedDigits.slice(3, 7),
+                        normalizedDigits.slice(7, 11),
+                        normalizedDigits.slice(11)
+                    ].filter(function (group) {
+                        return group !== "";
+                    }).join(" ");
+                }
+
                 var groups = [normalizedDigits.slice(0, 4)];
                 for (var index = 4; index < normalizedDigits.length; index += 4) {
                     groups.push(normalizedDigits.slice(index, index + 4));
