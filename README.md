@@ -641,7 +641,7 @@ Migration transform wilayah ke locations dibuat khusus PostgreSQL.
 
 <!-- Updated: Tambah case_id pada bookings, description pada booking_history, perjelas field customer (first_name/last_name), tambah relasi billings pada booking -->
 
-- `customers`: data customer booking. Field utama: `first_name`, `last_name`, `phone_number`, `email`.
+- `customers`: data customer booking. Field utama: `first_name`, `last_name`, `phone_number`, `phone_country_code`, `email`.
 - `bookings`: booking utama. Field utama: `uuid`, `case_id`, `customer_id`, `package_id`, `status_id`, `location_id`, `event_date`, `event_session`, `event_detail`, `google_maps_pin`, `reschedule_date`, `reschedule_reason`, `force_majeure_date`, `force_majeure_reason`, `operator_id`.
 - `booking_history`: riwayat status booking. Field utama: `booking_id`, `status_id`, `operator_id`, `description`.
 
@@ -704,6 +704,7 @@ Migrations diload dari `app/Providers/AppServiceProvider.php`:
 - `1.1.12`: alter `booking_history` tambah `description` (text nullable), alter `bookings` tambah `case_id` (unique) dengan backfill data existing.
 - `1.1.13`: alter `payments` tambah `rejection_reason` (text nullable) untuk anti-fraud payment proof flow.
 - `1.1.14`: alter reference `price_type` description — update `PT_RG` menjadi "Tambahan Ringan (100K-500K)" dan `PT_SD` menjadi "Tambahan Sedang (500K+)".
+- `1.6.2`: alter `customers` tambah `phone_country_code` untuk support selector negara dan format WhatsApp internasional di form booking public.
 
 <!-- Updated: Tambah versi migration 1.1.11, 1.1.12, 1.1.13, dan 1.1.14 -->
 

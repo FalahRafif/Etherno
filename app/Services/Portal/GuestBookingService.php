@@ -183,6 +183,7 @@ class GuestBookingService
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'phone_number' => (string) $payload['phone_number'],
+                'phone_country_code' => strtoupper(trim((string) ($payload['phone_country_code'] ?? 'ID'))) ?: 'ID',
             ]);
 
             /** @var Booking $booking */
@@ -214,7 +215,7 @@ class GuestBookingService
             ]);
 
             return $booking->loadMissing([
-                'customer:id,first_name,last_name,phone_number',
+                'customer:id,first_name,last_name,phone_number,phone_country_code',
                 'package:id,case_id,name,address,price,package_type',
                 'package.packageType:id,code,description',
                 'status:id,code,description',
@@ -1488,7 +1489,7 @@ class GuestBookingService
     private function hydrateBookingForStatusLookup(Booking $booking): Booking
     {
         return $booking->loadMissing([
-            'customer:id,first_name,last_name,phone_number',
+            'customer:id,first_name,last_name,phone_number,phone_country_code',
             'package:id,case_id,name,address,price,package_type,created_at',
             'package.packageType:id,code,description',
             'status:id,code,description',
@@ -1862,7 +1863,7 @@ class GuestBookingService
     private function hydrateBookingForSubmissionProof(Booking $booking): Booking
     {
         return $booking->loadMissing([
-            'customer:id,first_name,last_name,phone_number',
+            'customer:id,first_name,last_name,phone_number,phone_country_code',
             'package:id,case_id,name,address,price,package_type',
             'package.packageType:id,code,description',
             'status:id,code,description',
