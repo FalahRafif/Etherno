@@ -5,6 +5,7 @@ use App\Http\Controllers\Web\Public\LandingPageController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingPageController::class, 'index'])->name('home');
+Route::get('/portfolio', [LandingPageController::class, 'portfolio'])->name('portfolio.page');
 Route::get('/packages', [LandingPageController::class, 'packages'])->name('packages.page');
 Route::get('/tentang-kami/etherno', [LandingPageController::class, 'aboutEtherno'])->name('about.etherno');
 Route::get('/booking', [LandingPageController::class, 'booking'])->name('booking.page');

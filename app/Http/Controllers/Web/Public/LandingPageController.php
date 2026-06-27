@@ -27,6 +27,11 @@ class LandingPageController extends Controller
         return $this->guestPageService->render('packages.page', $this->guestPackageService->getAllPackagesPayload());
     }
 
+    public function portfolio(): View
+    {
+        return $this->guestPageService->render('portfolio.page');
+    }
+
     public function booking(): View
     {
         return $this->guestPageService->render('booking.form', $this->guestBookingService->getFormPayload());
