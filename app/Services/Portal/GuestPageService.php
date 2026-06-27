@@ -12,6 +12,7 @@ class GuestPageService
      */
     private array $pages = [
         'landing' => ['view' => 'pages.public.landing-page.landingpage', 'title' => 'Etherno - Wedding Photography'],
+        'portfolio.page' => ['view' => 'pages.public.portfolio-page.index', 'title' => 'Portfolio - Etherno'],
         'packages.page' => ['view' => 'pages.public.packages-page.index', 'title' => 'Semua Paket - Etherno'],
         'about.etherno' => ['view' => 'pages.public.about-page.etherno', 'title' => 'Tentang Etherno'],
         'booking.form' => ['view' => 'pages.public.booking-page.bookingpage', 'title' => 'Form Booking - Etherno'],
