@@ -1834,7 +1834,7 @@ body.booking-confirm-open{
 /* ── Footer ── */
 .public-footer{
   position:relative;
-  margin-top:56px;
+  /* margin-top:56px; */
   color:#f6f1e8;
   background:#11110f;
 }
